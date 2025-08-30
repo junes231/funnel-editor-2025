@@ -220,6 +220,7 @@ const showNotification = (message: string, type: 'success' | 'error' = 'success'
                 </>
           }
         />
+        <Route path="/finishSignIn" element={<FinishSignIn />} />
         <Route path="*" element={<h2>404 Not Found</h2>} />
       </Routes>
       {notification.visible && (
