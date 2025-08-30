@@ -1,6 +1,6 @@
 import { Navigate } from 'react-router-dom';
 import { getAuth } from 'firebase/auth';
-import FinishSignIn from './pages/FinishSignIn.js'; 
+
 interface PrivateRouteProps {
   children: React.ReactNode;
 }
