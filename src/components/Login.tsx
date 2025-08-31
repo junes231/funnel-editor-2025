@@ -65,7 +65,7 @@ export default function Login() {
     }
     setIsSendingLink(true);
     const actionCodeSettings = {
-      url: 'https://funnel-editor2025.netlify.app/',
+      url: 'https://funnel-editor2025.netlify.app/#/finishSignIn',
       handleCodeInApp: true,
     };
     sendSignInLinkToEmail(auth, email, actionCodeSettings)
