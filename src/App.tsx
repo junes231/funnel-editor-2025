@@ -322,7 +322,7 @@ const FunnelDashboard: React.FC<FunnelDashboardProps> = ({ db, user, isAdmin, fu
   // 使用 window.location.href 获取完整的当前URL
   const baseUrl = window.location.href.split('#')[0];
   // 构建完整的funnel链接
-  const url = `${baseUrl}/funnel-editor-2025/#/play/${funnelId}`;
+  const url = `${baseUrl}/#/play/${funnelId}`;
   
   // 使用clipboard API
   navigator.clipboard.writeText(url).then(() => {
