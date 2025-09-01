@@ -84,7 +84,7 @@ export default function Login() {
     try {
       const cred = await createUserWithEmailAndPassword(auth, email.trim(), pwd);
       await sendEmailVerification(cred.user, {
-        url: 'https://funnel-editor2025.netlify.app/verify',
+        url: 'https://funnel-editor2025.netlify.app/#/verify',
         handleCodeInApp: false
       });
       await signOut(auth); // 不让未验证会话留在前端
