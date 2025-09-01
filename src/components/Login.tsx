@@ -139,7 +139,7 @@ export default function Login() {
         return;
       }
       await sendEmailVerification(cred.user, {
-        url: 'https://funnel-editor2025.netlify.app/verify',
+        url: 'https://funnel-editor2025.netlify.app/#/verify',
         handleCodeInApp: false
       });
       setNotice('Verification email sent again.');
