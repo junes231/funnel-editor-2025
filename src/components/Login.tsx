@@ -11,13 +11,23 @@ import { evaluatePassword, PasswordStrengthResult } from '../utils/passwordStren
 
 type Mode = 'login' | 'register' | 'forgot';
 
-export default function Login() {
+// 新增：父级传下来的全局通知类型（根据你的父组件实际结构调整）
+interface GlobalNotification {
+  visible: boolean;
+  type: 'success' | 'error' | 'info';
+  message: string;
+}
+interface LoginProps {
+  setNotification?: (n: GlobalNotification) => void;
+}
+
+export default function Login({ setNotification }: LoginProps) {
   const auth = getAuth();
 
   const [mode, setMode] = useState<Mode>('login');
   const [email, setEmail] = useState('');
   const [pwd, setPwd] = useState('');
-  const [notice, setNotice] = useState('');
+  const [notice, setNotice] = useState('');          // 仍保留本地 notice（你也可以删）
   const [loading, setLoading] = useState(false);
 
   // 重发验证冷却
@@ -33,16 +43,26 @@ export default function Login() {
     return () => clearInterval(id);
   }, [cooldown]);
 
-  // 登录页若带 verified=1，提示验证成功
+  // 新增：使用全局通知（如果父级提供）
   useEffect(() => {
+    // 仅在登录模式下处理
     if (mode !== 'login') return;
     const sp = new URLSearchParams(window.location.search);
     if (sp.get('verified') === '1') {
-      setNotice('Email verified. Please sign in.');
+      if (setNotification) {
+        setNotification({
+          visible: true,
+            type: 'success',
+          message: 'Email verified. Please sign in.'
+        });
+      } else {
+        // 没传全局通知，就退回到本地 notice
+        setNotice('Email verified. Please sign in.');
+      }
     }
-  }, [mode]);
+  }, [mode, setNotification]);
 
-  // 监听密码变化（注册模式）评估强度（防抖 + 竞态处理）
+  // 监听密码变化（注册模式）评估强度
   useEffect(() => {
     if (mode !== 'register') {
       setPwStrength(null);
@@ -51,11 +71,10 @@ export default function Login() {
     const current = ++pwEvalCounter.current;
     const handler = setTimeout(async () => {
       const res = await evaluatePassword(pwd);
-      // 只接受最新一次
       if (current === pwEvalCounter.current) {
         setPwStrength(res);
       }
-    }, 180); // 简单防抖
+    }, 180);
     return () => clearTimeout(handler);
   }, [pwd, mode]);
 
@@ -74,12 +93,10 @@ export default function Login() {
       setNotice('Password must be at least 8 characters.');
       return;
     }
-    // 可选：要求强度 >= 2（Fair）再允许注册
     if (pwStrength && pwStrength.score < 2) {
       setNotice('Password too weak. Please strengthen it (aim for Fair or above).');
       return;
     }
-
     setLoading(true);
     try {
       const cred = await createUserWithEmailAndPassword(auth, email.trim(), pwd);
@@ -87,7 +104,7 @@ export default function Login() {
         url: 'https://funnel-editor2025.netlify.app/#/verify',
         handleCodeInApp: false
       });
-      await signOut(auth); // 不让未验证会话留在前端
+      await signOut(auth);
       setPwd('');
       setNotice('Registered. Verification email sent. Redirecting to sign in...');
       setTimeout(() => {
@@ -115,7 +132,7 @@ export default function Login() {
         return;
       }
       setNotice('Login success. Redirecting...');
-      window.location.assign('/editor'); // 进入编辑器
+      window.location.assign('/editor');
     } catch (e: any) {
       setNotice('Login failed: ' + (e?.message || 'Unknown error'));
     } finally {
@@ -163,9 +180,8 @@ export default function Login() {
       await sendPasswordResetEmail(auth, email.trim(), {
         url: 'https://funnel-editor2025.netlify.app/login'
       });
-      // 统一提示
       setNotice('If the email exists, a reset link has been sent.');
-    } catch (e: any) {
+    } catch {
       setNotice('If the email exists, a reset link has been sent.');
     } finally {
       setLoading(false);
@@ -196,7 +212,6 @@ export default function Login() {
     opacity: disabled ? 0.6 : 1
   });
 
-  // 密码强度条 UI 颜色映射
   const strengthColors = ['#d32f2f', '#f57c00', '#fbc02d', '#388e3c', '#2e7d32'];
 
   return (
@@ -214,7 +229,7 @@ export default function Login() {
       {notice && (
         <div style={{
           marginBottom: 16,
-            color: '#fff',
+          color: '#fff',
           background: '#222',
           padding: 12,
           borderRadius: 6,
