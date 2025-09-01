@@ -7,7 +7,7 @@ import {
   sendPasswordResetEmail,
   signOut,
 } from 'firebase/auth';
-import { evaluatePassword, PasswordStrengthResult } from '../utils/passwordStrength';
+import { evaluatePassword, PasswordStrengthResult } from '../utils/passwordStrength.ts';
 
 type Mode = 'login' | 'register' | 'forgot';
 
