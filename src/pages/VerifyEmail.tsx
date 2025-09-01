@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { getAuth, applyActionCode } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
-
+import { auth } from '../firebase';
 /**
  * 处理邮箱验证链接：
  * 期望链接格式（HashRouter 场景）:
