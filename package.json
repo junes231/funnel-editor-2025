@@ -19,6 +19,7 @@
     "firebase": "^10.12.3",        
     "ajv": "6.12.6",
     "ajv-keywords": "3.5.2"
+    "zxcvbn": "^4.4.2"
   },
   "devDependencies": {
     "gh-pages": "^6.0.0",
