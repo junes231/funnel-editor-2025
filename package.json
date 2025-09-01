@@ -18,7 +18,7 @@
     "react-router-dom": "^6.22.0",  
     "firebase": "^10.12.3",        
     "ajv": "6.12.6",
-    "ajv-keywords": "3.5.2"
+    "ajv-keywords": "3.5.2",
     "zxcvbn": "^4.4.2"
   },
   "devDependencies": {
