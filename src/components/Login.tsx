@@ -29,7 +29,7 @@ export default function Login({ setNotification }: LoginProps) {
   const [pwd, setPwd] = useState('');
   const [notice, setNotice] = useState('');          // 仍保留本地 notice（你也可以删）
   const [loading, setLoading] = useState(false);
-
+  const log = (...a:any[]) => console.log('[VERIFY-DEBUG]', ...a);
   // 重发验证冷却
   const [cooldown, setCooldown] = useState(0);
 
@@ -99,11 +99,16 @@ export default function Login({ setNotification }: LoginProps) {
     }
     setLoading(true);
     try {
-      const cred = await createUserWithEmailAndPassword(auth, email.trim(), pwd);
-      await sendEmailVerification(cred.user, {
-        url: 'https://funnel-editor2025.netlify.app/#/verify',
-        handleCodeInApp: false
-      });
+      
+// handleRegister try 内部：
+log('start createUser', email.trim());
+const cred = await createUserWithEmailAndPassword(auth, email.trim(), pwd);
+log('created user uid', cred.user.uid, 'verified?', cred.user.emailVerified);
+await sendEmailVerification(cred.user, {
+  url: 'https://funnel-editor2025.netlify.app/#/verify',
+  handleCodeInApp: false
+});
+log('sendEmailVerification resolved');
       await signOut(auth);
       setPwd('');
       setNotice('Registered. Verification email sent. Redirecting to sign in...');
@@ -149,16 +154,14 @@ export default function Login({ setNotification }: LoginProps) {
     setLoading(true);
     setNotice('');
     try {
-      const cred = await signInWithEmailAndPassword(auth, email.trim(), pwd);
-      if (cred.user.emailVerified) {
-        setNotice('Already verified.');
-        await signOut(auth);
-        return;
-      }
-      await sendEmailVerification(cred.user, {
-        url: 'https://funnel-editor2025.netlify.app/#/verify',
-        handleCodeInApp: false
-      });
+      log('resend signIn', email.trim());
+const cred = await signInWithEmailAndPassword(auth, email.trim(), pwd);
+log('resend got uid', cred.user.uid, 'verified?', cred.user.emailVerified);
+await sendEmailVerification(cred.user, {
+  url: 'https://funnel-editor2025.netlify.app/#/verify',
+  handleCodeInApp: false
+});
+log('resend sendEmailVerification resolved');
       setNotice('Verification email sent again.');
       setCooldown(30);
       await signOut(auth);
