@@ -3,11 +3,40 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>营销漏斗编辑器</title>
+    <title>Marketing Funnel Editor</title>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root"></div>
+  <div id="log" style="position:fixed;bottom:0;left:0;right:0;max-height:40%;overflow:auto;
+background:#000;color:#0f0;font:12px/1.4 monospace;padding:6px;z-index:99999;box-shadow:0 0 4px #0f0;">
+  (debug panel ready)
+</div>
+<script>
+(function(){
+  if (window.__logPanelInstalled) return;
+  window.__logPanelInstalled = true;
+  const box = document.getElementById('log');
+  const keep = ['log','warn','error'];
+  keep.forEach(fn=>{
+    const old = console[fn];
+    console[fn] = function(...args){
+      try { old.apply(console,args); } catch(e){}
+      if (!box) return;
+      const line = document.createElement('div');
+      line.style.whiteSpace='pre-wrap';
+      line.textContent = '['+fn.toUpperCase()+'] ' + args.map(a=>{
+        try {
+          if (typeof a === 'object') return JSON.stringify(a);
+          return String(a);
+        } catch(e){ return String(a); }
+      }).join(' ');
+      box.appendChild(line);
+      box.scrollTop = box.scrollHeight;
+    };
+  });
+})();
+</script>
   </body>
 </html>
 
