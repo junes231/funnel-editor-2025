@@ -3,8 +3,11 @@ import { getAuth, onAuthStateChanged, User, signOut } from 'firebase/auth';
 import PrivateRoute from './components/PrivateRoute.tsx';
 import Register from './pages/Register.tsx';
 import ResetPage from './pages/reset.tsx';
+import Login from './pages/Login.tsx';
+import Dashboard from './pages/Dashboard.tsx';
+import AppLayout from './components/AppLayout.tsx';
 import { checkPasswordStrength } from './utils/passwordStrength.ts';
-import { useNavigate, useParams, Routes, Route } from 'react-router-dom';
+import { useNavigate, useParams, HashRouter, Routes, Route } from 'react-router-dom';
 import {
   collection,
   doc,
