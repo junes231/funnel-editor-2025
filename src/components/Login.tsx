@@ -105,7 +105,7 @@ log('start createUser', email.trim());
 const cred = await createUserWithEmailAndPassword(auth, email.trim(), pwd);
 log('created user uid', cred.user.uid, 'verified?', cred.user.emailVerified);
 await sendEmailVerification(cred.user, {
-  url: 'https://funnel-editor2025.netlify.app/#/verify',
+  url: 'https://funnel-editor2025.netlify.app/#/login?verified=1',
   handleCodeInApp: false
 });
 log('sendEmailVerification resolved');
@@ -158,7 +158,7 @@ log('sendEmailVerification resolved');
 const cred = await signInWithEmailAndPassword(auth, email.trim(), pwd);
 log('resend got uid', cred.user.uid, 'verified?', cred.user.emailVerified);
 await sendEmailVerification(cred.user, {
-  url: 'https://funnel-editor2025.netlify.app/#/verify',
+  url: 'https://funnel-editor2025.netlify.app/#/login?verified=1',
   handleCodeInApp: false
 });
 log('resend sendEmailVerification resolved');
