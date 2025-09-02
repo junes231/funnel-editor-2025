@@ -179,11 +179,13 @@ const showNotification = (message: string, type: 'success' | 'error' = 'success'
   }
 
   return (
+    <HashRouter>
     <div style={{ padding: 24, fontFamily: 'Arial' }}>
       <Routes>
         {/* 公开路由 */}
-        <Route path="/play/:funnelId" element={<QuizPlayer db={db} />} />
-        <Route path="/register" element={<Register/>}/>
+        <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/play/:funnelId" element={<QuizPlayer db={db} />} />
         {/* 需要登录的路由 */}
         <Route
           path="/"
@@ -238,7 +240,8 @@ const showNotification = (message: string, type: 'success' | 'error' = 'success'
         </div>
       )}
     </div>
-  );
+    </HashRouter>
+      );
 }
 
 
