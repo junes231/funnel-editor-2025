@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef, ChangeEvent } from 'react';
 import { getAuth, onAuthStateChanged, User, signOut } from 'firebase/auth';
 import PrivateRoute from './components/PrivateRoute.tsx';
-
+import Register from './pages/Register.tsx';
 import ResetPage from './pages/reset.tsx';
 import { checkPasswordStrength } from './utils/passwordStrength.ts';
 import { useNavigate, useParams, Routes, Route } from 'react-router-dom';
@@ -180,7 +180,7 @@ const showNotification = (message: string, type: 'success' | 'error' = 'success'
       <Routes>
         {/* 公开路由 */}
         <Route path="/play/:funnelId" element={<QuizPlayer db={db} />} />
-        
+        <Route path="/register" element={<Register/>}/>
         {/* 需要登录的路由 */}
         <Route
           path="/"
