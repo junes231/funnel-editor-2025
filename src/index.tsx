@@ -5,7 +5,7 @@ import App from './App.tsx';
 import './index.css';
 
 // 只需导入一次，内部已经防重复
-import { db, auth } from './firebase';
+import { db, auth } from './firebase.ts';
 
 const rootEl = document.getElementById('root')!;
 createRoot(rootEl).render(
