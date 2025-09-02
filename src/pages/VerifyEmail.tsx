@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { applyActionCode } from 'firebase/auth';
 import { auth } from '../firebase.ts';
 import { useNavigate } from 'react-router-dom';
-import { installLongPressDebug } from '../utils/longPressDebug.tsx';
+import { installLongPressDebug } from '../utils/longPressDebug.ts';
 
 type Status =
   | { state: 'checking' }
