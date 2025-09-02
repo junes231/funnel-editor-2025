@@ -1,5 +1,5 @@
 import React from 'react';
-import { LEGAL_VERSIONS } from './legalConfig';
+import { LEGAL_VERSIONS } from './legalConfig.ts';
 
 // Simple placeholder Terms page (中文注释：后续把正式英文条款正文粘贴到此处)
 export default function TermsOfService() {
