@@ -1,5 +1,5 @@
 import React from 'react';
-import { LEGAL_VERSIONS } from './legalConfig';
+import { LEGAL_VERSIONS } from './legalConfig.ts';
 
 // Simple placeholder Privacy page (中文注释：后续替换为正式隐私政策文本)
 export default function PrivacyPolicy() {
