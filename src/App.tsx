@@ -187,7 +187,9 @@ const showNotification = (message: string, type: 'success' | 'error' = 'success'
         {/* 公开路由 */}
         <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-          <Route path="/play/:funnelId" element={<QuizPlayer db={db} />} />
+        <Route path="/legal/terms" element={<TermsOfService/>}/>
+        <Route path="/legal/privacy" element={<PrivacyPolicy/>}/>  
+        <Route path="/play/:funnelId" element={<QuizPlayer db={db} />} />
         {/* 需要登录的路由 */}
         <Route
           path="/"
