@@ -1,131 +1,139 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { auth } from '../firebase.ts';
-import { createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
-import { LEGAL_VERSIONS } from '../legal/legalConfig.ts';
+import { signInWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
 
-// Registration page with email verification + required legal agreement
-export default function Register() {
+// Tracks last resend timestamp (中文注释：限制一分钟一次重发)
+let lastResend = 0;
+
+function parseHashQuery() {
+  const h = window.location.hash; // e.g. #/login?verified=1
+  const i = h.indexOf('?');
+  if (i === -1) return {};
+  const sp = new URLSearchParams(h.slice(i + 1));
+  const o: Record<string,string> = {};
+  sp.forEach((v,k) => { o[k] = v; });
+  return o;
+}
+
+export default function Login() {
   const [email, setEmail] = useState('');
   const [pwd, setPwd] = useState('');
   const [msg, setMsg] = useState('');
   const [loading, setLoading] = useState(false);
-  const [accept, setAccept] = useState(false); // must accept legal
+  const [pendingUnverified, setPendingUnverified] = useState(false); // show resend section
 
-  async function handleRegister(e: React.FormEvent) {
+  useEffect(() => {
+    const q = parseHashQuery();
+    if (q.verified === '1') {
+      setMsg('Email verified. Please sign in.');
+    }
+  }, []);
+
+  async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (loading) return;
-    if (!accept) {
-      setMsg('You must accept the Terms of Service and Privacy Policy.');
-      return;
-    }
     setLoading(true);
     setMsg('');
+    setPendingUnverified(false);
     try {
-      const cred = await createUserWithEmailAndPassword(auth, email.trim(), pwd);
-      await sendEmailVerification(cred.user, {
-        url: 'https://funnel-editor2025.netlify.app/#/login?verified=1',
-        handleCodeInApp: false
-      });
-      setMsg(`Verification email sent to: ${email}. Please check your inbox and then sign in.`);
+      const cred = await signInWithEmailAndPassword(auth, email.trim(), pwd);
+      await cred.user.reload();
+      if (!cred.user.emailVerified) {
+        setPendingUnverified(true);
+        setMsg('Email not verified. Check your inbox or resend verification below.');
+        return;
+      }
+      // Success: redirect to protected area (中文注释：根据你自己的受保护路由调整)
+      window.location.replace('/#/');
     } catch (e: any) {
-      let text = e.message || 'Registration failed.';
-      if (e.code === 'auth/email-already-in-use') text = 'This email is already registered. Please sign in.';
-      if (e.code === 'auth/weak-password') text = 'Password is too weak. Use at least 8+ characters with complexity.';
-      if (e.code === 'auth/invalid-email') text = 'Invalid email format.';
-      if (e.code === 'auth/network-request-failed') text = 'Network error. Please try again.';
-      setMsg(text);
+      setMsg(e.message || 'Login failed.');
     } finally {
       setLoading(false);
     }
   }
 
+  async function resendVerification() {
+    if (!auth.currentUser) {
+      setMsg('Sign in (even if unverified) first so we can resend the email.');
+      return;
+    }
+    await auth.currentUser.reload();
+    if (auth.currentUser.emailVerified) {
+      setMsg('Already verified. Just sign in again.');
+      setPendingUnverified(false);
+      return;
+    }
+    if (Date.now() - lastResend < 60_000) {
+      setMsg('Too many requests. Please wait a minute.');
+      return;
+    }
+    try {
+      await sendEmailVerification(auth.currentUser, {
+        url: 'https://funnel-editor2025.netlify.app/#/login?verified=1',
+        handleCodeInApp: false
+      });
+      lastResend = Date.now();
+      setMsg('Verification email resent. Check your inbox.');
+    } catch (e: any) {
+      setMsg('Resend failed: ' + (e.message || e.code));
+    }
+  }
+
   return (
     <div style={container}>
-      <h2>Create Account</h2>
-      <form onSubmit={handleRegister} noValidate>
-        <label style={label}>
-          Email
-          <input
-            type="email"
-            value={email}
-            onChange={e=>setEmail(e.target.value)}
-            required
-            style={input}
-            autoComplete="email"
-            placeholder="you@example.com"
-          />
-        </label>
-        <label style={label}>
-          Password
-          <input
+      <h2>Sign In</h2>
+      <form onSubmit={onSubmit} noValidate>
+        <input
+          style={input}
+          type="email"
+          placeholder="Email"
+          value={email}
+          onChange={e=>setEmail(e.target.value)}
+          required
+          autoComplete="email"
+        />
+        <input
+          style={input}
             type="password"
-            value={pwd}
-            onChange={e=>setPwd(e.target.value)}
-            required
-            minLength={6}
-            style={input}
-            autoComplete="new-password"
-            placeholder="At least 6 chars (recommend 8+)"
-          />
-        </label>
-
-        <label style={legalRow}>
-          <input
-            type="checkbox"
-            checked={accept}
-            onChange={e=>setAccept(e.target.checked)}
-            style={{marginRight:8}}
-          />
-          I agree to the
-          &nbsp;<a href="#/legal/terms" target="_blank" rel="noopener noreferrer">
-            Terms of Service (v{LEGAL_VERSIONS.tos})
-          </a>
-          &nbsp;and&nbsp;
-          <a href="#/legal/privacy" target="_blank" rel="noopener noreferrer">
-            Privacy Policy (v{LEGAL_VERSIONS.privacy})
-          </a>.
-        </label>
-
-        <button
-          type="submit"
-          disabled={loading}
-          style={button}
-        >
-          {loading ? 'Processing…' : 'Register & Send Verification Email'}
+          placeholder="Password"
+          value={pwd}
+          onChange={e=>setPwd(e.target.value)}
+          required
+          autoComplete="current-password"
+        />
+        <button style={button} disabled={loading}>
+          {loading ? 'Processing…' : 'Sign In'}
         </button>
       </form>
 
+      {pendingUnverified && (
+        <button
+          onClick={resendVerification}
+          style={{ ...button, background: '#555', marginTop: 10 }}
+        >
+          Resend Verification Email
+        </button>
+      )}
+
       {msg && (
-        <div style={{
-          marginTop:16,
-          whiteSpace:'pre-wrap',
-          color: msg.startsWith('Verification email sent') ? '#0a0' : '#c00',
-          fontSize:13
-        }}>
+        <div style={{ marginTop: 12, whiteSpace: 'pre-wrap', color: '#064', fontSize: 13 }}>
           {msg}
         </div>
       )}
 
-      <div style={{marginTop:18, fontSize:14}}>
-        Already have an account? <a href="#/login">Sign in</a>
+      <div style={{ marginTop: 20, fontSize: 14 }}>
+        No account? <a href="#/register">Create one</a>
       </div>
     </div>
   );
 }
 
-// Styles (中文注释：简单内联样式，减少外部依赖)
+// Styles (中文注释：简单内联)
 const container:React.CSSProperties = {
-  maxWidth:400, margin:'40px auto', fontFamily:'sans-serif'
-};
-const label:React.CSSProperties = {
-  display:'block', marginBottom:12, fontSize:14, fontWeight:600
+  maxWidth:360, margin:'40px auto', fontFamily:'sans-serif'
 };
 const input:React.CSSProperties = {
-  width:'100%', padding:8, marginTop:4, fontSize:14
-};
-const legalRow:React.CSSProperties = {
-  display:'flex', alignItems:'center', flexWrap:'wrap', gap:4,
-  fontSize:12, lineHeight:1.4, margin:'4px 0 16px'
+  width:'100%', padding:8, marginBottom:10, fontSize:14
 };
 const button:React.CSSProperties = {
   width:'100%', padding:10, cursor:'pointer',
