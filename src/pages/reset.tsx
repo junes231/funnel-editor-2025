@@ -4,7 +4,7 @@ import {
   verifyPasswordResetCode,
   confirmPasswordReset
 } from 'firebase/auth';
-import { evaluatePassword, PasswordStrengthResult } from '../utils/passwordStrength';
+import { evaluatePassword, PasswordStrengthResult } from '../utils/passwordStrength.ts';
 
 export default function ResetPasswordPage() {
   const auth = getAuth();
