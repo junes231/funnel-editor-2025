@@ -20,7 +20,7 @@ import { FunnelEditor } from './components/funnels/editor/FunnelEditor.tsx';
 import { QuizPlayer } from './components/funnels/QuizPlayer.tsx';
 
 // Firebase instance must be passed from main entry or import db if you export it.
-import { db } from './firebase';
+import { db } from './firebase.ts';
 
 export default function App() {
   const { user, isAdmin, loading } = useAuth();
