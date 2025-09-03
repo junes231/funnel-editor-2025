@@ -7,8 +7,6 @@ import {
   sendPasswordResetEmail,
   signOut,
 } from 'firebase/auth';
-import { evaluatePassword, PasswordStrengthResult } from '../utils/passwordStrength.ts';
-
 type Mode = 'login' | 'register' | 'forgot';
 
 // 新增：父级传下来的全局通知类型（根据你的父组件实际结构调整）
