@@ -10,7 +10,7 @@ import {
   doc,
   updateDoc
 } from 'firebase/firestore';
-import { Funnel, FunnelData, defaultFunnelData } from '../types/funnel';
+import { Funnel, FunnelData, defaultFunnelData } from '../types/funnel.ts';
 import { User } from 'firebase/auth';
 
 interface UseFunnelsOptions {
