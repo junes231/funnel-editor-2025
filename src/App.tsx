@@ -23,7 +23,7 @@ import {
   getDoc
 } from 'firebase/firestore';
 
-import Login from './components/Login.tsx';
+
 import './App.css';
 
 // --- Interface Definitions ---
