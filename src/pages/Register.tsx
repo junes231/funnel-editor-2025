@@ -1,6 +1,13 @@
 import { useState } from 'react';
 import { auth } from '../firebase.ts';
 import { createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
+
+// Legal document versions
+const LEGAL_VERSIONS = {
+  tos: '1.0',
+  privacy: '1.0'
+};
+
 // Registration page with email verification + required legal agreement
 export default function Register() {
   const [email, setEmail] = useState('');
@@ -21,7 +28,7 @@ export default function Register() {
     try {
       const cred = await createUserWithEmailAndPassword(auth, email.trim(), pwd);
       await sendEmailVerification(cred.user, {
-        url: 'https://funnel-editor2025.netlify.app/#/login?verified=1',
+        url: 'https://funnel-editor2025.netlify.app/#/verify',
         handleCodeInApp: false
       });
       setMsg(`Verification email sent to: ${email}. Please check your inbox and then sign in.`);
