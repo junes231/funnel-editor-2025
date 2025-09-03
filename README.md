@@ -16,7 +16,7 @@ This repository contains the source code for personal or licensed use only. Redi
 
 1. Clone this repository
 2. Install dependencies: `npm install`
-3. Start development server: `npm start`
+3. Start development server: `npm start` (or `npm run dev`)
 4. Deploy to GitHub Pages: `npm run deploy`
 
 ## Deployment
