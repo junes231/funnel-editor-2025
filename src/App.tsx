@@ -4,6 +4,7 @@ import PrivateRoute from './components/PrivateRoute.tsx';
 import Register from './pages/Register.tsx';
 import ResetPage from './pages/reset.tsx';
 import LoginPage from "./pages/Login.tsx";
+import VerifyPage from './pages/VerifyPage.tsx';
 import { checkPasswordStrength } from './utils/passwordStrength.ts';
 import { useNavigate, useParams, Routes, Route } from 'react-router-dom';
 import {
