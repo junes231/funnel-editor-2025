@@ -1,8 +1,6 @@
 import { useState } from 'react';
 import { auth } from '../firebase.ts';
 import { createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
-import { LEGAL_VERSIONS } from '../legal/legalConfig.ts';
-
 // Registration page with email verification + required legal agreement
 export default function Register() {
   const [email, setEmail] = useState('');
