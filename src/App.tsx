@@ -11,8 +11,8 @@ import Register from './pages/Register.tsx';
 import ResetPage from './pages/reset.tsx';
 
 // Legal
-import TermsOfService from './legal/TermsOfService';
-import PrivacyPolicy from './legal/PrivacyPolicy';
+import TermsOfService from './legal/TermsOfService.tsx';
+import PrivacyPolicy from './legal/PrivacyPolicy.tsx';
 
 // Funnel feature components
 import { FunnelDashboard } from './components/funnels/FunnelDashboard.tsx';
