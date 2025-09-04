@@ -121,7 +121,7 @@ log('sendEmailVerification resolved');
       setLoading(false);
     }
   };
-  const API_URL = "https://grant-admin-role-498506838505.us-central1.run.app";
+  const API_URL = process.env.REACT_APP_CLOUDRUN_URL!;
 
 const callCloudRunAPI = async (userId: string) => {
   try {
