@@ -1,7 +1,3 @@
-// Long press (3s) to open an on‑screen log panel (only if URL contains debug=1 by default).
-// Usage: import { installLongPressDebug } from '../utils/longPressDebug'; installLongPressDebug();
-// Then add &debug=1 to URL and long‑press屏幕3秒(不要移动)即可弹出。
-
 export interface LongPressDebugOptions {
   enable?: boolean;
   longPressMs?: number;
@@ -43,21 +39,36 @@ export function installLongPressDebug(options: LongPressDebugOptions = {}) {
       backdrop-filter:blur(4px);box-shadow:0 4px 18px rgba(0,0,0,.5);
     `;
     panel.innerHTML = `
-      <div style="flex:0 0 auto;padding:4px 8px;background:rgba(255,255,255,0.07);
-           display:flex;align-items:center;gap:8px;cursor:move;">
-        <strong style="flex:1;color:#fff;font:12px system-ui;">调试日志 (长按 3 秒可再次呼出)</strong>
-        <button id="__lp_copy" style="background:#224;color:#fff;border:1px solid #335;font:11px;padding:2px 6px;border-radius:4px;">
-          复制
-        </button>
-        <button id="__lp_clear" style="background:#333;color:#fff;border:1px solid #555;font:11px;padding:2px 6px;border-radius:4px;">
-          清空
-        </button>
-        <button id="__lp_hide" style="background:#900;color:#fff;border:1px solid #b33;font:11px;padding:2px 6px;border-radius:4px;">
-          关闭
-        </button>
-      </div>
-      <div id="__lp_log_body" style="flex:1 1 auto;overflow:auto;padding:6px 8px;word-break:break-word;"></div>
-    `;
+  <div style="
+       flex:0 0 auto;
+       padding:4px 8px;
+       background:rgba(255,255,255,0.07);
+       display:flex;
+       align-items:center;
+       gap:8px;
+       cursor:move;
+       user-select:none;
+       -webkit-user-select:none;
+  ">
+    <strong style="flex:1;color:#fff;font:12px system-ui;">调试日志 (长按 3 秒可再次呼出)</strong>
+    <button id="__lp_copy" style="background:#224;color:#fff;border:1px solid #335;font:11px;padding:2px 6px;border-radius:4px;">
+      复制
+    </button>
+    <button id="__lp_clear" style="background:#333;color:#fff;border:1px solid #555;font:11px;padding:2px 6px;border-radius:4px;">
+      清空
+    </button>
+    <button id="__lp_hide" style="background:#900;color:#fff;border:1px solid #b33;font:11px;padding:2px 6px;border-radius:4px;">
+      关闭
+    </button>
+  </div>
+  <div id="__lp_log_body" style="
+       flex:1 1 auto;
+       overflow:auto;
+       padding:6px 8px;
+       word-break:break-word;
+       white-space:pre-wrap;
+  "></div>
+`;
     document.body.appendChild(panel);
 
     const body = panel.querySelector('#__lp_log_body') as HTMLDivElement;
@@ -171,15 +182,11 @@ export function installLongPressDebug(options: LongPressDebugOptions = {}) {
     return { x: e.clientX, y: e.clientY };
   }
 
+  // 绑定全局事件
   window.addEventListener('pointerdown', start, { passive: true });
-  window.addEventListener('pointerup', cancel, { passive: true });
-  window.addEventListener('pointercancel', cancel, { passive: true });
-  window.addEventListener('pointermove', move, { passive: true });
+window.addEventListener('pointerup', cancel, { passive: true });
+window.addEventListener('pointercancel', cancel, { passive: true });
+window.addEventListener('pointermove', move, { passive: true });
 
-  window.addEventListener('touchstart', start, { passive: true });
-  window.addEventListener('touchend', cancel, { passive: true });
-  window.addEventListener('touchcancel', cancel, { passive: true });
-  window.addEventListener('touchmove', move, { passive: true });
-
-  (window as any).__showDebugPanel = () => ensurePanel();
-}
+// 手动调出面板
+(window as any).__showDebugPanel = () => ensurePanel();
