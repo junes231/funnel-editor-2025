@@ -161,16 +161,8 @@ const callCloudRunAPI = async (userId: string) => {
     setLoading(false);
   }
 };
-      setNotice('Login success. Redirecting...');
-      window.location.assign('/editor');
-    } catch (e: any) {
-      setNotice('Login failed: ' + (e?.message || 'Unknown error'));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const resendVerification = async () => {
+      
+ const resendVerification = async () => {
     if (cooldown > 0) return;
     if (!email.trim() || !pwd) {
       setNotice('Input email & password to resend verification.');
