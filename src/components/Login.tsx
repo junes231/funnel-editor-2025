@@ -121,7 +121,21 @@ log('sendEmailVerification resolved');
       setLoading(false);
     }
   };
+  const API_URL = "https://grant-admin-role-498506838505.us-central1.run.app";
 
+const callCloudRunAPI = async (userId: string) => {
+  try {
+    const res = await fetch(`${API_URL}/api/grant-role`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId }),
+    });
+    const data = await res.json();
+    console.log("Cloud Run response:", data);
+  } catch (err) {
+    console.error("Cloud Run call failed:", err);
+  }
+};
   const handleLogin = async () => {
     setNotice('');
     if (!email.trim() || !pwd) {
@@ -136,6 +150,17 @@ log('sendEmailVerification resolved');
         await signOut(auth);
         return;
       }
+      callCloudRunAPI(cred.user.uid); // <-- 新增函数调用
+
+    setNotice('Login success. Redirecting...');
+    window.location.assign('/editor');
+
+  } catch (e: any) {
+    setNotice('Login failed: ' + (e?.message || 'Unknown error'));
+  } finally {
+    setLoading(false);
+  }
+};
       setNotice('Login success. Redirecting...');
       window.location.assign('/editor');
     } catch (e: any) {
