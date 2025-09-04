@@ -4,12 +4,12 @@
   "description": "Marketing Funnel Editor with React + TypeScript",
   "private": true,
   "homepage": ".",
-  "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "predeploy": "npm run build",
-    "deploy": "gh-pages -d build"
-  },
+ "scripts": {
+  "start": "node server.js",         // Cloud Run 后端启动
+  "build": "react-scripts build",   // 构建 React 静态文件
+  "predeploy": "npm run build",     // 保留 gh-pages 部署前端
+  "deploy": "gh-pages -d build"     // 保留 gh-pages 部署前端
+}
   "dependencies": {
     "react": "^18.0.0",
     "react-dom": "^18.0.0",
