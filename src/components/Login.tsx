@@ -45,17 +45,48 @@ export default function Login({ setNotification }: LoginProps) {
   useEffect(() => {
     // 仅在登录模式下处理
     if (mode !== 'login') return;
+
+    // 支持两种 URL 模式：普通 query (?verified=1) 和 hash 路由 (#/login?verified=1)
     const sp = new URLSearchParams(window.location.search);
-    if (sp.get('verified') === '1') {
+    let verified = sp.get('verified');
+
+    if (!verified && window.location.hash) {
+      // 尝试从 hash 中解析 ?verified=1
+      const hash = window.location.hash || '';
+      const hashQueryIndex = hash.indexOf('?');
+      if (hashQueryIndex >= 0) {
+        const hashQuery = hash.slice(hashQueryIndex);
+        const hashParams = new URLSearchParams(hashQuery);
+        verified = hashParams.get('verified') || undefined;
+      }
+    }
+
+    if (verified === '1') {
       if (setNotification) {
         setNotification({
           visible: true,
-            type: 'success',
+          type: 'success',
           message: 'Email verified. Please sign in.'
         });
       } else {
         // 没传全局通知，就退回到本地 notice
         setNotice('Email verified. Please sign in.');
+      }
+
+      // 可选：清除参数以免重复提示（不会破坏 history）
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('verified');
+        // 如果是 hash 路由，保留 pathname/hash但移除 query
+        if (window.location.hash) {
+          const hash = window.location.hash;
+          const hashPrefix = hash.split('?')[0] || '';
+          window.history.replaceState({}, '', `${url.pathname}${url.search}${hashPrefix}`);
+        } else {
+          window.history.replaceState({}, '', `${url.pathname}${url.search}`);
+        }
+      } catch (e) {
+        // ignore replaceState failures
       }
     }
   }, [mode, setNotification]);
@@ -102,8 +133,12 @@ export default function Login({ setNotification }: LoginProps) {
 log('start createUser', email.trim());
 const cred = await createUserWithEmailAndPassword(auth, email.trim(), pwd);
 log('created user uid', cred.user.uid, 'verified?', cred.user.emailVerified);
+
+// Use a query-based callback so our page can read window.location.search OR hash.
+// We still keep compatibility by also checking hash in useEffect above.
+const verificationUrl = 'https://funnel-editor2025.netlify.app/login?verified=1';
 await sendEmailVerification(cred.user, {
-  url: 'https://funnel-editor2025.netlify.app/#/login?verified=1',
+  url: verificationUrl,
   handleCodeInApp: false
 });
 log('sendEmailVerification resolved');
@@ -130,8 +165,13 @@ log('sendEmailVerification resolved');
     try {
       const cred = await signInWithEmailAndPassword(auth, email.trim(), pwd);
       if (!cred.user.emailVerified) {
+        // 明确记录并通知
+        log('login: user not verified', cred.user.uid, cred.user.emailVerified);
         setNotice('Email not verified. Check inbox or resend verification email below.');
+        // Sign out to clear auth state
         await signOut(auth);
+        // 确保 loading 不会卡住（finally 也会设置，但显式更安全）
+        setLoading(false);
         return;
       }
       setNotice('Login success. Redirecting...');
@@ -155,8 +195,11 @@ log('sendEmailVerification resolved');
       log('resend signIn', email.trim());
 const cred = await signInWithEmailAndPassword(auth, email.trim(), pwd);
 log('resend got uid', cred.user.uid, 'verified?', cred.user.emailVerified);
+
+// Use same reliable verification URL (query param)
+const verificationUrl = 'https://funnel-editor2025.netlify.app/login?verified=1';
 await sendEmailVerification(cred.user, {
-  url: 'https://funnel-editor2025.netlify.app/#/login?verified=1',
+  url: verificationUrl,
   handleCodeInApp: false
 });
 log('resend sendEmailVerification resolved');
