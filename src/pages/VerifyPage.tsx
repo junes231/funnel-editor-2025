@@ -45,46 +45,47 @@ export default function VerifyPage(): JSX.Element {
     (async () => {
       try {
         // 调用 applyActionCode 让 Firebase 后端标记该邮箱为 verified
-        await applyActionCode(auth, oobCode);
-        console.log("[VERIFY-DEBUG] applyActionCode resolved");
-        console.log("[VERIFY-DEBUG] after applyActionCode currentUser", auth.currentUser?.uid, auth.currentUser?.emailVerified);
+        console.log("[VERIFY-DEBUG] applyActionCode start", oobCode);
+  await applyActionCode(auth, oobCode);
+  console.log("[VERIFY-DEBUG] applyActionCode resolved");
 
-       if (auth.currentUser) {
-       try {
-       await auth.currentUser.reload();
-       console.log("[VERIFY-DEBUG] after reload currentUser", auth.currentUser?.uid, auth.currentUser?.emailVerified);
-       } catch (reloadErr) {
-       console.warn("auth.currentUser.reload() failed:", reloadErr);
-     }
-   }
+  if (auth.currentUser) {
+    try {
+      await auth.currentUser.reload();
+      console.log("[VERIFY-DEBUG] currentUser after reload", auth.currentUser.uid, auth.currentUser.emailVerified);
+    } catch (reloadErr) {
+      console.warn("auth.currentUser.reload() failed:", reloadErr);
+    }
+  }
 
-        // 有时后端状态传播与客户端缓存存在短延迟，尝试短轮询确认 emailVerified 为 true
-        const maxAttempts = 6;
-        let verified = false;
-        for (let i = 0; i < maxAttempts; i++) {
-          const u = auth.currentUser;
-          if (u && u.emailVerified) {
-            verified = true;
-            break;
-          }
-          // 若没有登录用户，可能需要等待客户端刷新或用户重新登录后才能看到标记
-          await new Promise((r) => setTimeout(r, 350));
-          try {
-            await u?.reload();
-          } catch {
-            // 忽略 reload 错误
-          }
-        }
+  const maxAttempts = 6;
+  let verified = false;
+  for (let i = 0; i < maxAttempts; i++) {
+    const u = auth.currentUser;
+    console.log("[VERIFY-DEBUG] polling attempt", i, u?.uid, u?.emailVerified); // ✅ 轮询时也打印
+    if (u && u.emailVerified) {
+      verified = true;
+      break;
+    }
+    await new Promise((r) => setTimeout(r, 350));
+    try {
+      await u?.reload();
+    } catch {}
+  }
 
-        setStatus("success");
-        setMessage(verified ? "Your email has been verified successfully." : "Verification processed. Please sign in; if you still see an unverified message, wait a moment and try again.");
+  setStatus("success");
+  setMessage(
+    verified
+      ? "Your email has been verified successfully."
+      : "Verification processed. Please sign in; if you still see an unverified message, wait a moment and try again."
+  );
 
-        // 给用户一点时间阅读消息后跳转到 login，并带上 verified=1 以便 login 页面显示提示
-        setTimeout(() => {
-  window.location.href = "/login?verified=1";
-}, 800);
-      } catch (err: any) {
-        const code = err?.code || err?.message || "unknown";
+    setTimeout(() => {
+    window.location.href = REDIRECT_TO;
+   }, REDIRECT_DELAY_MS);
+} catch (err: any) {
+  console.log("[VERIFY-DEBUG] applyActionCode failed", err); // ✅ 失败时打印
+  const code = err?.code || err?.message || "unknown";
         setErrorCode(code);
 
         let friendly = "An error occurred while verifying your email.";
