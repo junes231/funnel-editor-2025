@@ -18,11 +18,13 @@ export default function Register() {
     }
     setLoading(true);
     setMsg('');
-    try {
+      try {
       const cred = await createUserWithEmailAndPassword(auth, email.trim(), pwd);
+
+      // ✅ 保持登录，使用 handleCodeInApp: true
       await sendEmailVerification(cred.user, {
-        url: 'https://funnel-editor2025.netlify.app/#/login?verified=1',
-        handleCodeInApp: false
+        url: 'https://funnel-editor2025.netlify.app/#/verify?mode=verifyEmail',
+        handleCodeInApp: true
       });
       setMsg(`Verification email sent to: ${email}. Please check your inbox and then sign in.`);
     } catch (e: any) {
