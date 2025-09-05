@@ -105,8 +105,9 @@ const navigate = useNavigate();
 log('start createUser', email.trim());
 const cred = await createUserWithEmailAndPassword(auth, email.trim(), pwd);
 log('created user uid', cred.user.uid, 'verified?', cred.user.emailVerified);
+const continueUrl = `${window.location.origin}/#/finish-email-verification`;
 await sendEmailVerification(cred.user, {
-  url: 'https://funnel-editor2025.netlify.app/#/login?verified=1',
+  url: continueUrl,
   handleCodeInApp: false
 });
 log('sendEmailVerification resolved');
@@ -177,8 +178,9 @@ const callCloudRunAPI = async (userId: string) => {
       log('resend signIn', email.trim());
 const cred = await signInWithEmailAndPassword(auth, email.trim(), pwd);
 log('resend got uid', cred.user.uid, 'verified?', cred.user.emailVerified);
+const continueUrl = `${window.location.origin}/#/finish-email-verification`;
 await sendEmailVerification(cred.user, {
-  url: 'https://funnel-editor2025.netlify.app/#/login?verified=1',
+  url: continueUrl,
   handleCodeInApp: false
 });
 log('resend sendEmailVerification resolved');
