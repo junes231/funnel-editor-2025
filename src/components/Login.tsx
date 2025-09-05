@@ -145,6 +145,7 @@ const callCloudRunAPI = async (userId: string) => {
     setLoading(true);
     try {
       const cred = await signInWithEmailAndPassword(auth, email.trim(), pwd);
+      await cred.user.reload();
       if (!cred.user.emailVerified) {
         setNotice('Email not verified. Check inbox or resend verification email below.');
         await signOut(auth);
