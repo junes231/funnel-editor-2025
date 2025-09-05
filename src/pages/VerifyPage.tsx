@@ -46,7 +46,8 @@ export default function VerifyPage(): JSX.Element {
       try {
         // 调用 applyActionCode 让 Firebase 后端标记该邮箱为 verified
         await applyActionCode(auth, oobCode);
-
+        console.log("[VERIFY-DEBUG] applyActionCode resolved");
+        console.log("[VERIFY-DEBUG] currentUser", auth.currentUser?.uid, auth.currentUser?.emailVerified);
         // 如果当前有已登录用户，reload 以便客户端看到最新的 emailVerified
         // 如果用户是在另一个设备/会话完成验证，用户在此设备需要重新登录或 reload
         if (auth.currentUser) {
