@@ -49,19 +49,7 @@ export default function VerifyPage(): JSX.Element {
   await applyActionCode(auth, oobCode);
   console.log("[VERIFY-DEBUG] applyActionCode resolved");
 
-  if (auth.currentUser) {
-    try {
-      await auth.currentUser.reload();
-      console.log("[VERIFY-DEBUG] currentUser after reload", auth.currentUser.uid, auth.currentUser.emailVerified);
-    } catch (reloadErr) {
-      console.warn("auth.currentUser.reload() failed:", reloadErr);
-    }
-  }
-
-  
-
-  // 修改后的 message 明确要求重新登录
-setStatus("success");
+   // 修改后的 message 明确要求重新setStatus("success");
 setMessage("Your email has been verified successfully. Please sign in again.");
 
 // 跳转到登录页面，但不要附加 verified=1
