@@ -58,31 +58,16 @@ export default function VerifyPage(): JSX.Element {
     }
   }
 
-  const maxAttempts = 6;
-  let verified = false;
-  for (let i = 0; i < maxAttempts; i++) {
-    const u = auth.currentUser;
-    console.log("[VERIFY-DEBUG] polling attempt", i, u?.uid, u?.emailVerified); // ✅ 轮询时也打印
-    if (u && u.emailVerified) {
-      verified = true;
-      break;
-    }
-    await new Promise((r) => setTimeout(r, 350));
-    try {
-      await u?.reload();
-    } catch {}
-  }
+  
 
-  setStatus("success");
-  setMessage(
-    verified
-      ? "Your email has been verified successfully."
-      : "Verification processed. Please sign in; if you still see an unverified message, wait a moment and try again."
-  );
+  // 修改后的 message 明确要求重新登录
+setStatus("success");
+setMessage("Your email has been verified successfully. Please sign in again.");
 
-    setTimeout(() => {
-    window.location.href = REDIRECT_TO;
-   }, REDIRECT_DELAY_MS);
+// 跳转到登录页面，但不要附加 verified=1
+setTimeout(() => {
+  window.location.href = "/login";  // 这里不再带 ?verified=1
+}, REDIRECT_DELAY_MS);
 } catch (err: any) {
   console.log("[VERIFY-DEBUG] applyActionCode failed", err); // ✅ 失败时打印
   const code = err?.code || err?.message || "unknown";
