@@ -69,6 +69,23 @@ export default function Register() {
             placeholder="At least 8 characters"
           />
         </label>
+        <button
+  type="submit"
+  style={{
+    width: "100%",
+    padding: "12px",
+    marginTop: "18px",
+    fontSize: "16px",
+    background: "#007bff",
+    color: "#fff",
+    border: "none",
+    borderRadius: "6px",
+    cursor: "pointer",
+    fontWeight: "bold"
+  }}
+>
+  Create Account
+</button>
         {/* 明显的注册按钮，支持鼠标点击和回车提交 */}
         <button
           type="submit"
