@@ -7,7 +7,7 @@ import './index.css';
 // 只需导入一次，内部已经防重复
 import { db, auth } from './firebase.ts';
 import { installLongPressDebug } from './utils/longPressDebug.ts';
-
+(window as any).auth = auth;
 
 // 初始化长按调试
 installLongPressDebug({
