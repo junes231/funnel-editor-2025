@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, ChangeEvent } from 'react';
 import { getAuth, onAuthStateChanged, User, signOut } from 'firebase/auth';
 import PrivateRoute from './components/PrivateRoute.tsx';
-import Register from './pages/Register.tsx';
-import VerifyInfo from "./pages/VerifyInfo.tsx";
 import ResetPage from './pages/reset.tsx';
 import LoginPage from "./pages/Login.tsx";
 import VerifyPage from './pages/VerifyPage.tsx';
@@ -184,9 +182,7 @@ const showNotification = (message: string, type: 'success' | 'error' = 'success'
       <Routes>
         {/* 公开路由 */}
         <Route path="/play/:funnelId" element={<QuizPlayer db={db} />} />
-        <Route path="/register" element={<Register/>}/>
-         <Route path="/verify-info" element={<VerifyInfo />} />
-        <Route path="/login" element={<LoginPage />} />
+       <Route path="/login" element={<LoginPage />} />
        <Route path="/verify" element={<VerifyPage />} />
        <Route path="/finish-email-verification" element={<FinishEmailVerification />} />
         {/* 需要登录的路由 */}
@@ -194,7 +190,7 @@ const showNotification = (message: string, type: 'success' | 'error' = 'success'
           path="/"
           element={
             !user
-              ? <Login />
+              ? <LoginPage />
               : <>
                   <div style={{ marginBottom: 20, paddingBottom: 20, borderBottom: '1px solid #ccc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span>
@@ -219,7 +215,7 @@ const showNotification = (message: string, type: 'success' | 'error' = 'success'
           path="/edit/:funnelId"
           element={
             !user
-              ? <Login />
+              ? <LoginPage />
               : <>
                   <div style={{ marginBottom: 20, paddingBottom: 20, borderBottom: '1px solid #ccc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span>
