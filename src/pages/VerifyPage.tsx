@@ -47,17 +47,16 @@ export default function VerifyPage(): JSX.Element {
         // 调用 applyActionCode 让 Firebase 后端标记该邮箱为 verified
         await applyActionCode(auth, oobCode);
         console.log("[VERIFY-DEBUG] applyActionCode resolved");
-        console.log("[VERIFY-DEBUG] currentUser", auth.currentUser?.uid, auth.currentUser?.emailVerified);
-        // 如果当前有已登录用户，reload 以便客户端看到最新的 emailVerified
-        // 如果用户是在另一个设备/会话完成验证，用户在此设备需要重新登录或 reload
-        if (auth.currentUser) {
-          try {
-            await auth.currentUser.reload();
-          } catch (reloadErr) {
-            // reload 失败也不要阻塞成功逻辑，只做记录
-            console.warn("auth.currentUser.reload() failed:", reloadErr);
-          }
-        }
+        console.log("[VERIFY-DEBUG] after applyActionCode currentUser", auth.currentUser?.uid, auth.currentUser?.emailVerified);
+
+       if (auth.currentUser) {
+       try {
+       await auth.currentUser.reload();
+       console.log("[VERIFY-DEBUG] after reload currentUser", auth.currentUser?.uid, auth.currentUser?.emailVerified);
+       } catch (reloadErr) {
+       console.warn("auth.currentUser.reload() failed:", reloadErr);
+     }
+   }
 
         // 有时后端状态传播与客户端缓存存在短延迟，尝试短轮询确认 emailVerified 为 true
         const maxAttempts = 6;
