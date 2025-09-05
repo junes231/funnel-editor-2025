@@ -81,8 +81,8 @@ export default function VerifyPage(): JSX.Element {
 
         // 给用户一点时间阅读消息后跳转到 login，并带上 verified=1 以便 login 页面显示提示
         setTimeout(() => {
-          window.location.href = REDIRECT_TO;
-        }, REDIRECT_DELAY_MS);
+  window.location.href = "/login?verified=1";
+}, 800);
       } catch (err: any) {
         const code = err?.code || err?.message || "unknown";
         setErrorCode(code);
