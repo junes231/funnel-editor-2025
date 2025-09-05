@@ -187,6 +187,7 @@ const showNotification = (message: string, type: 'success' | 'error' = 'success'
          <Route path="/verify-info" element={<VerifyInfo />} />
         <Route path="/login" element={<LoginPage />} />
        <Route path="/verify" element={<VerifyPage />} />
+       <Route path="/finish-email-verification" element={<FinishEmailVerification />} />
         {/* 需要登录的路由 */}
         <Route
           path="/"
