@@ -19,16 +19,14 @@ export default function Register() {
     setLoading(true);
     try {
       // 注册账号
-      const cred = await createUserWithEmailAndPassword(auth, email.trim(), pwd);
-      // 发送邮箱验证邮件
       await sendEmailVerification(cred.user, {
-        url: "https://funnel-editor2025.netlify.app/#/verify?mode=verifyEmail",
-        handleCodeInApp: true
-      });
-      setMsg("Verification email sent. Please check your inbox.");
-      // 跳转到邮箱验证说明页面
-      setTimeout(() => {
-        window.location.replace("/verify-info");
+  url: 'https://funnel-editor2025.netlify.app/#/finish-email-verification?oobCode=XXXX',
+  handleCodeInApp: false
+});
+localStorage.setItem("pendingEmail", email.trim());
+localStorage.setItem("pendingPwd", pwd);
+// 跳转到邮箱验证说明页面
+switchMode('verify-info');
       }, 2000);
     } catch (e: any) {
       // 错误处理
