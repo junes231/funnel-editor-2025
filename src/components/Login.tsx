@@ -248,8 +248,22 @@ log('resend sendEmailVerification resolved');
       boxShadow: '0 4px 16px rgba(0,0,0,0.05)',
       background: '#fff'
     }}>
-      
-    <h2 style={{ marginTop: 0, fontSize: 24, letterSpacing: 0.5 }}>
+      {notice && (
+        <div style={{
+          marginBottom: 16,
+          color: '#fff',
+          background: '#222',
+          padding: 12,
+          borderRadius: 6,
+          fontSize: 14,
+          lineHeight: 1.5,
+          textAlign: 'left'
+        }}>
+          {notice}
+        </div>
+      )}
+
+      <h2 style={{ marginTop: 0, fontSize: 24, letterSpacing: 0.5 }}>
         {mode === 'login' && 'Sign In (Verified Email Required)'}
         {mode === 'register' && 'Create Account'}
         {mode === 'forgot' && 'Reset Password'}
@@ -307,7 +321,52 @@ log('resend sendEmailVerification resolved');
               >
                 {loading ? 'Signing in...' : 'Sign In'}
               </button>
-              
+              <button
+                onClick={resendVerification}
+                disabled={loading || cooldown > 0}
+                style={secondaryBtn(loading || cooldown > 0)}
+                type="button"
+              >
+                {cooldown > 0 ? `Resend Verification (${cooldown}s)` : 'Resend Verification Email'}
+              </button>
+              <div style={linkRow}>
+                <span
+                  onClick={() => switchMode('forgot')}
+                  style={linkStyle}
+                >
+                  Forgot password?
+                </span>
+              </div>
+              <div style={switchText}>
+                No account? <span onClick={() => switchMode('register')} style={linkStyle}>Create one</span>
+              </div>
+            </>
+          )}
+
+          {mode === 'register' && (
+            <>
+              <button
+                onClick={handleRegister}
+                disabled={loading}
+                style={primaryBtn(loading)}
+              >
+                {loading ? 'Creating...' : 'Create & Send Verification'}
+              </button>
+              <div style={switchText}>
+                Have an account? <span onClick={() => switchMode('login')} style={linkStyle}>Sign in</span>
+              </div>
+            </>
+          )}
+
+          {mode === 'forgot' && (
+            <>
+              <button
+                onClick={handleForgot}
+                disabled={loading}
+                style={primaryBtn(loading)}
+              >
+                {loading ? 'Sending...' : 'Send Reset Email'}
+              </button>
               <div style={switchText}>
                 Remembered? <span onClick={() => switchMode('login')} style={linkStyle}>Back to Sign in</span>
               </div>
