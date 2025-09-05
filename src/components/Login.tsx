@@ -149,11 +149,10 @@ const callCloudRunAPI = async (userId: string) => {
       await cred.user.reload();
      console.log("[LOGIN-DEBUG after reload]", cred.user.uid, cred.user.emailVerified);
       if (!cred.user.emailVerified) {
-        setNotice('Email not verified. Check inbox or resend verification email below.');
-        await signOut(auth);
-       navigate('/verify-info');
-        return;
-      }
+        setNotice('Email not verified. Please check your inbox for the verification link, or use the "Resend Verification" button.');
+      await signOut(auth); // 保持登出状态
+      return; // 阻止后续代码执行
+    }
       callCloudRunAPI(cred.user.uid); // <-- 新增函数调用
 
     setNotice('Login success. Redirecting...');
