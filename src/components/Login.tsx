@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom'; 
 import React, { useEffect, useState, useRef } from 'react';
 import {
   getAuth,
@@ -23,7 +24,7 @@ interface LoginProps {
 
 export default function Login({ setNotification }: LoginProps) {
   const auth = getAuth();
-
+const navigate = useNavigate();
   const [mode, setMode] = useState<Mode>('login');
   const [email, setEmail] = useState('');
   const [pwd, setPwd] = useState('');
@@ -150,6 +151,7 @@ const callCloudRunAPI = async (userId: string) => {
       if (!cred.user.emailVerified) {
         setNotice('Email not verified. Check inbox or resend verification email below.');
         await signOut(auth);
+       navigate('/verify-info');
         return;
       }
       callCloudRunAPI(cred.user.uid); // <-- 新增函数调用
