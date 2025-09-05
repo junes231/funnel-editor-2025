@@ -19,26 +19,28 @@ export default function Register() {
     setLoading(true);
     try {
       // 注册账号
-      await sendEmailVerification(cred.user, {
-  url: 'https://funnel-editor2025.netlify.app/#/finish-email-verification?oobCode=XXXX',
-  handleCodeInApp: false
-});
-localStorage.setItem("pendingEmail", email.trim());
-localStorage.setItem("pendingPwd", pwd);
-// 跳转到邮箱验证说明页面
-switchMode('verify-info');
-      }, 2000);
-    } catch (e: any) {
-      // 错误处理
-      let text = e.message || "Registration failed.";
-      if (e.code === "auth/email-already-in-use") text = "This email is already registered.";
-      if (e.code === "auth/weak-password") text = "Password is too weak.";
-      if (e.code === "auth/invalid-email") text = "Invalid email format.";
-      setMsg(text);
-    } finally {
-      setLoading(false);
-    }
+      const cred = await createUserWithEmailAndPassword(auth, email.trim(), pwd);
+    await sendEmailVerification(cred.user, {
+      url: 'https://funnel-editor2025.netlify.app/#/finish-email-verification?oobCode=XXXX',
+      handleCodeInApp: false
+    });
+    localStorage.setItem("pendingEmail", email.trim());
+    localStorage.setItem("pendingPwd", pwd);
+    // 跳转到邮箱验证说明页面（延迟1秒视觉更友好）
+    setTimeout(() => {
+      switchMode('verify-info');
+    }, 1000);
+  } catch (e: any) {
+    // 错误处理
+    let text = e.message || "Registration failed.";
+    if (e.code === "auth/email-already-in-use") text = "This email is already registered.";
+    if (e.code === "auth/weak-password") text = "Password is too weak.";
+    if (e.code === "auth/invalid-email") text = "Invalid email format.";
+    setMsg(text);
+  } finally {
+    setLoading(false);
   }
+}
 
   return (
     <div style={container}>
