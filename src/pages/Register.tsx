@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { auth } from '../firebase.ts';
 import { createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
-// Registration page with email verification + required legal agreement
+
 export default function Register() {
   const [email, setEmail] = useState('');
   const [pwd, setPwd] = useState('');
   const [msg, setMsg] = useState('');
   const [loading, setLoading] = useState(false);
-  const [accept, setAccept] = useState(false); // must accept legal
+  const [accept, setAccept] = useState(false); // 必须同意协议
 
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault();
@@ -18,15 +18,18 @@ export default function Register() {
     }
     setLoading(true);
     setMsg('');
-      try {
+    try {
       const cred = await createUserWithEmailAndPassword(auth, email.trim(), pwd);
-
-      // ✅ 保持登录，使用 handleCodeInApp: true
+      // 发送邮箱验证邮件
       await sendEmailVerification(cred.user, {
         url: 'https://funnel-editor2025.netlify.app/#/verify?mode=verifyEmail',
         handleCodeInApp: true
       });
-      setMsg(`Verification email sent to: ${email}. Please check your inbox and then sign in.`);
+      setMsg(`Verification email sent to: ${email}. Please check your inbox.`);
+      // 注册成功后跳转到邮箱验证说明页面
+      setTimeout(() => {
+        window.location.replace('/verify-info');
+      }, 2000);
     } catch (e: any) {
       let text = e.message || 'Registration failed.';
       if (e.code === 'auth/email-already-in-use') text = 'This email is already registered. Please sign in.';
@@ -68,7 +71,6 @@ export default function Register() {
             placeholder="At least 6 chars (recommend 8+)"
           />
         </label>
-
         <label style={legalRow}>
           <input
             type="checkbox"
@@ -78,14 +80,13 @@ export default function Register() {
           />
           I agree to the
           &nbsp;<a href="#/legal/terms" target="_blank" rel="noopener noreferrer">
-            Terms of Service (v{LEGAL_VERSIONS.tos})
+            Terms of Service
           </a>
           &nbsp;and&nbsp;
           <a href="#/legal/privacy" target="_blank" rel="noopener noreferrer">
-            Privacy Policy (v{LEGAL_VERSIONS.privacy})
+            Privacy Policy
           </a>.
         </label>
-
         <button
           type="submit"
           disabled={loading}
@@ -94,7 +95,6 @@ export default function Register() {
           {loading ? 'Processing…' : 'Register & Send Verification Email'}
         </button>
       </form>
-
       {msg && (
         <div style={{
           marginTop:16,
@@ -105,7 +105,6 @@ export default function Register() {
           {msg}
         </div>
       )}
-
       <div style={{marginTop:18, fontSize:14}}>
         Already have an account? <a href="#/login">Sign in</a>
       </div>
@@ -113,7 +112,7 @@ export default function Register() {
   );
 }
 
-// Styles (中文注释：简单内联样式，减少外部依赖)
+// 样式（中文注释：简单内联样式，减少外部依赖）
 const container:React.CSSProperties = {
   maxWidth:400, margin:'40px auto', fontFamily:'sans-serif'
 };
