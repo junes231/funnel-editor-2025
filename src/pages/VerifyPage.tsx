@@ -1,38 +1,23 @@
 import React, { useEffect, useState } from "react";
 import { getAuth, applyActionCode } from "firebase/auth";
-import "../styles/VerifyPage.css";
 
-type Status = "loading" | "success" | "error";
-
-function extractParamsFromHash(): URLSearchParams | null {
-  // 处理 single-page app 使用 hash 路由的情况，例如 continueUrl 包含 #/login?verified=1
-  const hash = window.location.hash || "";
-  const idx = hash.indexOf("?");
-  if (idx === -1) return null;
-  return new URLSearchParams(hash.substring(idx));
-}
-
+/**
+ * 邮箱验证结果页面
+ */
 export default function VerifyPage(): JSX.Element {
-  const [status, setStatus] = useState<Status>("loading");
+  const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
   const [message, setMessage] = useState<string>("Verifying your email...");
   const [errorCode, setErrorCode] = useState<string | null>(null);
 
-  const REDIRECT_DELAY_MS = 800; // 给后端/客户端短时间传播状态
-  const REDIRECT_TO = "/login?verified=1";
+  // 验证成功后自动跳转登录页
+  const REDIRECT_DELAY_MS = 2000;
+  const REDIRECT_TO = "/login";
 
   useEffect(() => {
-    // 优先从 location.search 读取；若为空则尝试从 hash 中读取（兼容 hash router）
+    // 解析邮箱验证链接参数
     const searchParams = new URLSearchParams(window.location.search);
     let oobCode = searchParams.get("oobCode");
     let mode = searchParams.get("mode");
-
-    if (!oobCode) {
-      const hashParams = extractParamsFromHash();
-      if (hashParams) {
-        oobCode = hashParams.get("oobCode") || oobCode;
-        mode = hashParams.get("mode") || mode;
-      }
-    }
 
     if (!oobCode || mode !== "verifyEmail") {
       setStatus("error");
@@ -44,34 +29,18 @@ export default function VerifyPage(): JSX.Element {
 
     (async () => {
       try {
-        // 调用 applyActionCode 让 Firebase 后端标记该邮箱为 verified
-        console.log("[VERIFY-DEBUG] applyActionCode start", oobCode);
-  await applyActionCode(auth, oobCode);
-  console.log("[VERIFY-DEBUG] applyActionCode resolved");
-
-   // 修改后的 message 明确要求重新setStatus("success");
-setMessage("Your email has been verified successfully. Please sign in again.");
-
-// 跳转到登录页面，但不要附加 verified=1
-setTimeout(() => {
-  window.location.href = "/login";  // 这里不再带 ?verified=1
-}, REDIRECT_DELAY_MS);
-} catch (err: any) {
-  console.log("[VERIFY-DEBUG] applyActionCode failed", err); // ✅ 失败时打印
-  const code = err?.code || err?.message || "unknown";
+        // 验证邮箱
+        await applyActionCode(auth, oobCode);
+        setMessage("Your email has been verified! You can now log in.");
+        setStatus("success");
+        // 2秒后跳转到登录页
+        setTimeout(() => {
+          window.location.href = REDIRECT_TO;
+        }, REDIRECT_DELAY_MS);
+      } catch (err: any) {
+        const code = err?.code || err?.message || "unknown";
         setErrorCode(code);
-
         let friendly = "An error occurred while verifying your email.";
-        if (code === "auth/invalid-action-code" || code === "auth/invalid-oob-code") {
-          friendly = "This verification link is invalid or has already been used.";
-        } else if (code === "auth/expired-action-code" || code === "auth/code-expired") {
-          friendly = "This verification link has expired.";
-        } else if (code === "auth/user-disabled") {
-          friendly = "The user account has been disabled.";
-        } else if (code === "auth/user-not-found") {
-          friendly = "No user record found for this verification link.";
-        }
-
         setStatus("error");
         setMessage(friendly);
       }
@@ -82,46 +51,58 @@ setTimeout(() => {
     window.location.href = "/login";
   };
 
-  const handleRetry = () => {
-    window.location.reload();
-  };
-
   return (
-    <div className="verify-page">
-      <div className="verify-card" role="main" aria-live="polite">
+    <div style={container}>
+      <div style={card}>
         {status === "loading" && (
           <>
-            <div className="spinner" aria-hidden="true" />
-            <h2 className="title">Verifying...</h2>
-            <p className="subtitle">{message}</p>
+            <h2>Verifying...</h2>
+            <p>{message}</p>
           </>
         )}
-
         {status === "success" && (
           <>
-            <div className="icon success" aria-hidden="true">✓</div>
-            <h2 className="title">Verified</h2>
-            <p className="subtitle">{message}</p>
-            <div className="actions">
-              <button className="btn primary" onClick={handleGoLogin}>Go to Login</button>
-            </div>
-            <p className="tiny">Redirecting to login shortly…</p>
+            <h2>Email Verified</h2>
+            <p>{message}</p>
+            <button style={button} onClick={handleGoLogin}>Go to Login</button>
+            <p style={{fontSize:12, color:"#888"}}>Redirecting in a moment…</p>
           </>
         )}
-
         {status === "error" && (
           <>
-            <div className="icon error" aria-hidden="true">✕</div>
-            <h2 className="title">Verification Failed</h2>
-            <p className="subtitle">{message}</p>
-            {errorCode && <pre className="error-code">{errorCode}</pre>}
-            <div className="actions">
-              <button className="btn secondary" onClick={handleRetry}>Try Again</button>
-              <button className="btn primary" onClick={handleGoLogin}>Go to Login</button>
-            </div>
+            <h2>Verification Failed</h2>
+            <p>{message}</p>
+            {errorCode && <pre style={{color:"#c00"}}>{errorCode}</pre>}
+            <button style={button} onClick={handleGoLogin}>Go to Login</button>
           </>
         )}
       </div>
     </div>
   );
 }
+
+// 简单样式
+const container: React.CSSProperties = {
+  maxWidth: 400,
+  margin: "60px auto",
+  padding: "36px",
+  textAlign: "center",
+  fontFamily: "sans-serif"
+};
+const card: React.CSSProperties = {
+  background: "#fff",
+  border: "1px solid #eee",
+  borderRadius: 10,
+  padding: "30px",
+  boxShadow: "0 2px 12px rgba(0,0,0,0.04)"
+};
+const button: React.CSSProperties = {
+  marginTop: 18,
+  padding: "10px 24px",
+  fontSize: 16,
+  background: "#0069d9",
+  color: "#fff",
+  border: "none",
+  borderRadius: 6,
+  cursor: "pointer"
+};
