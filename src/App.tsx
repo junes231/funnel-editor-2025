@@ -101,31 +101,37 @@ const showNotification = (message: string, type: 'success' | 'error' = 'success'
 };
   // useEffect for Authentication and Role checking
   useEffect(() => {
-  const auth = getAuth();
-  const currentUser = auth.currentUser;
-  
-  // 只有当有用户时才设置loading
-  if (currentUser) {
-    setIsLoading(true);
-  }
-  
-  const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-    if (currentUser) {
-      try {
-        setUser(currentUser);
-        const idTokenResult = await currentUser.getIdTokenResult(true);
-        setIsAdmin(idTokenResult.claims.role === 'admin');
-      } catch (error) {
-        console.error('Error checking admin status:', error);
+   const auth = getAuth();
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      // 只有当用户存在且邮箱已验证时，我们才认为他是有效登录用户
+      if (currentUser && currentUser.emailVerified) {
+        try {
+          // 为确保状态最新，重新加载用户信息
+          await currentUser.reload();
+          // 再次检查，防止在 reload 期间状态发生变化
+          if (currentUser.emailVerified) {
+            setUser(currentUser);
+            const idTokenResult = await currentUser.getIdTokenResult(true);
+            setIsAdmin(idTokenResult.claims.role === 'admin');
+          } else {
+            // 如果 reload 后发现邮箱未验证，则视为未登录
+            setUser(null);
+            setIsAdmin(false);
+          }
+        } catch (error) {
+          console.error('Error reloading user:', error);
+          setUser(null);
+          setIsAdmin(false);
+        }
+      } else {
+        // 对于所有其他情况（用户不存在，或邮箱未验证），都视为未登录
+        setUser(null);
+        setIsAdmin(false);
       }
-    } else {
-      setUser(null);
-      setIsAdmin(false);
-    }
-    setIsLoading(false);
-  });
-  return () => unsubscribe();
-}, []);
+      setIsLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
 
   // --- CRUD Functions (These should be inside the App component) ---
   const createFunnel = async (name: string) => {
