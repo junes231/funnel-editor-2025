@@ -84,45 +84,45 @@ const navigate = useNavigate();
     setMode(m);
   };
 
-  const handleRegister = async () => {
-    setNotice('');
-    if (!email.trim() || !pwd) {
-      setNotice('Please input email & password.');
-      return;
-    }
-    if (pwd.length < 8) {
-      setNotice('Password must be at least 8 characters.');
-      return;
-    }
-    if (pwStrength && pwStrength.score < 2) {
-      setNotice('Password too weak. Please strengthen it (aim for Fair or above).');
-      return;
-    }
-    setLoading(true);
-    try {
-      
-// handleRegister try 内部：
-log('start createUser', email.trim());
-const cred = await createUserWithEmailAndPassword(auth, email.trim(), pwd);
-log('created user uid', cred.user.uid, 'verified?', cred.user.emailVerified);
-const continueUrl = `${window.location.origin}/#/finish-email-verification`;
-await sendEmailVerification(cred.user, {
-  url: continueUrl,
-  handleCodeInApp: false
-});
-log('sendEmailVerification resolved');
-      await signOut(auth);
-      setPwd('');
-      setNotice('Registered. Verification email sent. Redirecting to sign in...');
-      setTimeout(() => {
-        switchMode('login');
-      }, 2200);
-    } catch (e: any) {
-      setNotice('Register failed: ' + (e?.message || 'Unknown error'));
-    } finally {
-      setLoading(false);
-    }
-  };
+  // 文件路径: src/components/Login.tsx
+
+const handleRegister = async () => {
+  setNotice('');
+  if (!email.trim() || !pwd) {
+    setNotice('Please input email & password.');
+    return;
+  }
+  if (pwd.length < 8) {
+    setNotice('Password must be at least 8 characters.');
+    return;
+  }
+  if (pwStrength && pwStrength.score < 2) {
+    setNotice('Password too weak. Please strengthen it (aim for Fair or above).');
+    return;
+  }
+  setLoading(true);
+  try {
+    const cred = await createUserWithEmailAndPassword(auth, email.trim(), pwd);
+    log('[验证-调试] 创建的用户 uid', cred.user.uid, '是否已验证？', cred.user.emailVerified);
+    
+    const continueUrl = `${window.location.origin}/#/finish-email-verification`;
+    await sendEmailVerification(cred.user, {
+      url: continueUrl,
+      handleCodeInApp: false
+    });
+    log('[验证-调试] sendEmailVerification 已解决');
+
+    // --- 调试代码开始 ---
+    // 为了定位错误，我们暂时只执行下面这行代码，并在此处停止
+    setNotice('The registration email has been sent successfully! Please check your inbox。');
+    // --- 调试代码结束 ---
+
+  } catch (e: any) {
+    setNotice('Register failed: ' + (e?.message || 'Unknown error'));
+  } finally {
+    setLoading(false);
+  }
+};
   const API_URL = process.env.REACT_APP_CLOUDRUN_URL!;
 
 const callCloudRunAPI = async (userId: string) => {
