@@ -1,5 +1,3 @@
-// 文件路径: src/components/Login.tsx
-
 import { useNavigate } from 'react-router-dom'; 
 import React, { useEffect, useState, useRef } from 'react';
 import {
@@ -26,17 +24,19 @@ interface LoginProps {
 
 export default function Login({ setNotification }: LoginProps) {
   const auth = getAuth();
-  const navigate = useNavigate();
+const navigate = useNavigate();
   const [mode, setMode] = useState<Mode>('login');
   const [email, setEmail] = useState('');
   const [pwd, setPwd] = useState('');
-  const [notice, setNotice] = useState('');
+  const [notice, setNotice] = useState('');          // 仍保留本地 notice（你也可以删）
   const [loading, setLoading] = useState(false);
   const log = (...a:any[]) => console.log('[VERIFY-DEBUG]', ...a);
+  // 重发验证冷却
   const [cooldown, setCooldown] = useState(0);
 
+  // 密码强度状态（仅注册时展示）
   const [pwStrength, setPwStrength] = useState<PasswordStrengthResult | null>(null);
-  const pwEvalCounter = useRef(0);
+  const pwEvalCounter = useRef(0); // 节流/防竞态计数
 
   useEffect(() => {
     if (cooldown <= 0) return;
@@ -44,7 +44,9 @@ export default function Login({ setNotification }: LoginProps) {
     return () => clearInterval(id);
   }, [cooldown]);
 
+  // 新增：使用全局通知（如果父级提供）
   useEffect(() => {
+    // 仅在登录模式下处理
     if (mode !== 'login') return;
     const sp = new URLSearchParams(window.location.search);
     if (sp.get('verified') === '1') {
@@ -55,11 +57,13 @@ export default function Login({ setNotification }: LoginProps) {
           message: 'Email verified. Please sign in.'
         });
       } else {
+        // 没传全局通知，就退回到本地 notice
         setNotice('Email verified. Please sign in.');
       }
     }
   }, [mode, setNotification]);
 
+  // 监听密码变化（注册模式）评估强度
   useEffect(() => {
     if (mode !== 'register') {
       setPwStrength(null);
@@ -80,60 +84,60 @@ export default function Login({ setNotification }: LoginProps) {
     setMode(m);
   };
 
-  const handleRegister = async () => {
-    // ... (handleRegister function logic)
-    setNotice('');
-    if (!email.trim() || !pwd) {
-      setNotice('Please input email & password.');
-      return;
-    }
-    if (pwd.length < 8) {
-      setNotice('Password must be at least 8 characters.');
-      return;
-    }
-    if (pwStrength && pwStrength.score < 2) {
-      setNotice('Password too weak. Please strengthen it (aim for Fair or above).');
-      return;
-    }
-    setLoading(true);
-    try {
-      log('start createUser', email.trim());
-      const cred = await createUserWithEmailAndPassword(auth, email.trim(), pwd);
-      log('created user uid', cred.user.uid, 'verified?', cred.user.emailVerified);
-      await sendEmailVerification(cred.user, {
-        url: 'https://funnel-editor2025.netlify.app/#/login?verified=1',
-        handleCodeInApp: false
-      });
-      log('sendEmailVerification resolved');
-      await signOut(auth);
-      setPwd('');
-      setNotice('Registered. Verification email sent. Redirecting to sign in...');
-      setTimeout(() => {
-        switchMode('login');
-      }, 2200);
-    } catch (e: any) {
-      setNotice('Register failed: ' + (e?.message || 'Unknown error'));
-    } finally {
-      setLoading(false);
-    }
-  };
+  // 文件路径: src/components/Login.tsx
 
+const handleRegister = async () => {
+  setNotice('');
+  if (!email.trim() || !pwd) {
+    setNotice('Please input email & password.');
+    return;
+  }
+  if (pwd.length < 8) {
+    setNotice('Password must be at least 8 characters.');
+    return;
+  }
+  if (pwStrength && pwStrength.score < 2) {
+    setNotice('Password too weak. Please strengthen it (aim for Fair or above).');
+    return;
+  }
+  setLoading(true);
+  try {
+    const cred = await createUserWithEmailAndPassword(auth, email.trim(), pwd);
+    log('[验证-调试] 创建的用户 uid', cred.user.uid, '是否已验证？', cred.user.emailVerified);
+    
+    const continueUrl = `${window.location.origin}/#/finish-email-verification`;
+    await sendEmailVerification(cred.user, {
+      url: continueUrl,
+      handleCodeInApp: false
+    });
+    log('[验证-调试] sendEmailVerification 已解决');
+
+    // --- 调试代码开始 ---
+    // 为了定位错误，我们暂时只执行下面这行代码，并在此处停止
+    setNotice('The registration email has been sent successfully! Please check your inbox。');
+    // --- 调试代码结束 ---
+
+  } catch (e: any) {
+    setNotice('Register failed: ' + (e?.message || 'Unknown error'));
+  } finally {
+    setLoading(false);
+  }
+};
   const API_URL = process.env.REACT_APP_CLOUDRUN_URL!;
 
-  const callCloudRunAPI = async (userId: string) => {
-    try {
-      const res = await fetch(`${API_URL}/api/grant-role`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId }),
-      });
-      const data = await res.json();
-      console.log("Cloud Run response:", data);
-    } catch (err) {
-      console.error("Cloud Run call failed:", err);
-    }
-  };
-
+const callCloudRunAPI = async (userId: string) => {
+  try {
+    const res = await fetch(`${API_URL}/api/grant-role`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId }),
+    });
+    const data = await res.json();
+    console.log("Cloud Run response:", data);
+  } catch (err) {
+    console.error("Cloud Run call failed:", err);
+  }
+};
   const handleLogin = async () => {
     setNotice('');
     if (!email.trim() || !pwd) {
@@ -144,26 +148,25 @@ export default function Login({ setNotification }: LoginProps) {
     try {
       const cred = await signInWithEmailAndPassword(auth, email.trim(), pwd);
       await cred.user.reload();
-      console.log("[LOGIN-DEBUG after reload]", cred.user.uid, cred.user.emailVerified);
+     console.log("[LOGIN-DEBUG after reload]", cred.user.uid, cred.user.emailVerified);
       if (!cred.user.emailVerified) {
-        setNotice('Email not verified. Check inbox or resend verification email below.');
-        await signOut(auth);
-        navigate('/verify-info');
-        return;
-      }
-      callCloudRunAPI(cred.user.uid);
-
-      setNotice('Login success. Redirecting...');
-    window.location.assign('/');
-
-    } catch (e: any) {
-      setNotice('Login failed: ' + (e?.message || 'Unknown error'));
-    } finally {
-      setLoading(false);
+        setNotice('Email not verified. Please check your inbox for the verification link, or use the "Resend Verification" button.');
+      await signOut(auth); // 保持登出状态
+      return; // 阻止后续代码执行
     }
-  };
-        
-  const resendVerification = async () => {
+      callCloudRunAPI(cred.user.uid); // <-- 新增函数调用
+
+    setNotice('Login success. Redirecting...');
+   // window.location.assign('/editor');
+
+  } catch (e: any) {
+    setNotice('Login failed: ' + (e?.message || 'Unknown error'));
+  } finally {
+    setLoading(false);
+  }
+};
+      
+ const resendVerification = async () => {
     if (cooldown > 0) return;
     if (!email.trim() || !pwd) {
       setNotice('Input email & password to resend verification.');
@@ -173,13 +176,14 @@ export default function Login({ setNotification }: LoginProps) {
     setNotice('');
     try {
       log('resend signIn', email.trim());
-      const cred = await signInWithEmailAndPassword(auth, email.trim(), pwd);
-      log('resend got uid', cred.user.uid, 'verified?', cred.user.emailVerified);
-      await sendEmailVerification(cred.user, {
-        url: 'https://funnel-editor2025.netlify.app/#/login?verified=1',
-        handleCodeInApp: false
-      });
-      log('resend sendEmailVerification resolved');
+const cred = await signInWithEmailAndPassword(auth, email.trim(), pwd);
+log('resend got uid', cred.user.uid, 'verified?', cred.user.emailVerified);
+const continueUrl = `${window.location.origin}/#/finish-email-verification`;
+await sendEmailVerification(cred.user, {
+  url: continueUrl,
+  handleCodeInApp: false
+});
+log('resend sendEmailVerification resolved');
       setNotice('Verification email sent again.');
       setCooldown(30);
       await signOut(auth);
@@ -191,7 +195,6 @@ export default function Login({ setNotification }: LoginProps) {
   };
 
   const handleForgot = async () => {
-    // ... (handleForgot function logic)
     setNotice('');
     if (!email.trim()) {
       setNotice('Please input email.');
@@ -223,7 +226,6 @@ export default function Login({ setNotification }: LoginProps) {
     opacity: disabled ? 0.7 : 1,
     transition: 'background .2s'
   });
-  
   const secondaryBtn = (disabled: boolean): React.CSSProperties => ({
     padding: '10px 18px',
     fontSize: 14,
@@ -271,6 +273,7 @@ export default function Login({ setNotification }: LoginProps) {
       </h2>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 18, textAlign: 'left' }}>
+        {/* Email 输入 */}
         <div>
           <label style={labelStyle}>Email</label>
           <input
@@ -283,6 +286,7 @@ export default function Login({ setNotification }: LoginProps) {
           />
         </div>
 
+        {/* 密码输入（登录 & 注册） */}
         {(mode === 'login' || mode === 'register') && (
           <div>
             <label style={labelStyle}>{mode === 'login' ? 'Password' : 'Password (min 8 chars)'}</label>
@@ -295,18 +299,21 @@ export default function Login({ setNotification }: LoginProps) {
               autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
             />
 
+            {/* 注册模式下显示强度条 */}
             {mode === 'register' && (
               <PasswordStrengthBar result={pwStrength} colors={strengthColors} />
             )}
           </div>
         )}
 
+        {/* 忘记密码模式不输入密码，只发送邮件 */}
         {mode === 'forgot' && (
           <p style={{ fontSize: 14, color: '#555', lineHeight: 1.4 }}>
             Enter your account email and we will send a password reset link if it exists.
           </p>
         )}
 
+        {/* 按钮与操作区域 */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {mode === 'login' && (
             <>
@@ -409,6 +416,7 @@ interface BarProps {
   colors: string[];
 }
 const PasswordStrengthBar: React.FC<BarProps> = ({ result, colors }) => {
+  // 没输入密码时展示灰色初始条
   const score = result ? result.score : 0;
   const label = result ? result.label : 'Very Weak';
   const calcBy = result ? result.calcBy : 'fallback';
