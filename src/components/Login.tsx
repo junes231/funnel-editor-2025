@@ -157,7 +157,7 @@ const callCloudRunAPI = async (userId: string) => {
       callCloudRunAPI(cred.user.uid); // <-- 新增函数调用
 
     setNotice('Login success. Redirecting...');
-    window.location.assign('/editor');
+   // window.location.assign('/editor');
 
   } catch (e: any) {
     setNotice('Login failed: ' + (e?.message || 'Unknown error'));
