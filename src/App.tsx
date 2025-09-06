@@ -101,43 +101,35 @@ const showNotification = (message: string, type: 'success' | 'error' = 'success'
 };
   // useEffect for Authentication and Role checking
   useEffect(() => {
-    const auth = getAuth();
+     const auth = getAuth();
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      // 无论发生什么，我们都要等到所有异步检查完成后才结束加载状态
       try {
         if (currentUser) {
-          // 关键：首先强制从 Firebase 服务器刷新用户数据
           await currentUser.reload();
-          
-          // 只有邮箱已验证的用户才被视为“真正”的登录用户
           if (currentUser.emailVerified) {
             setUser(currentUser);
             const idTokenResult = await currentUser.getIdTokenResult(true);
             setIsAdmin(idTokenResult.claims.role === 'admin');
           } else {
-            // 如果用户存在但邮箱未验证，视为未登录，并为保险起见执行登出
-            // 这可以防止新注册的用户（emailVerified=false）错误地触发登录状态
+            // 用户存在但邮箱未验证，视为未登录
             await signOut(auth);
             setUser(null);
             setIsAdmin(false);
           }
         } else {
-          // 如果 currentUser 本身就是 null，直接视为未登录
+          // 用户不存在，视为未登录
           setUser(null);
           setIsAdmin(false);
         }
       } catch (error) {
-        // 如果在 reload 或其他检查中出错，也视为未登录
         console.error("Authentication check failed:", error);
         setUser(null);
         setIsAdmin(false);
       } finally {
-        // 无论成功还是失败，所有逻辑都已处理完毕，现在可以安全地结束加载状态了
+        // 所有检查完成后，才解除加载状态
         setIsLoading(false);
       }
     });
-
-    // 清理函数，在组件卸载时取消监听
     return () => unsubscribe();
   }, []);
 
