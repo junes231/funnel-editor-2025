@@ -103,12 +103,12 @@ const showNotification = (message: string, type: 'success' | 'error' = 'success'
   useEffect(() => {
      const auth = getAuth();
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      // 这个监听器只负责一件事：将 Firebase 的当前用户状态同步到 React 的 state 中
       if (currentUser && currentUser.emailVerified) {
         setUser(currentUser);
       } else {
         setUser(null);
       }
+// ...
       
       // 检查管理员身份可以在这里，也可以在 user 状态变化后单独进行
       if (currentUser && currentUser.emailVerified) {
