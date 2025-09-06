@@ -45,10 +45,7 @@ export default function FinishEmailVerification() {
               setMsg("Login successful! Redirecting to the editor...");
 
               // 延时一小段时间让用户看到成功消息，然后跳转
-              setTimeout(() => {
-                navigate('/'); 
-              }, 1500);
-            })
+              
             .catch(loginError => {
               // 如果自动登录失败
               localStorage.removeItem("pendingEmail");
@@ -68,7 +65,7 @@ export default function FinishEmailVerification() {
         setMsg("Link is invalid or has expired. Please try registering again.");
         console.error("Error applying action code", error);
       });
-  }, [auth, navigate]);
+  }, [auth]);
 
   // UI部分保持不变，用于向用户展示当前处理状态
   return (
