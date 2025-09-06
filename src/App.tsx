@@ -103,41 +103,43 @@ const showNotification = (message: string, type: 'success' | 'error' = 'success'
   useEffect(() => {
     const auth = getAuth();
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      // 无论发生什么，我们都要等到所有检查完成后才结束加载状态
+      // 无论发生什么，我们都要等到所有异步检查完成后才结束加载状态
       try {
         if (currentUser) {
-          // 先刷新用户数据，确保 emailVerified 状态是最新的
+          // 关键：首先强制从 Firebase 服务器刷新用户数据
           await currentUser.reload();
           
-          // 只有邮箱已验证的用户才被视为有效登录
+          // 只有邮箱已验证的用户才被视为“真正”的登录用户
           if (currentUser.emailVerified) {
             setUser(currentUser);
             const idTokenResult = await currentUser.getIdTokenResult(true);
             setIsAdmin(idTokenResult.claims.role === 'admin');
           } else {
-            // 如果邮箱未验证，即使有 currentUser 对象，也视为未登录
-            // 这可以防止注册后立即跳转的BUG
-            await signOut(auth); // 为保险起见，确保其登出
+            // 如果用户存在但邮箱未验证，视为未登录，并为保险起见执行登出
+            // 这可以防止新注册的用户（emailVerified=false）错误地触发登录状态
+            await signOut(auth);
             setUser(null);
             setIsAdmin(false);
           }
         } else {
-          // 用户不存在，视为未登录
+          // 如果 currentUser 本身就是 null，直接视为未登录
           setUser(null);
           setIsAdmin(false);
         }
       } catch (error) {
+        // 如果在 reload 或其他检查中出错，也视为未登录
         console.error("Authentication check failed:", error);
         setUser(null);
         setIsAdmin(false);
       } finally {
-        // 所有逻辑检查完毕，现在可以安全地结束加载状态了
+        // 无论成功还是失败，所有逻辑都已处理完毕，现在可以安全地结束加载状态了
         setIsLoading(false);
       }
     });
 
+    // 清理函数，在组件卸载时取消监听
     return () => unsubscribe();
-  }, []); 
+  }, []);
 
   // --- CRUD Functions (These should be inside the App component) ---
   const createFunnel = async (name: string) => {
@@ -185,11 +187,8 @@ const showNotification = (message: string, type: 'success' | 'error' = 'success'
   };
 
   // --- Render Logic ---
-  if (user && isLoading) {
-    return <div style={{ textAlign: 'center', marginTop: '50px', fontFamily: 'Arial' }}>Loading user data...</div>;
-  }
    if (isLoading) {
-    return <div style={{ textAlign: 'center', marginTop: '50px', fontFamily: 'Arial' }}>Loading user data...</div>;
+    return <div style={{ textAlign: 'center', marginTop: '50px', fontFamily: 'Arial' }}>Verifying user status...</div>;
   }
   return (
     <div style={{ padding: 24, fontFamily: 'Arial' }}>
