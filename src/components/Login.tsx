@@ -139,32 +139,40 @@ const callCloudRunAPI = async (userId: string) => {
   }
 };
   const handleLogin = async () => {
-    setNotice('');
-    if (!email.trim() || !pwd) {
-      setNotice('Please input email & password.');
+  setNotice('');
+  if (!email.trim() || !pwd) {
+    setNotice('Please input email & password.');
+    return;
+  }
+  setLoading(true);
+
+  try {
+    // 步骤 1: 尝试使用邮箱和密码登录
+    const cred = await signInWithEmailAndPassword(auth, email.trim(), pwd);
+
+    // 步骤 2: 从服务器重新加载最新的用户信息
+    await cred.user.reload();
+
+    // 步骤 3: 最终检查用户的邮箱是否已验证
+    if (!cred.user.emailVerified) {
+      // 如果未验证，显示错误消息并确保用户已登出
+      setNotice('Email not verified. Please check your inbox or use the "Resend" button.');
+      await signOut(auth);
+      setLoading(false); // 在此路径下必须结束 loading
       return;
     }
-    setLoading(true);
-    try {
-      const cred = await signInWithEmailAndPassword(auth, email.trim(), pwd);
-      await cred.user.reload();
-     console.log("[LOGIN-DEBUG after reload]", cred.user.uid, cred.user.emailVerified);
-      if (!cred.user.emailVerified) {
-        setNotice('Email not verified. Please check your inbox for the verification link, or use the "Resend Verification" button.');
-      await signOut(auth); // 保持登出状态
-      return; // 阻止后续代码执行
-    }
-     // callCloudRunAPI(cred.user.uid); // <-- 新增函数调用
 
-    setNotice('Login success. Redirecting...');
-   // window.location.assign('/editor');
+    // 如果代码执行到这里，意味着登录和验证都已成功。
+    // 我们不需要做任何额外的事情。
+    // App.tsx 中的 onAuthStateChanged 监听器将会自动检测到这个成功的登录状态，
+    // 并负责将页面平滑地切换到编辑器。
 
   } catch (e: any) {
-    setNotice('Login failed: ' + (e?.message || 'Unknown error'));
-  } finally {
-    setLoading(false);
+    // 如果登录过程中出现任何错误（例如密码错误），则在这里捕获
+    console.error("Login failed:", e); // 在控制台打印详细错误以供调试
+    setNotice('Login failed: ' + (e?.message || 'Invalid credentials.'));
+    setLoading(false); // 确保在失败时结束 loading
   }
-};
       
  const resendVerification = async () => {
     if (cooldown > 0) return;
