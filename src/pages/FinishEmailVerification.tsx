@@ -5,81 +5,65 @@ import {
   getAuth, 
   isSignInWithEmailLink, 
   signInWithEmailLink,
-  createUserWithEmailAndPassword
+  updatePassword // 引入一个新方法来设置密码
 } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
 
 export default function FinishEmailVerification() {
-  const [message, setMessage] = useState("Processing your sign-in link, please wait...");
+  const [message, setMessage] = useState("Processing your secure link, please wait...");
   const navigate = useNavigate();
   const auth = getAuth();
 
   useEffect(() => {
     const processSignIn = async () => {
+      // 1. 确认URL是否为有效的Firebase登录链接
       if (!isSignInWithEmailLink(auth, window.location.href)) {
-        setMessage("This link is invalid or has expired.");
+        setMessage("This link is invalid, expired, or has already been used.");
         return;
       }
 
+      // 2. 从localStorage获取邮箱和期望的密码
       let email = localStorage.getItem('emailForSignIn');
       const password = localStorage.getItem('passwordForSignIn');
 
+      // 安全措施：如果localStorage中没有邮箱，则提示用户输入
       if (!email) {
-        email = window.prompt('For security, please provide your email to complete the process:');
+        email = window.prompt('For your security, please re-enter your email address:');
       }
       
       if (!email) {
         setMessage("Process cancelled. No email was provided.");
         return;
       }
-      
-      // 如果密码存在，说明这是“注册并登录”流程
-      if (password) {
-        try {
-          setMessage("Creating your account...");
-          await createUserWithEmailAndPassword(auth, email, password);
-          
-          setMessage("Account created successfully! You are now logged in.");
-          
-          // 清理 localStorage
-          localStorage.removeItem('emailForSignIn');
-          localStorage.removeItem('passwordForSignIn');
 
-          // 关键步骤: 成功后延迟一小会，然后强制跳转到编辑器主页
-          setTimeout(() => {
-            navigate('/');
-          }, 1500); // 延迟1.5秒
+      try {
+        setMessage("Verifying your email and signing you in...");
+        
+        // 3. 核心步骤：使用链接登录用户。
+        // 这个操作会隐式地创建一个新用户（如果不存在的话），并将其邮箱标记为“已验证”。
+        const userCredential = await signInWithEmailLink(auth, email, window.location.href);
+        
+        // 4. 如果是注册流程（即我们暂存了密码），则为这个新账户设置密码。
+        if (password && userCredential.user) {
+          setMessage("Setting your password...");
+          await updatePassword(userCredential.user, password);
+        }
+        
+        // 5. 清理工作
+        localStorage.removeItem('emailForSignIn');
+        localStorage.removeItem('passwordForSignIn');
+        
+        setMessage("Success! You are now signed in. Redirecting...");
 
-        } catch (error: any) {
-          // 如果错误是“邮箱已占用”，说明用户可能刷新或重复点击了链接
-          if (error.code === 'auth/email-already-in-use') {
-            setMessage("Account already exists. Signing you in...");
-            try {
-              await signInWithEmailLink(auth, email, window.location.href);
-              localStorage.removeItem('emailForSignIn');
-              localStorage.removeItem('passwordForSignIn');
-              setTimeout(() => {
-                navigate('/');
-              }, 1500);
-            } catch (signInError: any) {
-              setMessage(`Sign-in failed: ${signInError.message}`);
-            }
-          } else {
-            setMessage(`Account creation failed: ${error.message}`);
-          }
-        }
-      } else {
-        // 如果没有密码，说明是“仅登录”流程
-        try {
-          setMessage("Signing you in...");
-          await signInWithEmailLink(auth, email, window.location.href);
-          localStorage.removeItem('emailForSignIn');
-          setTimeout(() => {
-            navigate('/');
-          }, 1500);
-        } catch (signInError: any) {
-          setMessage(`Sign-in failed: ${signInError.message}`);
-        }
+        // 6. 自己负责跳转，确保成功
+        // 此时，App.tsx中的onAuthStateChanged会接收到一个emailVerified为true的用户
+        setTimeout(() => {
+          navigate('/');
+        }, 1500); // 延迟1.5秒给用户看成功信息
+
+      } catch (error: any) {
+        setMessage(`An error occurred: ${error.message}. Please try again from the login page.`);
+        console.error("Error during sign-in with email link:", error);
       }
     };
 
@@ -89,7 +73,7 @@ export default function FinishEmailVerification() {
   return (
     <div style={{maxWidth: 400, margin: '80px auto', padding: 36, background: '#fff', borderRadius: 8, textAlign: 'center'}}>
       <h2>{message}</h2>
-      <p>Please wait, the page will redirect automatically after this process is complete...</p>
+      <p>This page should redirect automatically. If it doesn't, please return to the login page.</p>
     </div>
   );
 }
