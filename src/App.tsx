@@ -101,37 +101,43 @@ const showNotification = (message: string, type: 'success' | 'error' = 'success'
 };
   // useEffect for Authentication and Role checking
   useEffect(() => {
-   const auth = getAuth();
+    const auth = getAuth();
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      // 只有当用户存在且邮箱已验证时，我们才认为他是有效登录用户
-      if (currentUser && currentUser.emailVerified) {
-        try {
-          // 为确保状态最新，重新加载用户信息
+      // 无论发生什么，我们都要等到所有检查完成后才结束加载状态
+      try {
+        if (currentUser) {
+          // 先刷新用户数据，确保 emailVerified 状态是最新的
           await currentUser.reload();
-          // 再次检查，防止在 reload 期间状态发生变化
+          
+          // 只有邮箱已验证的用户才被视为有效登录
           if (currentUser.emailVerified) {
             setUser(currentUser);
             const idTokenResult = await currentUser.getIdTokenResult(true);
             setIsAdmin(idTokenResult.claims.role === 'admin');
           } else {
-            // 如果 reload 后发现邮箱未验证，则视为未登录
+            // 如果邮箱未验证，即使有 currentUser 对象，也视为未登录
+            // 这可以防止注册后立即跳转的BUG
+            await signOut(auth); // 为保险起见，确保其登出
             setUser(null);
             setIsAdmin(false);
           }
-        } catch (error) {
-          console.error('Error reloading user:', error);
+        } else {
+          // 用户不存在，视为未登录
           setUser(null);
           setIsAdmin(false);
         }
-      } else {
-        // 对于所有其他情况（用户不存在，或邮箱未验证），都视为未登录
+      } catch (error) {
+        console.error("Authentication check failed:", error);
         setUser(null);
         setIsAdmin(false);
+      } finally {
+        // 所有逻辑检查完毕，现在可以安全地结束加载状态了
+        setIsLoading(false);
       }
-      setIsLoading(false);
     });
+
     return () => unsubscribe();
-  }, []);
+  }, []); 
 
   // --- CRUD Functions (These should be inside the App component) ---
   const createFunnel = async (name: string) => {
@@ -182,7 +188,9 @@ const showNotification = (message: string, type: 'success' | 'error' = 'success'
   if (user && isLoading) {
     return <div style={{ textAlign: 'center', marginTop: '50px', fontFamily: 'Arial' }}>Loading user data...</div>;
   }
-
+   if (isLoading) {
+    return <div style={{ textAlign: 'center', marginTop: '50px', fontFamily: 'Arial' }}>Loading user data...</div>;
+  }
   return (
     <div style={{ padding: 24, fontFamily: 'Arial' }}>
       <Routes>
