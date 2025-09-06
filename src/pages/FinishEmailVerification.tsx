@@ -11,7 +11,12 @@ export default function FinishEmailVerification() {
 
   useEffect(() => {
     console.log("FinishEmailVerification page loaded."); // <-- 添加日志
-    const params = new URLSearchParams(window.location.search);
+     const hash = window.location.hash;
+    const queryStringIndex = hash.indexOf('?');
+    const queryString = queryStringIndex !== -1 ? hash.substring(queryStringIndex) : '';
+
+    // 2. 使用提取出的查询字符串来解析参数
+    const params = new URLSearchParams(queryString);
     const oobCode = params.get("oobCode");
     
     if (!oobCode) {
