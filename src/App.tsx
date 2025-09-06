@@ -102,36 +102,29 @@ const showNotification = (message: string, type: 'success' | 'error' = 'success'
   // useEffect for Authentication and Role checking
   useEffect(() => {
      const auth = getAuth();
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      try {
-        if (currentUser) {
-          await currentUser.reload();
-          if (currentUser.emailVerified) {
-            setUser(currentUser);
-            const idTokenResult = await currentUser.getIdTokenResult(true);
-            setIsAdmin(idTokenResult.claims.role === 'admin');
-          } else {
-            // 用户存在但邮箱未验证，视为未登录
-            await signOut(auth);
-            setUser(null);
-            setIsAdmin(false);
-          }
-        } else {
-          // 用户不存在，视为未登录
-          setUser(null);
-          setIsAdmin(false);
-        }
-      } catch (error) {
-        console.error("Authentication check failed:", error);
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      // 这个监听器只负责一件事：将 Firebase 的当前用户状态同步到 React 的 state 中
+      if (currentUser && currentUser.emailVerified) {
+        setUser(currentUser);
+      } else {
         setUser(null);
-        setIsAdmin(false);
-      } finally {
-        // 所有检查完成后，才解除加载状态
-        setIsLoading(false);
       }
+      
+      // 检查管理员身份可以在这里，也可以在 user 状态变化后单独进行
+      if (currentUser && currentUser.emailVerified) {
+         currentUser.getIdTokenResult(true).then(idTokenResult => {
+            setIsAdmin(idTokenResult.claims.role === 'admin');
+         });
+      } else {
+          setIsAdmin(false);
+      }
+
+      // 只要 onAuthStateChanged 触发了，就代表初始的用户状态检查已完成
+      setIsLoading(false);
     });
+
     return () => unsubscribe();
-  }, []);
+  }, []); 
 
   // --- CRUD Functions (These should be inside the App component) ---
   const createFunnel = async (name: string) => {
@@ -179,8 +172,8 @@ const showNotification = (message: string, type: 'success' | 'error' = 'success'
   };
 
   // --- Render Logic ---
-   if (isLoading) {
-    return <div style={{ textAlign: 'center', marginTop: '50px', fontFamily: 'Arial' }}>Verifying user status...</div>;
+    if (isLoading) {
+    return <div style={{ textAlign: 'center', marginTop: '50px' }}>Verifying user status...</div>;
   }
   return (
     <div style={{ padding: 24, fontFamily: 'Arial' }}>
