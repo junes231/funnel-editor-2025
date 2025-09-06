@@ -154,7 +154,7 @@ const callCloudRunAPI = async (userId: string) => {
       await signOut(auth); // 保持登出状态
       return; // 阻止后续代码执行
     }
-      callCloudRunAPI(cred.user.uid); // <-- 新增函数调用
+     // callCloudRunAPI(cred.user.uid); // <-- 新增函数调用
 
     setNotice('Login success. Redirecting...');
    // window.location.assign('/editor');
