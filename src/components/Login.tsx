@@ -84,7 +84,7 @@ const navigate = useNavigate();
     setMode(m);
   };
 
-  // 文件路径: src/components/Login.tsx
+// 文件路径: src/components/Login.tsx
 
 const handleRegister = async () => {
   setNotice('');
@@ -105,6 +105,11 @@ const handleRegister = async () => {
     const cred = await createUserWithEmailAndPassword(auth, email.trim(), pwd);
     log('[验证-调试] 创建的用户 uid', cred.user.uid, '是否已验证？', cred.user.emailVerified);
     
+    // 关键改动 1: 将凭据暂存到 localStorage
+    localStorage.setItem("pendingEmail", email.trim());
+    localStorage.setItem("pendingPwd", pwd);
+
+    // 关键改动 2: 确保 continueUrl 指向正确的处理页面
     const continueUrl = `${window.location.origin}/#/finish-email-verification`;
     await sendEmailVerification(cred.user, {
       url: continueUrl,
@@ -112,10 +117,8 @@ const handleRegister = async () => {
     });
     log('[验证-调试] sendEmailVerification 已解决');
 
-    // --- 调试代码开始 ---
-    // 为了定位错误，我们暂时只执行下面这行代码，并在此处停止
-    setNotice('The registration email has been sent successfully! Please check your inbox。');
-    // --- 调试代码结束 ---
+    // 关键改动 3: 更新提示，告知用户去点击“魔法链接”
+    setNotice('The registration email has been sent successfully! Please check your inbox and click the link inside to complete registration and log in.');
 
   } catch (e: any) {
     setNotice('Register failed: ' + (e?.message || 'Unknown error'));
