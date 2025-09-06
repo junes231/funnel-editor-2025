@@ -6,7 +6,7 @@ import { useNavigate } from "react-router-dom";
 
 export default function FinishEmailVerification() {
   const [status, setStatus] = useState<"verifying" | "success" | "error">("verifying");
-  const [msg, setMsg] = useState("Verifying your email...");
+  const [msg, setMsg] = useState("Verifying your email, please wait...");
   const navigate = useNavigate();
   const auth = getAuth();
 
@@ -20,13 +20,13 @@ export default function FinishEmailVerification() {
 
     if (!oobCode) {
       setStatus("error");
-      setMsg("Link is invalid or has expired. The verification code is missing.");
+      setMsg("Link is invalid or has expired.");
       return;
     }
 
     applyActionCode(auth, oobCode)
       .then(() => {
-        setMsg("Email verified! Attempting to log you in...");
+        setMsg("Email verified! Logging you in automatically...");
         const pendingEmail = localStorage.getItem("pendingEmail");
         const pendingPwd = localStorage.getItem("pendingPwd");
 
@@ -37,47 +37,49 @@ export default function FinishEmailVerification() {
               localStorage.removeItem("pendingPwd");
               setStatus("success");
               setMsg("Login successful! Redirecting to the editor...");
+              // The redirect is now handled by App.tsx, so no navigate() call here.
             })
-            .catch(loginError => {
+            .catch(() => {
               localStorage.removeItem("pendingEmail");
               localStorage.removeItem("pendingPwd");
               setStatus("error");
-              setMsg("Your email is verified, but auto-login failed. Please go to the login page and sign in manually.");
-              console.error("Auto sign-in failed after verification", loginError);
+              setMsg("Your email is verified, but auto-login failed. Please sign in manually.");
             });
         } else {
           setStatus("success");
-          setMsg("Your email has been successfully verified! Please proceed to login.");
+          // This case handles users clicking the link on a different browser/device
+          setMsg("Your email has been successfully verified! Please proceed to the login page.");
         }
       })
-      .catch((error) => {
+      .catch(() => {
         setStatus("error");
-        setMsg("Link is invalid or has expired. Please try registering again.");
-        console.error("Error applying action code", error);
+        setMsg("Verification link is invalid or has expired. Please try registering again.");
       });
-  }, [auth, navigate]); // <-- 修正：将 navigate 添加回依赖数组
+  }, [auth, navigate]);
 
   return (
     <div style={{maxWidth: 400, margin: '80px auto', padding: 36, background: '#fff', borderRadius: 8, textAlign: 'center'}}>
+      {/* 动态显示标题 */}
       <h2>{msg}</h2>
       
-      {status === "verifying" && <p>Please wait...</p>}
-
-      {status === "success" && (
+      {/* 当正在验证或成功时，显示等待信息，不提供任何按钮 */}
+      {(status === "verifying" || status === "success") && (
         <div style={{marginTop: '20px'}}>
-          <p>You can now log in to your account.</p>
+          <p>Please wait, you will be redirected automatically...</p>
+          {/* 您可以在这里添加一个加载动画来优化体验 */}
+        </div>
+      )}
+
+      {/* 只有在发生错误时，才提供返回登录页的按钮 */}
+      {status === "error" && (
+         <div style={{marginTop: '20px'}}>
+          <p>Something went wrong. Please try again from the login page.</p>
           <button 
             onClick={() => navigate('/login')}
             style={{padding: '12px 24px', fontSize: 16, cursor: 'pointer', background: '#007bff', color: 'white', border: 'none', borderRadius: 5}}
           >
             Go to Login Page
           </button>
-        </div>
-      )}
-
-      {status === "error" && (
-         <div style={{marginTop: '20px'}}>
-          <a href="/#" onClick={(e) => { e.preventDefault(); navigate('/login'); }}>Back to main page</a>
         </div>
       )}
     </div>
