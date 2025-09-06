@@ -126,17 +126,20 @@ const showNotification = (message: string, type: 'success' | 'error' = 'success'
     return () => unsubscribe();
   }, []); 
     useEffect(() => {
+    // 仅当用户成功登录后执行
     if (user) {
+      // 获取当前所在的页面路径
       const currentPath = window.location.hash.split('?')[0].replace('#', '');
-      const nonAppRoutes = ['/login', '/verify', '/finish-email-verification', '/reset'];
+      // 定义所有与认证相关的页面
+      const authPages = ['/login', '/finish-email-verification', '/register', '/reset', '/verify'];
       
-      if (nonAppRoutes.includes(currentPath)) {
-        console.log('[Auth Nav] User is logged in. Forcing redirect to dashboard...');
-        // 使用 window.location.replace 进行强制跳转，这比 navigate 更可靠
-        window.location.replace('/#/'); 
+      // 如果用户当前在任何一个认证页面上，说明他刚刚完成了登录流程
+      if (authPages.includes(currentPath)) {
+        // 则将他导航到应用的主页
+        navigate('/');
       }
     }
-  }, [user]); 
+  }, [user, navigate]);
   // --- CRUD Functions (These should be inside the App component) ---
   const createFunnel = async (name: string) => {
     if (!db || !user) return; 
