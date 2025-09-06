@@ -1,65 +1,69 @@
 // src/pages/FinishEmailVerification.tsx
 
 import React, { useEffect, useState } from "react";
-import { getAuth, applyActionCode, signInWithEmailAndPassword } from "firebase/auth";
+import { getAuth, applyActionCode } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
 
 export default function FinishEmailVerification() {
+  const [status, setStatus] = useState<"verifying" | "success" | "error">("verifying");
   const [msg, setMsg] = useState("Verifying your email...");
   const navigate = useNavigate();
   const auth = getAuth();
 
   useEffect(() => {
-    console.log("FinishEmailVerification page loaded."); // <-- 添加日志
-     const hash = window.location.hash;
+    // 从 URL 的 hash 部分 (#/...) 中提取查询字符串
+    const hash = window.location.hash;
     const queryStringIndex = hash.indexOf('?');
     const queryString = queryStringIndex !== -1 ? hash.substring(queryStringIndex) : '';
-
-    // 2. 使用提取出的查询字符串来解析参数
+    
     const params = new URLSearchParams(queryString);
     const oobCode = params.get("oobCode");
-    
+
     if (!oobCode) {
-      console.error("oobCode not found in URL!"); // <-- 添加日志
-      setMsg("Information is missing or the link is invalid.");
+      setStatus("error");
+      setMsg("Link is invalid or has expired. The verification code is missing.");
       return;
     }
 
-    console.log("Applying action code:", oobCode); // <-- 添加日志
+    // 应用验证码
     applyActionCode(auth, oobCode)
       .then(() => {
-        console.log("Email verification successful in Firebase!"); // <-- 添加日志
-        setMsg("Email verification successful, logging in automatically...");
+        // 验证成功后，清除之前保存的密码（如果有）
+        localStorage.removeItem("pendingEmail");
+        localStorage.removeItem("pendingPwd");
         
-        const email = localStorage.getItem("pendingEmail");
-        const pwd = localStorage.getItem("pendingPwd");
-
-        if (!email || !pwd) {
-            console.error("Pending email/password not found in localStorage."); // <-- 添加日志
-            setMsg("Could not log in automatically. Please go to the login page.");
-            return;
-        }
-
-        // ... 自动登录逻辑
-        return signInWithEmailAndPassword(auth, email, pwd);
-      })
-      .then((userCredential) => {
-          if (userCredential) {
-            console.log("Auto sign-in successful, navigating to editor."); // <-- 添加日志
-            localStorage.removeItem("pendingEmail");
-            localStorage.removeItem("pendingPwd");
-            navigate("/editor");
-          }
+        setStatus("success");
+        setMsg("Your email has been successfully verified!");
       })
       .catch((error) => {
-        console.error("Verification failed:", error); // <-- 添加错误日志
-        setMsg(`Verification failed: ${error.message}. Please try registering again.`);
+        setStatus("error");
+        setMsg("Link is invalid or has expired. Please try registering again.");
+        console.error("Error applying action code", error);
       });
-  }, [navigate, auth]);
+  }, [auth]);
 
+  // 渲染一个更清晰的UI
   return (
-    <div style={{maxWidth:400,margin:'80px auto',padding:36,background:'#fff',borderRadius:8}}>
+    <div style={{maxWidth: 400, margin: '80px auto', padding: 36, background: '#fff', borderRadius: 8, textAlign: 'center'}}>
       <h2>{msg}</h2>
+      
+      {status === "success" && (
+        <div style={{marginTop: '20px'}}>
+          <p>You can now log in to your account.</p>
+          <button 
+            onClick={() => navigate('/login')}
+            style={{padding: '12px 24px', fontSize: 16, cursor: 'pointer', background: '#007bff', color: 'white', border: 'none', borderRadius: 5}}
+          >
+            Go to Login Page
+          </button>
+        </div>
+      )}
+
+      {status === "error" && (
+         <div style={{marginTop: '20px'}}>
+          <a href="/#" onClick={(e) => { e.preventDefault(); navigate('/login'); }}>Back to main page</a>
+        </div>
+      )}
     </div>
   );
 }
