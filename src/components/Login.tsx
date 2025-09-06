@@ -151,10 +151,10 @@ export default function Login({ setNotification }: LoginProps) {
         navigate('/verify-info');
         return;
       }
-     //  callCloudRunAPI(cred.user.uid);
+      callCloudRunAPI(cred.user.uid);
 
       setNotice('Login success. Redirecting...');
-    //  window.location.assign('/editor');
+    window.location.assign('/');
 
     } catch (e: any) {
       setNotice('Login failed: ' + (e?.message || 'Unknown error'));
