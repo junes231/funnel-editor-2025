@@ -119,25 +119,28 @@ useEffect(() => {
 
 // 新的 useEffect 2: 只在用户状态变化后，负责检查管理员权限
 useEffect(() => {
-  if (!user) {
-    setIsAdmin(false);
-    return; 
-  }
-
-  user.getIdTokenResult(true) 
-    .then(idTokenResult => {
-      if (idTokenResult.claims.role === 'admin') {
-        setIsAdmin(true);
-      } else {
-        setIsAdmin(false);
-      }
-    })
-    .catch(error => {
-      console.error("Error checking admin status:", error);
+    // 如果 user 对象不存在 (用户未登录或已登出)，则他肯定不是管理员
+    if (!user) {
       setIsAdmin(false);
-    });
+      return; 
+    }
 
-}, [user]); // 关键：这个 effect 只在 `user` 状态变化时执行
+    user.getIdTokenResult() 
+      .then(idTokenResult => {
+        // 检查 token 中 'role' 声明是否为 'admin'
+        if (idTokenResult.claims.role === 'admin') {
+          setIsAdmin(true);
+        } else {
+          setIsAdmin(false);
+        }
+      })
+      .catch(error => {
+        // 这个 catch 块现在基本不会被触发了
+        console.error("Error checking admin status:", error);
+        setIsAdmin(false);
+      });
+
+  }, [user]);// 关键：这个 effect 只在 `user` 状态变化时执行
     useEffect(() => {
     // 仅当用户成功登录后执行
     if (user) {
