@@ -89,7 +89,7 @@ export default function Login({ setNotification }: LoginProps) {
   };
 
   // 常规登录逻辑 (保持不变)
-  const handleLogin = async () => {
+   const handleLogin = async () => {
     setNotice('');
     if (!email.trim() || !pwd) {
       setNotice('Please input email & password.');
@@ -98,21 +98,43 @@ export default function Login({ setNotification }: LoginProps) {
     setLoading(true);
     try {
       const cred = await signInWithEmailAndPassword(auth, email.trim(), pwd);
-      await cred.user.reload();
+      // 检查邮箱是否已验证
       if (!cred.user.emailVerified) {
-        setNotice('Email not verified. Please check your inbox for the verification link.');
-        await auth.signOut();
-        return;
+          // 强制刷新用户状态
+          await cred.user.reload();
+          // 再次检查
+          if (!auth.currentUser?.emailVerified) {
+              setNotice('Email not verified. Please check your inbox for the verification link.');
+              await auth.signOut(); // 保持登出状态
+              return;
+          }
       }
       setNotice('Login success. Redirecting...');
-      // 跳转由 App.tsx 统一处理
+      // 成功的跳转由 App.tsx 统一处理
     } catch (e: any) {
       setNotice('Login failed: ' + (e?.message || 'Unknown error'));
     } finally {
       setLoading(false);
     }
   };
-  
+  const handleForgot = async () => {
+    setNotice('');
+    if (!email.trim()) {
+      setNotice('Please input your account email.');
+      return;
+    }
+    setLoading(true);
+    try {
+      await sendPasswordResetEmail(auth, email.trim(), {
+        url: `${window.location.origin}/#/reset` // 确保链接指向我们之前添加的 /reset 路由
+      });
+      setNotice('If the email exists, a password reset link has been sent.');
+    } catch (e: any) {
+      setNotice('If the email exists, a password reset link has been sent.');
+    } finally {
+      setLoading(false);
+    }
+  };
   // (忘记密码、重发邮件等其他函数保持您原有的逻辑)
 
   // --- UI渲染: 使用您原有的完整UI代码 ---
@@ -141,7 +163,7 @@ export default function Login({ setNotification }: LoginProps) {
       {notice && <div style={{ marginBottom: 16, color: '#fff', background: '#222', padding: 12, borderRadius: 6, fontSize: 14, lineHeight: 1.5, textAlign: 'left' }}>{notice}</div>}
       
       <h2 style={{ marginTop: 0, fontSize: 24 }}>
-        {mode === 'login' && 'Sign In (Verified Email Required)'}
+        {mode === 'login' && 'Sign In'}
         {mode === 'register' && 'Create Account'}
         {mode === 'forgot' && 'Reset Password'}
       </h2>
@@ -159,14 +181,19 @@ export default function Login({ setNotification }: LoginProps) {
             {mode === 'register' && <PasswordStrengthBar result={pwStrength} colors={strengthColors} />}
           </div>
         )}
+        
+        {mode === 'forgot' && (
+           <p style={{ fontSize: 14, color: '#555' }}>Enter your email to receive a password reset link.</p>
+        )}
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 10 }}>
           {mode === 'login' && (
             <>
               <button onClick={handleLogin} disabled={loading} style={primaryBtn(loading)}>{loading ? 'Signing in...' : 'Sign In'}</button>
-              <button disabled={true} style={secondaryBtn(true)}>Resend Verification Email</button>
-              <div><span onClick={() => switchMode('forgot')} style={linkStyle}>Forgot password?</span></div>
-              <div>No account? <span onClick={() => switchMode('register')} style={linkStyle}>Create one</span></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span onClick={() => switchMode('forgot')} style={linkStyle}>Forgot password?</span>
+                <span>No account? <span onClick={() => switchMode('register')} style={linkStyle}>Create one</span></span>
+              </div>
             </>
           )}
           {mode === 'register' && (
@@ -175,14 +202,22 @@ export default function Login({ setNotification }: LoginProps) {
               <div>Have an account? <span onClick={() => switchMode('login')} style={linkStyle}>Sign in</span></div>
             </>
           )}
+           {mode === 'forgot' && (
+            <>
+              <button onClick={handleForgot} disabled={loading} style={primaryBtn(loading)}>{loading ? 'Sending...' : 'Send Reset Email'}</button>
+              <div>Remembered your password? <span onClick={() => switchMode('login')} style={linkStyle}>Sign in</span></div>
+            </>
+          )}
         </div>
       </div>
 
+      {/* --- 将这段代码添加到这里 --- */}
       <div style={{ marginTop: 32, fontSize: 12, color: '#888', lineHeight: 1.5, textAlign: 'left' }}>
         <p style={{ margin: '0 0 6px' }}>By continuing you agree to:</p>
         <a href="https://github.com/junes231/myfunnel-legal/blob/main/PRIVACY_POLICY.md" target="_blank" rel="noopener noreferrer" style={{ ...linkStyle, color: '#888', marginRight: 14 }}>Privacy Policy</a>
         <a href="https://github.com/junes231/myfunnel-legal/blob/main/TERMS_OF_SERVICE.md" target="_blank" rel="noopener noreferrer" style={{ ...linkStyle, color: '#888' }}>Terms of Service</a>
       </div>
+      
     </div>
   );
 }
