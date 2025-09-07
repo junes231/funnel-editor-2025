@@ -22,14 +22,23 @@ export default function ResetPasswordPage() {
 
   // 解析链接并验证 oobCode
   useEffect(() => {
-    const sp = new URLSearchParams(window.location.search);
+    // 1. 获取URL中'#'号后面的所有内容
+    const hash = window.location.hash;
+    // 2. 找到'?'，并截取查询字符串
+    const queryStringIndex = hash.indexOf('?');
+    const queryString = queryStringIndex !== -1 ? hash.substring(queryStringIndex) : '';
+    
+    // 3. 使用截取出的字符串来解析参数
+    const sp = new URLSearchParams(queryString);
     const mode = sp.get('mode');
     const code = sp.get('oobCode');
+
     if (mode !== 'resetPassword' || !code) {
       setPhase('error');
-      setNotice('Invalid reset link.');
+      setNotice('Invalid or expired password reset link.');
       return;
     }
+
     setOobCode(code);
     (async () => {
       try {
@@ -38,12 +47,12 @@ export default function ResetPasswordPage() {
         setPhase('form');
       } catch {
         setPhase('error');
-        setNotice('Reset link expired or already used.');
+        setNotice('Reset link is invalid, expired, or has already been used.');
       }
     })();
   }, [auth]);
 
-  // 监听 p1（新密码）评估强度
+  // 监听 p1（新密码）评估强度 (保持不变)
   useEffect(() => {
     if (!p1) {
       setPwStrength(null);
@@ -59,14 +68,15 @@ export default function ResetPasswordPage() {
     return () => clearTimeout(timer);
   }, [p1]);
 
+  // 提交新密码的函数 (保持不变)
   const submit = async () => {
     setNotice('');
     if (p1.length < 8) {
-      setNotice('Password must be ≥ 8 characters.');
+      setNotice('Password must be at least 8 characters.');
       return;
     }
     if (pwStrength && pwStrength.score < 2) {
-      setNotice('Password too weak. Improve it to Fair or above.');
+      setNotice('Password is too weak. Please choose a stronger one.');
       return;
     }
     if (p1 !== p2) {
@@ -77,25 +87,28 @@ export default function ResetPasswordPage() {
     try {
       await confirmPasswordReset(auth, oobCode, p1);
       setPhase('success');
-      setNotice('Password reset successfully. Redirecting to sign in...');
-      setTimeout(() => window.location.assign('/login'), 1800);
+      setNotice('Password has been reset successfully. Redirecting to sign in...');
+      setTimeout(() => window.location.assign('/#/login'), 2000);
     } catch (e: any) {
       setNotice('Reset failed: ' + (e?.message || 'Unknown error'));
     } finally {
       setLoading(false);
     }
   };
-
-  return (
+  
+   return (
     <div style={pageBox}>
       <h2 style={{ marginTop: 0 }}>Reset Password</h2>
-      {notice && <div style={alert}>{notice}</div>}
-      {phase === 'checking' && <p>Validating link...</p>}
+      {notice && <div style={{...alert, background: phase === 'error' ? '#d32f2f' : '#222'}}>{notice}</div>}
+      
+      {phase === 'checking' && <p>Verifying link...</p>}
+      
       {phase === 'error' && (
         <p>
-          <a href="/forgot" style={link}>Request a new reset email</a>
+          <a href="/#/login" style={link}>Return to Login</a>
         </p>
       )}
+
       {phase === 'form' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
           <p style={{ fontSize: 13, color: '#555', margin: '0 0 4px' }}>Account: {email}</p>
@@ -112,7 +125,7 @@ export default function ResetPasswordPage() {
             <PasswordStrengthBar result={pwStrength} />
           </div>
             <div>
-            <label style={label}>Confirm Password</label>
+            <label style={label}>Confirm New Password</label>
             <input
               type="password"
               placeholder="Repeat new password"
@@ -129,11 +142,9 @@ export default function ResetPasswordPage() {
           >
             {loading ? 'Submitting...' : 'Confirm Reset'}
           </button>
-          <p style={{ fontSize: 13 }}>
-            <a href="/login" style={link}>Back to Sign In</a>
-          </p>
         </div>
       )}
+
       {phase === 'success' && <p style={{ fontSize: 13 }}>Redirecting...</p>}
     </div>
   );
