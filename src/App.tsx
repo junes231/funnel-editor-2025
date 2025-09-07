@@ -100,31 +100,44 @@ const showNotification = (message: string, type: 'success' | 'error' = 'success'
   }, 1000);
 };
   // useEffect for Authentication and Role checking
-  useEffect(() => {
-     const auth = getAuth();
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      if (currentUser && currentUser.emailVerified) {
-        setUser(currentUser);
-      } else {
-        setUser(null);
-      }
-// ...
-      
-      // 检查管理员身份可以在这里，也可以在 user 状态变化后单独进行
-      if (currentUser && currentUser.emailVerified) {
-         currentUser.getIdTokenResult(true).then(idTokenResult => {
-            setIsAdmin(idTokenResult.claims.role === 'admin');
-         });
-      } else {
-          setIsAdmin(false);
-      }
+  // --- 请粘贴这两个新的 useEffect ---
 
-      // 只要 onAuthStateChanged 触发了，就代表初始的用户状态检查已完成
-      setIsLoading(false);
+// 新的 useEffect 1: 只负责监听和设置用户登录状态
+useEffect(() => {
+  const auth = getAuth();
+  const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    if (currentUser && currentUser.emailVerified) {
+      setUser(currentUser);
+    } else {
+      setUser(null);
+    }
+    setIsLoading(false);
+  });
+
+  return () => unsubscribe();
+}, []); // 依赖为空，只在加载时运行一次
+
+// 新的 useEffect 2: 只在用户状态变化后，负责检查管理员权限
+useEffect(() => {
+  if (!user) {
+    setIsAdmin(false);
+    return; 
+  }
+
+  user.getIdTokenResult(true) 
+    .then(idTokenResult => {
+      if (idTokenResult.claims.role === 'admin') {
+        setIsAdmin(true);
+      } else {
+        setIsAdmin(false);
+      }
+    })
+    .catch(error => {
+      console.error("Error checking admin status:", error);
+      setIsAdmin(false);
     });
 
-    return () => unsubscribe();
-  }, []); 
+}, [user]); // 关键：这个 effect 只在 `user` 状态变化时执行
     useEffect(() => {
     // 仅当用户成功登录后执行
     if (user) {
