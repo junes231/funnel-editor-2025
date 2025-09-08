@@ -1,23 +1,25 @@
 // 文件路径: src/pages/FinishEmailVerification.tsx
 
 import React, { useEffect, useState } from "react";
-import { 
-  getAuth, 
-  isSignInWithEmailLink, 
+import {
+  getAuth,
+  isSignInWithEmailLink,
   signInWithEmailLink,
   updatePassword
 } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
 
 export default function FinishEmailVerification() {
-  const [message, setMessage] = useState("Processing your secure link, please wait...");
+  const [message, setMessage] = useState("Verifying your secure link...");
+  const [status, setStatus] = useState<"verifying" | "success" | "error">("verifying");
+  const navigate = useNavigate();
   const auth = getAuth();
-  const navigate = useNavigate(); // 保留navigate用于处理错误情况
 
   useEffect(() => {
     const processSignIn = async () => {
       if (!isSignInWithEmailLink(auth, window.location.href)) {
-        setMessage("This link is invalid, expired, or has already been used.");
+        setMessage("This link is invalid or has expired.");
+        setStatus("error");
         return;
       }
 
@@ -30,11 +32,11 @@ export default function FinishEmailVerification() {
       
       if (!email) {
         setMessage("Process cancelled. No email was provided.");
+        setStatus("error");
         return;
       }
       
       try {
-        setMessage("Verifying your email and signing you in...");
         const userCredential = await signInWithEmailLink(auth, email, window.location.href);
         
         if (password && userCredential.user) {
@@ -45,22 +47,44 @@ export default function FinishEmailVerification() {
         localStorage.removeItem('emailForSignIn');
         localStorage.removeItem('passwordForSignIn');
         
-        setMessage("Success! You are now signed in. Redirecting...");
-        // **关键改动**: 不再执行任何跳转。App.tsx 将会接管。
+        // --- 关键改动：更新状态为 success ---
+        setStatus("success");
+        setMessage("Success! Redirecting to your dashboard...");
+
+        setTimeout(() => {
+          navigate('/');
+        }, 1500);
 
       } catch (error: any) {
-        setMessage(`An error occurred: ${error.message}. Please try again.`);
-        console.error("Error during sign-in with email link:", error);
+        setMessage(`An error occurred: ${error.message}`);
+        setStatus("error");
       }
     };
 
     processSignIn();
-  }, [auth, navigate]); // 依赖数组中保留 navigate
+  }, [auth, navigate]);
 
   return (
     <div style={{maxWidth: 400, margin: '80px auto', padding: 36, background: '#fff', borderRadius: 8, textAlign: 'center'}}>
-      <h2>{message}</h2>
-      <p>This page should redirect automatically. If it doesn't, please return to the login page.</p>
+      
+      {/* --- 根据状态显示不同动画 --- */}
+      {status === 'verifying' && <div className="loader"></div>}
+      {status === 'success' && <div className="success-checkmark">✓</div>}
+      
+      <h2 style={{marginTop: 10}}>{message}</h2>
+
+      {status !== 'error' && (
+        <p>This page will redirect automatically...</p>
+      )}
+
+      {status === 'error' && (
+        <button 
+          onClick={() => navigate('/login')}
+          style={{padding: '12px 24px', fontSize: 16, cursor: 'pointer', background: '#007bff', color: 'white', border: 'none', borderRadius: 5, marginTop: 20}}
+        >
+          Return to Login Page
+        </button>
+      )}
     </div>
   );
 }
