@@ -7,9 +7,11 @@ import {
   confirmPasswordReset
 } from 'firebase/auth';
 import { evaluatePassword, PasswordStrengthResult } from '../utils/passwordStrength.ts';
+import { useNavigate } from 'react-router-dom'; // 引入 useNavigate
 
 export default function ResetPasswordPage() {
   const auth = getAuth();
+  const navigate = useNavigate(); // 初始化 navigate
   const [phase, setPhase] = useState<'checking'|'form'|'success'|'error'>('checking');
   const [email, setEmail] = useState('');
   const [oobCode, setOobCode] = useState('');
@@ -82,7 +84,7 @@ export default function ResetPasswordPage() {
       await confirmPasswordReset(auth, oobCode, p1);
       setPhase('success');
       setNotice('Password has been reset successfully. Redirecting to sign in...');
-      setTimeout(() => window.location.assign('/#/login'), 2000);
+      setTimeout(() => navigate('/login'), 2000);
     } catch (e: any) {
       setNotice('Reset failed: ' + (e?.message || 'Unknown error'));
     } finally {
@@ -94,7 +96,6 @@ export default function ResetPasswordPage() {
   const input: React.CSSProperties = { padding: '12px 14px', fontSize: 15, width: '100%', border: '1px solid #ccc', borderRadius: 6 };
   const btn = (d:boolean): React.CSSProperties => ({ padding:'12px 20px', fontSize:16, cursor:d?'not-allowed':'pointer', background:'#0069d9', color:'#fff', border:'none', borderRadius:6, fontWeight:600, opacity:d?0.7:1 });
   const alert: React.CSSProperties = { marginBottom:16, color:'#fff', padding:12, borderRadius:6, fontSize:14, textAlign:'left' };
-  const link: React.CSSProperties = { color:'#0069d9', textDecoration:'underline' };
   const label: React.CSSProperties = { fontSize:12, fontWeight:600, display:'block', marginBottom:4, textAlign:'left' };
 
   return (
@@ -104,10 +105,14 @@ export default function ResetPasswordPage() {
       
       {phase === 'checking' && <p>Verifying link...</p>}
       
+      {/* --- 关键修改：将原来的链接替换为按钮 --- */}
       {phase === 'error' && (
-        <p>
-          <a href="/#/login" style={link}>Return to Login</a>
-        </p>
+        <button
+          onClick={() => navigate('/login')}
+          style={btn(false)} // 复用您已有的蓝色按钮样式
+        >
+          Return to Login
+        </button>
       )}
 
       {phase === 'form' && (
@@ -130,8 +135,6 @@ export default function ResetPasswordPage() {
 
       {phase === 'success' && <p style={{ fontSize: 13 }}>Redirecting...</p>}
       
-      {/* --- 关键修改：之前版本在这里有一个多余的按钮，现已删除 --- */}
-
     </div>
   );
 }
