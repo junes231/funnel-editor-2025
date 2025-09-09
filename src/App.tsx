@@ -74,7 +74,7 @@ export default function App({ db }: AppProps) {
   // New state variables to manage authentication and user roles
   const [user, setUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [funnels, setFunnels] = useState<Funnel[]>([]);
   // 在现有的 state 声明附近添加
 const [notification, setNotification] = useState<{
@@ -86,7 +86,7 @@ const [notification, setNotification] = useState<{
   type: 'success',
   visible: false
 });
-
+ 
 // 添加显示通知的函数
 const showNotification = (message: string, type: 'success' | 'error' = 'success') => {
   setNotification({
@@ -104,43 +104,33 @@ const showNotification = (message: string, type: 'success' | 'error' = 'success'
 
 // 新的 useEffect 1: 只负责监听和设置用户登录状态
 useEffect(() => {
-  const auth = getAuth();
-  const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-    if (currentUser && currentUser.emailVerified) {
-      setUser(currentUser);
-    } else {
-      setUser(null);
-    }
-    setIsLoading(false);
-  });
+    const auth = getAuth();
+    // onAuthStateChanged 返回一个 unsubscribe 函数
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      // 只要这个函数被调用，就意味着 Firebase 的首次检查已完成
+      // 无论 currentUser 是否存在，我们都可以结束初始加载状态
+      if (currentUser && currentUser.emailVerified) {
+        setUser(currentUser);
+      } else {
+        setUser(null);
+      }
+      setIsLoading(false);
+    });
 
-  return () => unsubscribe();
-}, []); // 依赖为空，只在加载时运行一次
+    // 组件卸载时，取消监听以防止内存泄漏
+    return () => unsubscribe();
+  }, []); // 空依赖数组，确保只在组件首次加载时设置监听器
 
-// 新的 useEffect 2: 只在用户状态变化后，负责检查管理员权限
-useEffect(() => {
-    // 如果 user 对象不存在 (用户未登录或已登出)，则他肯定不是管理员
+  // (检查管理员权限的 useEffect 保持不变)
+  useEffect(() => {
     if (!user) {
       setIsAdmin(false);
-      return; 
+      return;
     }
-
-    user.getIdTokenResult() 
-      .then(idTokenResult => {
-        // 检查 token 中 'role' 声明是否为 'admin'
-        if (idTokenResult.claims.role === 'admin') {
-          setIsAdmin(true);
-        } else {
-          setIsAdmin(false);
-        }
-      })
-      .catch(error => {
-        // 这个 catch 块现在基本不会被触发了
-        console.error("Error checking admin status:", error);
-        setIsAdmin(false);
-      });
-
-  }, [user]);// 关键：这个 effect 只在 `user` 状态变化时执行
+    user.getIdTokenResult().then(idTokenResult => {
+        setIsAdmin(idTokenResult.claims.role === 'admin');
+    }).catch(() => setIsAdmin(false));
+  }, [user]);
     useEffect(() => {
     // 仅当用户成功登录后执行
     if (user) {
