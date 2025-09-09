@@ -398,11 +398,11 @@ const FunnelDashboard: React.FC<FunnelDashboardProps> = ({ db, user, isAdmin, fu
           {funnels.map((funnel) => (
             <li key={funnel.id} className="funnel-item">
               <span>{funnel.name}</span>
-              <div className="funnel-actions">
-                <button className="button-link" onClick={() => navigate(`/edit/${funnel.id}`)}>Edit</button>
-                <button className="button-link" onClick={() => navigate(`/play/${funnel.id}`)}>Play</button>
-                <button className="button-link" onClick={() => handleCopyLink(funnel.id)}>Copy Link</button>
-                <button className="button-link delete-button" onClick={() => handleDeleteFunnel(funnel.id)}>Delete</button>
+               <div className="funnel-actions">
+                <button className="funnel-action-btn" onClick={() => navigate(`/edit/${funnel.id}`)}>Edit</button>
+                <button className="funnel-action-btn" onClick={() => navigate(`/play/${funnel.id}`)}>Play</button>
+                <button className="funnel-action-btn" onClick={() => handleCopyLink(funnel.id)}>Copy Link</button>
+                <button className="funnel-action-btn delete" onClick={() => handleDeleteFunnel(funnel.id)}>Delete</button>
               </div>
             </li>
           ))}
