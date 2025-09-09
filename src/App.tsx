@@ -1007,7 +1007,7 @@ const QuizEditorComponent: React.FC<QuizEditorComponentProps> = ({ questions, on
       )}
 
      
-      <button className="funnel-action-btn" onClick={onBack}>
+         <button className="btn-back-animated" style={{marginTop: '20px'}} onClick={onBack}>
         <span role="img" aria-label="back">
           ←
         </span>{' '}
@@ -1246,7 +1246,7 @@ const LinkSettingsComponent: React.FC<LinkSettingsComponentProps> = ({
        Applied
        </button>
         
-        <button className="funnel-action-btn" onClick={onBack}>
+        <button className="btn-back-animated" onClick={onBack}>
           <span role="img" aria-label="back">
             ←
           </span>{' '}
@@ -1314,7 +1314,7 @@ const ColorCustomizerComponent: React.FC<ColorCustomizerComponentProps> = ({
         Applied
         </button>
          
-        <button className="funnel-action-btn" onClick={onBack}>
+        <button className="btn-back-animated" onClick={onBack}> 
           <span role="img" aria-label="back">
             ←
           </span>{' '}
