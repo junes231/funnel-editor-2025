@@ -969,3 +969,42 @@ p {
   30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
   40%, 60% { transform: translate3d(4px, 0, 0); }
 }
+
+
+/* 漏斗列表页操作按钮的新样式 */
+.funnel-action-btn {
+  background-color: #e9ecef; /* 浅灰色背景 */
+  color: #495057; /* 深灰色文字 */
+  padding: 8px 16px;
+  border-radius: 20px; /* 圆角使其呈胶囊状 */
+  border: 1px solid transparent;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  margin: 0 5px; /* 增加按钮间距 */
+  
+  /* --- 核心动画设置 --- */
+  /* 您要求了1秒的动画，但通常0.3秒的用户体验会更流畅。*/
+  /* 您可以根据喜好将这里的 0.3s 修改为 1s。*/
+  transition: all 0.3s ease-in-out; 
+}
+
+/* 鼠标悬停时的动画效果 */
+.funnel-action-btn:hover {
+  background-color: #007bff; /* 悬停时变为蓝色 */
+  color: white; /* 文字变为白色 */
+  transform: translateY(-3px); /* 按钮向上浮动3像素 */
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15); /* 添加阴影 */
+}
+
+/* “删除”按钮的特殊样式 */
+.funnel-action-btn.delete {
+  color: #dc3545; /* 红色文字 */
+}
+
+/* “删除”按钮悬停时的特殊样式 */
+.funnel-action-btn.delete:hover {
+  background-color: #dc3545; /* 悬停时变为红色 */
+  color: white;
+}
