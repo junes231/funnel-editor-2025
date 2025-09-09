@@ -1190,7 +1190,19 @@ interface LinkSettingsComponentProps {
   setConversionGoal: React.Dispatch<React.SetStateAction<string>>;
   onBack: (event: React.MouseEvent<HTMLButtonElement>) => void;
   showNotification: (message: string, type?: 'success' | 'error') => void;
-} => {
+}
+
+// 2. 然后用这个接口来创建组件函数
+const LinkSettingsComponent: React.FC<LinkSettingsComponentProps> = ({
+  finalRedirectLink,
+  setFinalRedirectLink,
+  tracking,
+  setTracking,
+  conversionGoal,
+  setConversionGoal,
+  onBack,
+  showNotification
+}) => {
   return (
     <div className="link-settings-container">
       <h2>
