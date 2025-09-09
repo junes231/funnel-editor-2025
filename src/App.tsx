@@ -864,7 +864,7 @@ interface QuizEditorComponentProps {
   questions: Question[];
   onAddQuestion: () => void;
   onEditQuestion: (index: number) => void;
-  onBack: () => void;
+  onBack: (event: React.MouseEvent<HTMLButtonElement>) => void;
   onImportQuestions: (importedQuestions: Question[]) => void;
 }
 
@@ -1240,7 +1240,8 @@ interface ColorCustomizerComponentProps {
   setBackgroundColor: React.Dispatch<React.SetStateAction<string>>;
   textColor: string;
   setTextColor: React.Dispatch<React.SetStateAction<string>>;
-  onBack: () => void;
+  onBack: (event: React.MouseEvent<HTMLButtonElement>) => void;
+  showNotification: (message: string, type?: 'success' | 'error') => void;
 }
 
 const ColorCustomizerComponent: React.FC<ColorCustomizerComponentProps> = ({
