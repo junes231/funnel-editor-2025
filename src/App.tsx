@@ -1286,7 +1286,7 @@ const ColorCustomizerComponent: React.FC<ColorCustomizerComponentProps> = ({
         </span>{' '}
         Applied
         </button>
-         {
+         
         <button className="funnel-action-btn secondary" onClick={onBack}>
           <span role="img" aria-label="back">
             ←
