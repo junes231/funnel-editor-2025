@@ -1021,3 +1021,23 @@ p {
   background-color: #5a6268; /* 悬停时变为深灰色 */
   border-color: transparent; /* 移除蓝色边框效果 */
 }
+
+
+/* 定义一个名为 "green-flash" 的动画 */
+@keyframes green-flash {
+  0% {
+    background-color: #6c757d; /* 动画开始时是按钮的原始灰色 */
+  }
+  50% {
+    background-color: #28a745; /* 动画中途变为明亮的绿色 */
+    transform: scale(1.05); /* 让按钮轻微放大 */
+  }
+  100% {
+    background-color: #6c757d; /* 动画结束时恢复为原始灰色 */
+  }
+}
+
+/* 创建一个可以被JavaScript调用的动画类 */
+.is-animating {
+  animation: green-flash 0.5s ease-out;
+}
