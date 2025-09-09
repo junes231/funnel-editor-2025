@@ -692,7 +692,7 @@ const handleImportQuestions = (importedQuestions: Question[]) => {
               </h3>
               <p>Customize theme colors for this funnel.</p>
             </div>
-            <button className="back-button" onClick={() => navigate('/')}>
+            <button className="funnel-action-btn" style={{marginTop: '20px'}} onClick={() => navigate('/')}>
               <span role="img" aria-label="back">
                 ←
               </span>{' '}
