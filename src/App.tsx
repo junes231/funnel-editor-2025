@@ -993,7 +993,8 @@ const QuizEditorComponent: React.FC<QuizEditorComponentProps> = ({ questions, on
         </ul>
       )}
 
-      <button className="back-button" onClick={onBack}>
+     
+      <button className="funnel-action-btn secondary" style={{marginTop: '20px'}} onClick={onBack}>
         <span role="img" aria-label="back">
           ←
         </span>{' '}
@@ -1218,7 +1219,8 @@ const LinkSettingsComponent: React.FC<LinkSettingsComponentProps> = ({
       </span>{' '}
        Applied
        </button>
-        <button className="cancel-button" onClick={onBack}>
+        
+        <button className="funnel-action-btn secondary" onClick={onBack}>
           <span role="img" aria-label="back">
             ←
           </span>{' '}
@@ -1284,7 +1286,8 @@ const ColorCustomizerComponent: React.FC<ColorCustomizerComponentProps> = ({
         </span>{' '}
         Applied
         </button>
-        <button className="cancel-button" onClick={onBack}>
+         {
+        <button className="funnel-action-btn secondary" onClick={onBack}>
           <span role="img" aria-label="back">
             ←
           </span>{' '}
