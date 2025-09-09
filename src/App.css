@@ -1008,3 +1008,16 @@ p {
   background-color: #dc3545; /* 悬停时变为红色 */
   color: white;
 }
+
+
+/* 为“返回/取消”等次要操作按钮添加灰色样式 */
+.funnel-action-btn.secondary {
+  background-color: #6c757d; /* 中性灰色背景 */
+  color: white;
+}
+
+/* 次要按钮的悬停效果 */
+.funnel-action-btn.secondary:hover {
+  background-color: #5a6268; /* 悬停时变为深灰色 */
+  border-color: transparent; /* 移除蓝色边框效果 */
+}
