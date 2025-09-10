@@ -500,20 +500,7 @@ const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData }) => 
     textColor,
     saveFunnelToFirestore,
   ]);
-  const handleAnimatedBackNavigation = (event: React.MouseEvent<HTMLButtonElement>, action: () => void) => {
-    const button = event.currentTarget;
-    // 1. 给被点击的按钮添加动画类
-    button.classList.add('is-hiding');
-
-    // 2. 等待动画播放完毕 (1000毫秒 = 1秒)
-    setTimeout(() => {
-      // 3. 动画结束后执行页面跳转
-      action();
-      
-      // 4. 移除动画类 (虽然页面已跳转，但这是个好习惯)
-      button.classList.remove('is-hiding');
-    }, 1000);
-  };
+  
   const handleAddQuestion = () => {
     if (questions.length >= 6) {
       alert('You can only have up to 6 questions for this quiz.');
@@ -695,7 +682,7 @@ const handleImportQuestions = (importedQuestions: Question[]) => {
               </h3>
               <p>Customize theme colors for this funnel.</p>
             </div>
-            <button className="funnel-action-btn" style={{marginTop: '20px'}} onClick={() => navigate('/')}>
+            <button className="back-button" onClick={() => navigate('/')}>
               <span role="img" aria-label="back">
                 ←
               </span>{' '}
@@ -997,7 +984,7 @@ const QuizEditorComponent: React.FC<QuizEditorComponentProps> = ({ questions, on
       )}
 
      
-         <button className="btn-back-animated" style={{marginTop: '20px'}} onClick={onBack}>
+         <button className="back-button" onClick={onBack}>
         <span role="img" aria-label="back">
           ←
         </span>{' '}
@@ -1236,7 +1223,7 @@ const LinkSettingsComponent: React.FC<LinkSettingsComponentProps> = ({
        Applied
        </button>
         
-        <button className="btn-back-animated" onClick={onBack}>
+        <button className="back-button" onClick={onBack}>
           <span role="img" aria-label="back">
             ←
           </span>{' '}
@@ -1304,7 +1291,7 @@ const ColorCustomizerComponent: React.FC<ColorCustomizerComponentProps> = ({
         Applied
         </button>
          
-        <button className="btn-back-animated" onClick={onBack}> 
+        <button className="back-button" onClick={onBack}> 
           <span role="img" aria-label="back">
             ←
           </span>{' '}
