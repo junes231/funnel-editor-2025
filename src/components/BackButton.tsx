@@ -1,17 +1,25 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
-const BackButton: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
+interface BackButtonProps {
+  to: string;
+  children: React.ReactNode;
+}
+
+const BackButton: React.FC<BackButtonProps> = ({ to, children }) => {
   const [isFading, setIsFading] = useState(false);
+  const navigate = useNavigate();
 
   const handleClick = () => {
     setIsFading(true);
     setTimeout(() => {
-      window.history.back();
+      navigate(-1, { replace: true });
     }, 1000);
   };
 
   return (
     <button
+      className="back-button"
       onClick={handleClick}
       style={{
         transition: "opacity 1s",
@@ -19,7 +27,7 @@ const BackButton: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
       }}
       disabled={isFading}
     >
-      {children || "return"}
+      {children}
     </button>
   );
 };
