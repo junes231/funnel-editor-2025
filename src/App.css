@@ -1028,11 +1028,16 @@ p {
 
 
 
+/* App.css */
 .back-button {
   opacity: 1;
   transition: opacity 1s ease;
+  /* 下面两行可选：视觉/布局微调 */
+  display: inline-block;
+  cursor: pointer;
 }
 
 .back-button.animate-out {
   opacity: 0;
+  pointer-events: none; /* 避免重复点击 */
 }
