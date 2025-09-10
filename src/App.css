@@ -1027,44 +1027,12 @@ p {
 
 
 
-/* 为特定的“返回”按钮定义一个统一的、美观的样式 */
-.btn-back-animated {
-  background-color: #6c757d; /* 中性灰色背景 */
-  color: white;
-  padding: 10px 24px; /* 增加了内边距，让按钮更大更美观 */
-  border-radius: 8px;
-  border: none;
-  font-weight: 600;
-  font-size: 16px; /* 增加了字体大小 */
-  cursor: pointer;
-  transition: all 0.3s ease; /* 保留一个平滑的悬停效果 */
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px; /* 在图标和文字之间增加间距 */
+
+.back-button {
+  opacity: 1;
+  transition: opacity 1s ease;
 }
 
-.btn-back-animated:hover {
-  background-color: #5a6268; /* 鼠标悬停时变深 */
-  transform: translateY(-2px); /* 悬停时轻微上浮 */
-  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-}
-
-/* 这个类将在按钮被点击时通过JavaScript添加，以触发隐藏动画 */
-.is-hiding {
-  /* 动画时长为1秒 */
-  animation: hide-and-go 1s ease-in-out forwards;
-}
-
-/* 定义隐藏动画的关键帧：淡出、缩小并最终隐藏 */
-@keyframes hide-and-go {
-  from {
-    opacity: 1;
-    transform: scale(1);
-  }
-  to {
-    opacity: 0;
-    transform: scale(0.5);
-    visibility: hidden;
-  }
+.back-button.animate-out {
+  opacity: 0;
 }
