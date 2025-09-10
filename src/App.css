@@ -1026,18 +1026,6 @@ p {
 
 
 
-/* 按钮的基础样式，定义了过渡效果 */
-.back-button {
-  /* ... 您其他的按钮样式，如 padding, font-size 等 ... */
-  opacity: 1; /* 初始状态为完全不透明 */
-  transition: opacity 1s ease-in-out; /* 核心：定义一个持续1秒的透明度过渡动画 */
-}
-
-/* 当按钮需要隐藏时，添加这个 class */
-.back-button.animate-out {
-  opacity: 0; /* 目标状态为完全透明 */
-  pointer-events: none; /* 防止在动画过程中被再次点击 */
-}
 
 
 
