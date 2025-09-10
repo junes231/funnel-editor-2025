@@ -7,7 +7,6 @@ import VerifyPage from './pages/VerifyPage.tsx';
 import FinishEmailVerification from './pages/FinishEmailVerification.tsx';
 import { checkPasswordStrength } from './utils/passwordStrength.ts';
 import SomePage from "./pages/SomePage.tsx";
-import BackButton from "./components/BackButton.tsx";
 import { useNavigate, useParams, Routes, Route } from 'react-router-dom';
 import {
   collection,
@@ -194,9 +193,7 @@ useEffect(() => {
   };
 
   // --- Render Logic ---
-    if (isLoading) {
-    return <div style={{ textAlign: 'center', marginTop: '50px' }}>Verifying user status...</div>;
-  }
+    
   return (
     <div style={{ padding: 24, fontFamily: 'Arial' }}>
       <Routes>
@@ -684,7 +681,7 @@ const handleImportQuestions = (importedQuestions: Question[]) => {
               </h3>
               <p>Customize theme colors for this funnel.</p>
             </div>
-            <button className="back-button" onClick={handleClick}>
+            <button className="back-button" onClick={() => navigate('/')}>
               <span role="img" aria-label="back">
                 ←
               </span>{' '}
@@ -986,7 +983,7 @@ const QuizEditorComponent: React.FC<QuizEditorComponentProps> = ({ questions, on
       )}
 
      
-         <button className="back-button" onClick={handleClick}>
+         <button className="back-button" onClick={onBack}>
         <span role="img" aria-label="back">
           ←
         </span>{' '}
@@ -1225,7 +1222,7 @@ const LinkSettingsComponent: React.FC<LinkSettingsComponentProps> = ({
        Applied
        </button>
         
-      <button className="back-button" onClick={handleClick}>
+        <button className="back-button" onClick={onBack}>
           <span role="img" aria-label="back">
             ←
           </span>{' '}
@@ -1293,7 +1290,7 @@ const ColorCustomizerComponent: React.FC<ColorCustomizerComponentProps> = ({
         Applied
         </button>
          
-        <button className="back-button" onClick={handleClick}> 
+        <button className="back-button" onClick={onBack}> 
           <span role="img" aria-label="back">
             ←
           </span>{' '}
