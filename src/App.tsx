@@ -7,6 +7,7 @@ import VerifyPage from './pages/VerifyPage.tsx';
 import FinishEmailVerification from './pages/FinishEmailVerification.tsx';
 import { checkPasswordStrength } from './utils/passwordStrength.ts';
 import SomePage from "./pages/SomePage.tsx";
+import BackButton from "./components/BackButton.tsx";
 import { useNavigate, useParams, Routes, Route } from 'react-router-dom';
 import {
   collection,
@@ -683,7 +684,7 @@ const handleImportQuestions = (importedQuestions: Question[]) => {
               </h3>
               <p>Customize theme colors for this funnel.</p>
             </div>
-            <button className="back-button" onClick={() => navigate('/')}>
+            <button className="back-button" onClick={handleClick}>
               <span role="img" aria-label="back">
                 ←
               </span>{' '}
@@ -985,7 +986,7 @@ const QuizEditorComponent: React.FC<QuizEditorComponentProps> = ({ questions, on
       )}
 
      
-         <button className="back-button" onClick={onBack}>
+         <button className="back-button" onClick={handleClick}>
         <span role="img" aria-label="back">
           ←
         </span>{' '}
@@ -1224,7 +1225,7 @@ const LinkSettingsComponent: React.FC<LinkSettingsComponentProps> = ({
        Applied
        </button>
         
-        <button className="back-button" onClick={onBack}>
+      <button className="back-button" onClick={handleClick}>
           <span role="img" aria-label="back">
             ←
           </span>{' '}
@@ -1292,7 +1293,7 @@ const ColorCustomizerComponent: React.FC<ColorCustomizerComponentProps> = ({
         Applied
         </button>
          
-        <button className="back-button" onClick={onBack}> 
+        <button className="back-button" onClick={handleClick}> 
           <span role="img" aria-label="back">
             ←
           </span>{' '}
