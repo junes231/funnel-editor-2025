@@ -1,4 +1,4 @@
-import BackButton from "../components/BackButton";
+import BackButton from "../components/BackButton.js";
 
 function SomePage() {
   return (
