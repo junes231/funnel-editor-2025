@@ -1,19 +1,18 @@
-// src/components/BackButton.js
+// src/components/BackButton.tsx
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
 
-function BackButton({ children, to }) {
+interface BackButtonProps {
+  children: React.ReactNode;
+  to: string; // 跳转目标
+}
+
+function BackButton({ children, to }: BackButtonProps) {
   const [isAnimating, setIsAnimating] = useState(false);
-  const navigate = useNavigate();
 
   const handleClick = () => {
     setIsAnimating(true);
     setTimeout(() => {
-      if (to) {
-        navigate(to);   // 跳转到指定路径
-      } else {
-        navigate(-1);   // 如果没传路径，就返回上一页
-      }
+      window.location.href = to; // 1秒后跳转
     }, 1000);
   };
 
