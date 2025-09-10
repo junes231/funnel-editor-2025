@@ -1,4 +1,4 @@
-import BackButton from "../components/BackButton.js";
+import BackButton from "../components/BackButton.tsx";
 
 function SomePage() {
   return (
