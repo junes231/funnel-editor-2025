@@ -6,6 +6,7 @@ import LoginPage from "./pages/Login.tsx";
 import VerifyPage from './pages/VerifyPage.tsx';
 import FinishEmailVerification from './pages/FinishEmailVerification.tsx';
 import { checkPasswordStrength } from './utils/passwordStrength.ts';
+import SomePage from "./pages/SomePage.tsx";
 import { useNavigate, useParams, Routes, Route } from 'react-router-dom';
 import {
   collection,
