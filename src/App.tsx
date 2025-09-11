@@ -58,6 +58,25 @@ interface AppProps {
   db: Firestore;
 }
 
+interface FunnelEditorProps {
+  db: Firestore;
+  updateFunnelData: (funnelId: string, newData: FunnelData) => Promise<void>;
+  showNotification: (message: string, type?: 'success' | 'error') => void; // 添加了 showNotification
+}
+
+interface FunnelDashboardProps {
+  db: Firestore;
+  user: User; // <-- 添加这一行
+  isAdmin: boolean;
+  funnels: Funnel[];
+  setFunnels: React.Dispatch<React.SetStateAction<Funnel[]>>;
+  createFunnel: (name: string) => Promise<void>;
+  deleteFunnel: (funnelId: string) => Promise<void>;
+}
+
+interface QuizPlayerProps {
+  db: Firestore;
+}
 const defaultFunnelData: FunnelData = {
   questions: [],
   finalRedirectLink: '',
@@ -267,15 +286,7 @@ useEffect(() => {
 }
 
 
-interface FunnelDashboardProps {
-  db: Firestore;
-  user: User; // <-- 添加这一行
-  isAdmin: boolean;
-  funnels: Funnel[];
-  setFunnels: React.Dispatch<React.SetStateAction<Funnel[]>>;
-  createFunnel: (name: string) => Promise<void>;
-  deleteFunnel: (funnelId: string) => Promise<void>;
-}
+
 
 // REPLACE your old FunnelDashboard component with this new one
 const FunnelDashboard: React.FC<FunnelDashboardProps> = ({ db, user, isAdmin, funnels, setFunnels, createFunnel, deleteFunnel }) => {
@@ -406,11 +417,6 @@ const FunnelDashboard: React.FC<FunnelDashboardProps> = ({ db, user, isAdmin, fu
     </div>
   );
 };
-interface FunnelEditorProps {
-  db: Firestore;
-  updateFunnelData: (funnelId: string, newData: FunnelData) => Promise<void>;
-  showNotification: (message: string, type?: 'success' | 'error') => void; // 添加了 showNotification
-}
 
 const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData, showNotification }) => {
   const { funnelId } = useParams<{ funnelId: string }>();
@@ -725,9 +731,7 @@ const handleImportQuestions = (importedQuestions: Question[]) => {
   return <div className="App">{renderEditorContent()}</div>;
 };
 
-interface QuizPlayerProps {
-  db: Firestore;
-}
+
 
 const QuizPlayer: React.FC<QuizPlayerProps> = ({ db }) => {
   const { funnelId } = useParams<{ funnelId: string }>();
