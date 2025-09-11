@@ -504,6 +504,7 @@ const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData }) => 
   // 在 FunnelEditor 组件内部，可以放在 saveFunnelToFirestore 函数的下面
 
 const handleSelectTemplate = async (templateName: string) => {
+  console.log(`[LOG] handleSelectTemplate called with: ${templateName}`);
   // 检查是否会超出6个问题的限制
   if (questions.length >= 6) {
     setNotification({ message: 'Cannot add from template, the 6-question limit has been reached.', type: 'error' });
@@ -1001,19 +1002,32 @@ const QuizEditorComponent: React.FC<QuizEditorComponentProps> = ({ questions, on
         </button>
         <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".json" style={{ display: 'none' }} />
       </div>
-         {/* --- 模板库区域 (这是唯一的一份，解决了重复问题) --- */}
+         
+         {/* --- 模板库区域 --- */}
       <div style={{ textAlign: 'center', marginTop: '20px', paddingTop: '20px', borderTop: '1px solid #eee' }}>
         <h3 style={{ marginBottom: '15px' }}>Or, start with a template:</h3>
         <div style={{ display: 'flex', gap: '15px', justifyContent: 'center' }}>
-          {/* * 修正了 onClick 调用，确保能正确触发 onSelectTemplate
-            * 使用了统一的 className "template-btn" 以便美化样式
-          */}
-          <button className="template-btn" onClick={() => onSelectTemplate('health-supplement-template')}>
+
+         <button 
+            className="template-btn" 
+            onClick={() => {
+              console.log('[LOG] "Health Supplements" button clicked!');
+              onSelectTemplate('health-supplement-template');
+            }}
+          >
             💪 Health Supplements
           </button>
-          <button className="template-btn" onClick={() => onSelectTemplate('ecommerce-product-finder-template')}>
+
+          <button 
+            className="template-btn" 
+            onClick={() => {
+              console.log('[LOG] "Product Finder" button clicked!');
+              onSelectTemplate('ecommerce-product-finder-template');
+            }}
+          >
             🎁 Product Finder
           </button>
+          
         </div>
       </div>
       {questions.length === 0 ? (
