@@ -1011,7 +1011,22 @@ const QuizEditorComponent: React.FC<QuizEditorComponentProps> = ({ questions, on
         </button>
         <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".json" style={{ display: 'none' }} />
       </div>
-
+      {/* --- 修改开始 --- */}
+      <div style={{ textAlign: 'center', marginTop: '20px', paddingTop: '20px', borderTop: '1px solid #eee' }}>
+        <h3 style={{ marginBottom: '15px' }}>Or, start with a template:</h3>
+        {/*
+         * 问题1：按钮不美观 -> 给按钮添加了 "button-link" 类名
+         * 问题2：点击没反应 -> 修正了 onClick 的调用方式
+         */}
+        <div style={{ display: 'flex', gap: '15px', justifyContent: 'center' }}>
+          <button className="button-link" onClick={() => onSelectTemplate('health-supplement-template')}>
+            💪 Health Supplements
+          </button>
+          <button className="button-link" onClick={() => onSelectTemplate('ecommerce-product-finder-template')}>
+            🎁 Product Finder
+          </button>
+        </div>
+      </div>
       {questions.length === 0 ? (
         <p className="no-questions-message">No questions added yet. Click "Add New Question" or "Import Questions" to start!</p>
       ) : (
