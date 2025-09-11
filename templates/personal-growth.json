@@ -1,0 +1,104 @@
+[
+  {
+    "title": "What\u2019s your main focus in life?",
+    "answers": [
+      {
+        "text": "A. Career"
+      },
+      {
+        "text": "B. Health"
+      },
+      {
+        "text": "C. Relationships"
+      },
+      {
+        "text": "D. Happiness"
+      }
+    ]
+  },
+  {
+    "title": "How do you handle stress?",
+    "answers": [
+      {
+        "text": "A. Exercise"
+      },
+      {
+        "text": "B. Meditation"
+      },
+      {
+        "text": "C. Talking to friends"
+      },
+      {
+        "text": "D. Work harder"
+      }
+    ]
+  },
+  {
+    "title": "What motivates you?",
+    "answers": [
+      {
+        "text": "A. Family"
+      },
+      {
+        "text": "B. Money"
+      },
+      {
+        "text": "C. Growth"
+      },
+      {
+        "text": "D. Recognition"
+      }
+    ]
+  },
+  {
+    "title": "Preferred lifestyle?",
+    "answers": [
+      {
+        "text": "A. Minimalist"
+      },
+      {
+        "text": "B. Balanced"
+      },
+      {
+        "text": "C. Luxury"
+      },
+      {
+        "text": "D. Adventurous"
+      }
+    ]
+  },
+  {
+    "title": "How do you learn best?",
+    "answers": [
+      {
+        "text": "A. Reading"
+      },
+      {
+        "text": "B. Listening"
+      },
+      {
+        "text": "C. Doing"
+      },
+      {
+        "text": "D. Observing"
+      }
+    ]
+  },
+  {
+    "title": "Your biggest challenge?",
+    "answers": [
+      {
+        "text": "A. Time"
+      },
+      {
+        "text": "B. Motivation"
+      },
+      {
+        "text": "C. Focus"
+      },
+      {
+        "text": "D. Discipline"
+      }
+    ]
+  }
+]
