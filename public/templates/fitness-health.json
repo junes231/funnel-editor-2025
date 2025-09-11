@@ -1,0 +1,104 @@
+[
+  {
+    "title": "What\u2019s your main fitness goal?",
+    "answers": [
+      {
+        "text": "A. Lose weight"
+      },
+      {
+        "text": "B. Build muscle"
+      },
+      {
+        "text": "C. Improve endurance"
+      },
+      {
+        "text": "D. Stay healthy"
+      }
+    ]
+  },
+  {
+    "title": "How often do you exercise?",
+    "answers": [
+      {
+        "text": "A. Never"
+      },
+      {
+        "text": "B. 1\u20132 times/week"
+      },
+      {
+        "text": "C. 3\u20135 times/week"
+      },
+      {
+        "text": "D. Daily"
+      }
+    ]
+  },
+  {
+    "title": "Favorite workout style?",
+    "answers": [
+      {
+        "text": "A. Cardio"
+      },
+      {
+        "text": "B. Strength training"
+      },
+      {
+        "text": "C. Yoga/Pilates"
+      },
+      {
+        "text": "D. Mixed routine"
+      }
+    ]
+  },
+  {
+    "title": "Biggest struggle in fitness?",
+    "answers": [
+      {
+        "text": "A. Time"
+      },
+      {
+        "text": "B. Motivation"
+      },
+      {
+        "text": "C. Nutrition"
+      },
+      {
+        "text": "D. Consistency"
+      }
+    ]
+  },
+  {
+    "title": "Preferred training location?",
+    "answers": [
+      {
+        "text": "A. Gym"
+      },
+      {
+        "text": "B. Home"
+      },
+      {
+        "text": "C. Outdoors"
+      },
+      {
+        "text": "D. Studio classes"
+      }
+    ]
+  },
+  {
+    "title": "How do you track progress?",
+    "answers": [
+      {
+        "text": "A. Scale weight"
+      },
+      {
+        "text": "B. Photos"
+      },
+      {
+        "text": "C. Performance stats"
+      },
+      {
+        "text": "D. Energy levels"
+      }
+    ]
+  }
+]

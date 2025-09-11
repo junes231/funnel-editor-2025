@@ -1,0 +1,104 @@
+[
+  {
+    "title": "What\u2019s your business goal?",
+    "answers": [
+      {
+        "text": "A. Launch startup"
+      },
+      {
+        "text": "B. Grow revenue"
+      },
+      {
+        "text": "C. Attract investors"
+      },
+      {
+        "text": "D. Exit/sell company"
+      }
+    ]
+  },
+  {
+    "title": "Main business challenge?",
+    "answers": [
+      {
+        "text": "A. Funding"
+      },
+      {
+        "text": "B. Customers"
+      },
+      {
+        "text": "C. Team"
+      },
+      {
+        "text": "D. Scaling"
+      }
+    ]
+  },
+  {
+    "title": "How do you market?",
+    "answers": [
+      {
+        "text": "A. Social media"
+      },
+      {
+        "text": "B. Networking"
+      },
+      {
+        "text": "C. Paid ads"
+      },
+      {
+        "text": "D. Partnerships"
+      }
+    ]
+  },
+  {
+    "title": "Your risk appetite?",
+    "answers": [
+      {
+        "text": "A. Low"
+      },
+      {
+        "text": "B. Medium"
+      },
+      {
+        "text": "C. High"
+      },
+      {
+        "text": "D. Very high"
+      }
+    ]
+  },
+  {
+    "title": "Preferred work style?",
+    "answers": [
+      {
+        "text": "A. Solo"
+      },
+      {
+        "text": "B. Small team"
+      },
+      {
+        "text": "C. Growing team"
+      },
+      {
+        "text": "D. Large company"
+      }
+    ]
+  },
+  {
+    "title": "Biggest motivator?",
+    "answers": [
+      {
+        "text": "A. Freedom"
+      },
+      {
+        "text": "B. Wealth"
+      },
+      {
+        "text": "C. Impact"
+      },
+      {
+        "text": "D. Recognition"
+      }
+    ]
+  }
+]

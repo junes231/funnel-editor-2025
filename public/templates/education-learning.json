@@ -1,0 +1,104 @@
+[
+  {
+    "title": "Why do you want to learn?",
+    "answers": [
+      {
+        "text": "A. Career growth"
+      },
+      {
+        "text": "B. Personal interest"
+      },
+      {
+        "text": "C. Academic success"
+      },
+      {
+        "text": "D. Certification"
+      }
+    ]
+  },
+  {
+    "title": "Preferred learning format?",
+    "answers": [
+      {
+        "text": "A. Video courses"
+      },
+      {
+        "text": "B. Reading"
+      },
+      {
+        "text": "C. Interactive tools"
+      },
+      {
+        "text": "D. Live coaching"
+      }
+    ]
+  },
+  {
+    "title": "How much time per week?",
+    "answers": [
+      {
+        "text": "A. <2 hrs"
+      },
+      {
+        "text": "B. 2\u20135 hrs"
+      },
+      {
+        "text": "C. 5\u201310 hrs"
+      },
+      {
+        "text": "D. 10+ hrs"
+      }
+    ]
+  },
+  {
+    "title": "Biggest study challenge?",
+    "answers": [
+      {
+        "text": "A. Focus"
+      },
+      {
+        "text": "B. Motivation"
+      },
+      {
+        "text": "C. Resources"
+      },
+      {
+        "text": "D. Time"
+      }
+    ]
+  },
+  {
+    "title": "How do you apply knowledge?",
+    "answers": [
+      {
+        "text": "A. Projects"
+      },
+      {
+        "text": "B. Exams"
+      },
+      {
+        "text": "C. Work tasks"
+      },
+      {
+        "text": "D. Hobbies"
+      }
+    ]
+  },
+  {
+    "title": "What inspires you to study?",
+    "answers": [
+      {
+        "text": "A. Passion"
+      },
+      {
+        "text": "B. Income"
+      },
+      {
+        "text": "C. Family"
+      },
+      {
+        "text": "D. Recognition"
+      }
+    ]
+  }
+]
