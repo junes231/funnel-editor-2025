@@ -985,17 +985,7 @@ const QuizEditorComponent: React.FC<QuizEditorComponentProps> = ({ questions, on
         </span>{' '}
         Quiz Question List
       </h2>
-       <div className="templates-section" style={{ marginTop: '20px', paddingTop: '20px', borderTop: '1px solid #eee' }}>
-                <h3>Or, start with a template:</h3>
-                <div className="template-buttons" style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
-                    <button className="template-btn" onClick={() => onSelectTemplate('health-supplement-template')}>
-                        💪 Health Supplements
-                    </button>
-                    <button className="template-btn" onClick={() => onSelectTemplate('ecommerce-product-finder-template')}>
-                        🎁 Product Finder
-                    </button>
-                </div>
-            </div>
+       
       <div className="quiz-editor-actions">
         <button className="add-button" onClick={onAddQuestion}>
           <span role="img" aria-label="add">
@@ -1011,18 +1001,17 @@ const QuizEditorComponent: React.FC<QuizEditorComponentProps> = ({ questions, on
         </button>
         <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".json" style={{ display: 'none' }} />
       </div>
-      {/* --- 修改开始 --- */}
+         {/* --- 模板库区域 (这是唯一的一份，解决了重复问题) --- */}
       <div style={{ textAlign: 'center', marginTop: '20px', paddingTop: '20px', borderTop: '1px solid #eee' }}>
         <h3 style={{ marginBottom: '15px' }}>Or, start with a template:</h3>
-        {/*
-         * 问题1：按钮不美观 -> 给按钮添加了 "button-link" 类名
-         * 问题2：点击没反应 -> 修正了 onClick 的调用方式
-         */}
         <div style={{ display: 'flex', gap: '15px', justifyContent: 'center' }}>
-          <button className="button-link" onClick={() => onSelectTemplate('health-supplement-template')}>
+          {/* * 修正了 onClick 调用，确保能正确触发 onSelectTemplate
+            * 使用了统一的 className "template-btn" 以便美化样式
+          */}
+          <button className="template-btn" onClick={() => onSelectTemplate('health-supplement-template')}>
             💪 Health Supplements
           </button>
-          <button className="button-link" onClick={() => onSelectTemplate('ecommerce-product-finder-template')}>
+          <button className="template-btn" onClick={() => onSelectTemplate('ecommerce-product-finder-template')}>
             🎁 Product Finder
           </button>
         </div>
