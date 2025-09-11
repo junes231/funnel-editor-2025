@@ -6,7 +6,7 @@ import LoginPage from "./pages/Login.tsx";
 import VerifyPage from './pages/VerifyPage.tsx';
 import FinishEmailVerification from './pages/FinishEmailVerification.tsx';
 import { checkPasswordStrength } from './utils/passwordStrength.ts';
-import SomePage from "./pages/SomePage.tsx";
+import BackButton from './components/BackButton.tsx'; 
 import { useNavigate, useParams, Routes, Route } from 'react-router-dom';
 import {
   collection,
@@ -683,12 +683,9 @@ const handleImportQuestions = (importedQuestions: Question[]) => {
               </h3>
               <p>Customize theme colors for this funnel.</p>
             </div>
-            <button className="back-button" onClick={() => navigate('/')}>
-              <span role="img" aria-label="back">
-                ←
-              </span>{' '}
-              Back to All Funnels
-            </button>
+            <BackButton goBack={true}>
+  <span role="img" aria-label="back">←</span> Back to All Funnels
+            </BackButton>
             <div style={{ marginTop: '20px', padding: '10px', border: '1px dashed #ccc', fontSize: '0.8em', wordBreak: 'break-all', textAlign: 'left' }}>
               <strong>DEBUG:</strong> {debugLinkValue}
             </div>
@@ -985,12 +982,9 @@ const QuizEditorComponent: React.FC<QuizEditorComponentProps> = ({ questions, on
       )}
 
      
-         <button className="back-button" onClick={onBack}>
-        <span role="img" aria-label="back">
-          ←
-        </span>{' '}
-        Back to Funnel Dashboard
-      </button>
+         <BackButton onClick={onBack}>
+  <span role="img" aria-label="back">←</span> Back to Funnel Dashboard
+        </BackButton>
     </div>
   );
 };
@@ -1224,12 +1218,9 @@ const LinkSettingsComponent: React.FC<LinkSettingsComponentProps> = ({
        Applied
        </button>
         
-        <button className="back-button" onClick={onBack}>
-          <span role="img" aria-label="back">
-            ←
-          </span>{' '}
-          Back to Editor
-        </button>
+        <BackButton onClick={onBack}>
+  <span role="img" aria-label="back">←</span> Back to Editor
+       </BackButton>
       </div>
     </div>
   );
@@ -1292,12 +1283,9 @@ const ColorCustomizerComponent: React.FC<ColorCustomizerComponentProps> = ({
         Applied
         </button>
          
-        <button className="back-button" onClick={onBack}> 
-          <span role="img" aria-label="back">
-            ←
-          </span>{' '}
-          Back to Editor
-        </button>
+        <BackButton onClick={onBack}>
+  <span role="img" aria-label="back">←</span> Back to Editor
+        </BackButton>
       </div>
     </div>
   );
