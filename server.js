@@ -1,0 +1,52 @@
+const express = require("express");
+const cors = require("cors");
+const admin = require("firebase-admin");
+const fs = require("fs");
+const path = require("path");
+
+admin.initializeApp();
+const app = express();
+const port = process.env.PORT || 8080;
+
+// --- 1. 更健壮的 CORS 配置 ---
+const corsOptions = {
+  origin: "https://funnel-editor2025.netlify.app",
+  methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
+  credentials: true,
+  optionsSuccessStatus: 204
+};
+app.use(cors(corsOptions));
+app.use(express.json());
+
+// --- 2. 添加静态文件服务 ---
+app.use(express.static(path.join(__dirname, 'build')));
+
+// --- API 路由定义 ---
+
+// 3. 添加一个简单的“健康检查”路由
+app.get("/api/health", (req, res) => {
+  res.status(200).send({ status: "ok" });
+});
+
+// (保留您现有的 grant-admin-role 路由不变)
+app.post("/api/grant-admin-role", async (req, res) => {
+  // ... 您的代码 ...
+});
+
+// (保留您现有的 templates 路由不变)
+app.get("/api/templates", (req, res) => {
+  const templatesDirectory = path.join(__dirname, 'build', 'templates');
+  fs.readdir(templatesDirectory, (err, files) => {
+    if (err) {
+      if (err.code === 'ENOENT') { return res.json([]); }
+      return res.status(500).json({ error: "Failed to list templates" });
+    }
+    const jsonFiles = files.filter(file => path.extname(file).toLowerCase() === '.json');
+    res.json(jsonFiles);
+  });
+});
+
+// --- 启动服务器 ---
+app.listen(port, () => {
+  console.log(`Backend server for funnel-editor listening on port ${port}`);
+});
