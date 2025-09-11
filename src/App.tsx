@@ -535,29 +535,35 @@ const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData, showN
     setSelectedQuestionIndex(index);
     setCurrentSubView('questionForm');
   };
-   const handleSelectTemplate = async (templateName: string) => {
-    console.log(`[DEBUG] handleSelectTemplate called with: ${templateName}`);
-    if (questions.length >= 6) {
-      showNotification('Cannot add from template, the 6-question limit has been reached.', 'error');
-      return;
+   // 在 FunnelEditor 组件内部...
+
+const handleSelectTemplate = async (templateName: string) => {
+  console.log(`[DEBUG] Attempting to load template: '${templateName}'`);
+  
+  // 如果当前已有问题，则询问用户是否确认替换
+  if (questions.length > 0) {
+    if (!window.confirm('This will replace all current questions with the selected template. Are you sure?')) {
+      return; // 如果用户点击“取消”，则函数提前结束
     }
-    try {
-      const response = await fetch(`/templates/${templateName}.json`);
-      if (!response.ok) { throw new Error(`Template file not found`); }
-      const templateQuestions: Question[] = await response.json();
-      
-      const newQuestions = [...questions, ...templateQuestions];
-      if (newQuestions.length > 6) {
-        showNotification('Cannot add all questions, would exceed the 6-question limit.', 'error');
-        return;
-      }
-      setQuestions(newQuestions);
-      showNotification(`Template '${templateName}' loaded successfully!`, 'success');
-    } catch (error) {
-      console.error('Error loading template:', error);
-      showNotification('Failed to load the template.', 'error');
+  }
+
+  try {
+    const response = await fetch(`/templates/${templateName}.json`);
+    if (!response.ok) {
+      throw new Error(`File not found (status: ${response.status})`);
     }
-  };
+
+    const templateQuestions: Question[] = await response.json();
+    
+    // 直接用模板内容替换现有问题
+    setQuestions(templateQuestions); 
+    showNotification(`Template '${templateName}' loaded successfully!`, 'success');
+
+  } catch (error: any) {
+    console.error('[CRITICAL] Error loading template:', error);
+    showNotification(`Failed to load template: ${error.message}`, 'error');
+  }
+};
   const handleDeleteQuestion = () => {
   if (selectedQuestionIndex !== null) {
     setIsDeleting(true); // 开始动画
@@ -1005,31 +1011,28 @@ const QuizEditorComponent: React.FC<QuizEditorComponentProps> = ({ questions, on
          
          {/* --- 模板库区域 --- */}
       <div style={{ textAlign: 'center', marginTop: '20px', paddingTop: '20px', borderTop: '1px solid #eee' }}>
-        <h3 style={{ marginBottom: '15px' }}>Or, start with a template:</h3>
-        <div style={{ display: 'flex', gap: '15px', justifyContent: 'center' }}>
+      <h3 style={{ marginBottom: '15px' }}>Or, start with a template:</h3>
+     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', justifyContent: 'center' }}>
+    
+    {/* --- 以下是根据您上传的文件名进行的修正 --- */}
+    <button className="template-btn" onClick={() => onSelectTemplate('fitness-health')}>
+      💪 Fitness & Health
+    </button>
+    <button className="template-btn" onClick={() => onSelectTemplate('entrepreneurship-business')}>
+      🚀 Entrepreneurship
+    </button>
+    <button className="template-btn" onClick={() => onSelectTemplate('personal-growth')}>
+      🌱 Personal Growth
+    </button>
+    <button className="template-btn" onClick={() => onSelectTemplate('education-learning')}>
+      📚 Education & Learning
+    </button>
+    <button className="template-btn" onClick={() => onSelectTemplate('marketing-funnel')}>
+      📈 Marketing Funnel
+    </button>
 
-         <button 
-            className="template-btn" 
-            onClick={() => {
-              console.log('[LOG] "Health Supplements" button clicked!');
-              onSelectTemplate('health-supplement-template');
-            }}
-          >
-            💪 Health Supplements
-          </button>
-
-          <button 
-            className="template-btn" 
-            onClick={() => {
-              console.log('[LOG] "Product Finder" button clicked!');
-              onSelectTemplate('ecommerce-product-finder-template');
-            }}
-          >
-            🎁 Product Finder
-          </button>
-          
-        </div>
-      </div>
+  </div>
+</div>
       {questions.length === 0 ? (
         <p className="no-questions-message">No questions added yet. Click "Add New Question" or "Import Questions" to start!</p>
       ) : (
