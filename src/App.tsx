@@ -193,7 +193,9 @@ useEffect(() => {
   };
 
   // --- Render Logic ---
-    
+   if (isLoading) {
+    return <div style={{ textAlign: 'center', marginTop: '50px' }}>Verifying user status...</div>;
+  } 
   return (
     <div style={{ padding: 24, fontFamily: 'Arial' }}>
       <Routes>
