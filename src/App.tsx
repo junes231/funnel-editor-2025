@@ -244,8 +244,12 @@ useEffect(() => {
                     </span>
                     <button onClick={() => signOut(getAuth())} style={{ padding: '8px 15px' }}>Logout</button>
                   </div>
-                  <FunnelEditor db={db} updateFunnelData={updateFunnelData} />
-                </>
+                  <FunnelEditor 
+                  db={db} 
+                 updateFunnelData={updateFunnelData} 
+                showNotification={showNotification} // <-- 确保传递了这个 prop
+              />
+            </>
           }
         />
         
@@ -405,9 +409,10 @@ const FunnelDashboard: React.FC<FunnelDashboardProps> = ({ db, user, isAdmin, fu
 interface FunnelEditorProps {
   db: Firestore;
   updateFunnelData: (funnelId: string, newData: FunnelData) => Promise<void>;
+  showNotification: (message: string, type?: 'success' | 'error') => void; // 添加了 showNotification
 }
 
-const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData }) => {
+const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData, showNotification }) => {
   const { funnelId } = useParams<{ funnelId: string }>();
   const navigate = useNavigate();
 
@@ -501,38 +506,7 @@ const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData }) => 
     textColor,
     saveFunnelToFirestore,
   ]);
-  // 在 FunnelEditor 组件内部，可以放在 saveFunnelToFirestore 函数的下面
-
-const handleSelectTemplate = async (templateName: string) => {
-  console.log(`[LOG] handleSelectTemplate called with: ${templateName}`);
-  // 检查是否会超出6个问题的限制
-  if (questions.length >= 6) {
-    setNotification({ message: 'Cannot add from template, the 6-question limit has been reached.', type: 'error' });
-    return;
-  }
-
-  try {
-    // 从 public/templates/ 文件夹中获取模板文件
-    const response = await fetch(`/templates/${templateName}.json`);
-    const templateQuestions: Question[] = await response.json();
-
-    // 将模板中的问题与现有问题合并
-    const newQuestions = [...questions, ...templateQuestions];
-
-    // 再次检查合并后是否超出限制
-    if (newQuestions.length > 6) {
-      setNotification({ message: `Cannot add all questions from template, it would exceed the 6-question limit.`, type: 'error' });
-      return;
-    }
-
-    setQuestions(newQuestions);
-    setNotification({ message: `Template "${templateName}" loaded successfully!`, type: 'success' });
-
-  } catch (error) {
-    console.error('Error loading template:', error);
-    setNotification({ message: 'Failed to load the template.', type: 'error' });
-  }
-};
+  
   const handleAddQuestion = () => {
     if (questions.length >= 6) {
       alert('You can only have up to 6 questions for this quiz.');
@@ -555,7 +529,29 @@ const handleSelectTemplate = async (templateName: string) => {
     setSelectedQuestionIndex(index);
     setCurrentSubView('questionForm');
   };
-
+   const handleSelectTemplate = async (templateName: string) => {
+    console.log(`[DEBUG] handleSelectTemplate called with: ${templateName}`);
+    if (questions.length >= 6) {
+      showNotification('Cannot add from template, the 6-question limit has been reached.', 'error');
+      return;
+    }
+    try {
+      const response = await fetch(`/templates/${templateName}.json`);
+      if (!response.ok) { throw new Error(`Template file not found`); }
+      const templateQuestions: Question[] = await response.json();
+      
+      const newQuestions = [...questions, ...templateQuestions];
+      if (newQuestions.length > 6) {
+        showNotification('Cannot add all questions, would exceed the 6-question limit.', 'error');
+        return;
+      }
+      setQuestions(newQuestions);
+      showNotification(`Template '${templateName}' loaded successfully!`, 'success');
+    } catch (error) {
+      console.error('Error loading template:', error);
+      showNotification('Failed to load the template.', 'error');
+    }
+  };
   const handleDeleteQuestion = () => {
   if (selectedQuestionIndex !== null) {
     setIsDeleting(true); // 开始动画
