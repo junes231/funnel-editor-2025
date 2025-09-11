@@ -8,7 +8,7 @@ admin.initializeApp();
 const app = express();
 const port = process.env.PORT || 8080;
 
-// --- 1. 更健壮的 CORS 配置 ---
+// --- CORS 配置 ---
 const corsOptions = {
   origin: "https://funnel-editor2025.netlify.app",
   methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
@@ -18,22 +18,22 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 
-// --- 2. 添加静态文件服务 ---
+// --- 静态文件服务 (非常重要) ---
 app.use(express.static(path.join(__dirname, 'build')));
 
 // --- API 路由定义 ---
 
-// 3. 添加一个简单的“健康检查”路由
+// 健康检查路由
 app.get("/api/health", (req, res) => {
   res.status(200).send({ status: "ok" });
 });
 
-// (保留您现有的 grant-admin-role 路由不变)
+// grant-admin-role 路由
 app.post("/api/grant-admin-role", async (req, res) => {
-  // ... 您的代码 ...
+  // ... 您的授权逻辑 ...
 });
 
-// (保留您现有的 templates 路由不变)
+// templates 路由
 app.get("/api/templates", (req, res) => {
   const templatesDirectory = path.join(__dirname, 'build', 'templates');
   fs.readdir(templatesDirectory, (err, files) => {
