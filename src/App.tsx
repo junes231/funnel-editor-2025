@@ -884,7 +884,7 @@ interface QuizEditorComponentProps {
   questions: Question[];
   onAddQuestion: () => void;
   onEditQuestion: (index: number) => void;
-  onBack: (event: React.MouseEvent<HTMLButtonElement>) => void;
+  onBack: () => void;
   onImportQuestions: (importedQuestions: Question[]) => void;
   onSelectTemplate: (templateName: string) => void;
 }
