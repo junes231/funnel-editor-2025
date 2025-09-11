@@ -1024,7 +1024,28 @@ p {
   border-color: transparent; /* 移除蓝色边框效果 */
 }
 
+/* 文件: junes231/funnel-editor-2025/funnel-editor-2025-main/src/App.css */
 
+.button-link {
+    background: none;
+    border: 1px solid #007bff; /* 添加边框 */
+    color: #007bff;
+    cursor: pointer;
+    text-decoration: none;
+    padding: 8px 16px; /* 增加内边距 */
+    border-radius: 8px; /* 添加圆角 */
+    transition: background-color 0.2s ease, color 0.2s ease;
+    font-size: 0.9em;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.button-link:hover {
+    background-color: #007bff; /* 鼠标悬停时改变背景色 */
+    color: white; /* 鼠标悬停时改变文字颜色 */
+    text-decoration: none;
+}
 
 
 
