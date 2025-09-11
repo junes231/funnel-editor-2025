@@ -1,0 +1,104 @@
+[
+  {
+    "title": "What\u2019s your business stage?",
+    "answers": [
+      {
+        "text": "A. Just starting"
+      },
+      {
+        "text": "B. Small but growing"
+      },
+      {
+        "text": "C. Established"
+      },
+      {
+        "text": "D. Scaling globally"
+      }
+    ]
+  },
+  {
+    "title": "Main source of leads?",
+    "answers": [
+      {
+        "text": "A. Social media"
+      },
+      {
+        "text": "B. Paid ads"
+      },
+      {
+        "text": "C. SEO/Content"
+      },
+      {
+        "text": "D. Referrals"
+      }
+    ]
+  },
+  {
+    "title": "Biggest marketing challenge?",
+    "answers": [
+      {
+        "text": "A. Lead generation"
+      },
+      {
+        "text": "B. Conversions"
+      },
+      {
+        "text": "C. Retention"
+      },
+      {
+        "text": "D. Scaling budget"
+      }
+    ]
+  },
+  {
+    "title": "Preferred campaign type?",
+    "answers": [
+      {
+        "text": "A. Email"
+      },
+      {
+        "text": "B. Social ads"
+      },
+      {
+        "text": "C. Influencers"
+      },
+      {
+        "text": "D. Webinars"
+      }
+    ]
+  },
+  {
+    "title": "How do you measure success?",
+    "answers": [
+      {
+        "text": "A. Clicks"
+      },
+      {
+        "text": "B. Leads"
+      },
+      {
+        "text": "C. Sales"
+      },
+      {
+        "text": "D. ROI"
+      }
+    ]
+  },
+  {
+    "title": "What motivates your growth?",
+    "answers": [
+      {
+        "text": "A. Brand awareness"
+      },
+      {
+        "text": "B. More customers"
+      },
+      {
+        "text": "C. Higher profit"
+      },
+      {
+        "text": "D. Market dominance"
+      }
+    ]
+  }
+]
