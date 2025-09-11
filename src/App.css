@@ -1047,7 +1047,29 @@ p {
     text-decoration: none;
 }
 
+/* 在文件末尾添加 */
 
+.template-btn {
+  background-color: #ffffff;
+  border: 1px solid #6f42c1; /* 紫色边框 */
+  color: #6f42c1; /* 紫色文字 */
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 1em;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.template-btn:hover {
+  background-color: #6f42c1; /* 鼠标悬停时变为紫色背景 */
+  color: #ffffff; /* 文字变为白色 */
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
 
 
 
