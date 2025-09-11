@@ -501,7 +501,37 @@ const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData }) => 
     textColor,
     saveFunnelToFirestore,
   ]);
-  
+  // 在 FunnelEditor 组件内部，可以放在 saveFunnelToFirestore 函数的下面
+
+const handleSelectTemplate = async (templateName: string) => {
+  // 检查是否会超出6个问题的限制
+  if (questions.length >= 6) {
+    setNotification({ message: 'Cannot add from template, the 6-question limit has been reached.', type: 'error' });
+    return;
+  }
+
+  try {
+    // 从 public/templates/ 文件夹中获取模板文件
+    const response = await fetch(`/templates/${templateName}.json`);
+    const templateQuestions: Question[] = await response.json();
+
+    // 将模板中的问题与现有问题合并
+    const newQuestions = [...questions, ...templateQuestions];
+
+    // 再次检查合并后是否超出限制
+    if (newQuestions.length > 6) {
+      setNotification({ message: `Cannot add all questions from template, it would exceed the 6-question limit.`, type: 'error' });
+      return;
+    }
+
+    setQuestions(newQuestions);
+    setNotification({ message: `Template "${templateName}" loaded successfully!`, type: 'success' });
+
+  } catch (error) {
+    console.error('Error loading template:', error);
+    setNotification({ message: 'Failed to load the template.', type: 'error' });
+  }
+};
   const handleAddQuestion = () => {
     if (questions.length >= 6) {
       alert('You can only have up to 6 questions for this quiz.');
@@ -598,7 +628,8 @@ const handleImportQuestions = (importedQuestions: Question[]) => {
             onEditQuestion={handleEditQuestion}
             onBack={() => setCurrentSubView('mainEditorDashboard')}
             onImportQuestions={handleImportQuestions}
-          />
+            onSelectTemplate={handleSelectTemplate}
+            />
         );
       case 'questionForm':
         const questionToEdit = selectedQuestionIndex !== null ? questions[selectedQuestionIndex] : undefined;
@@ -854,6 +885,7 @@ interface QuizEditorComponentProps {
   onEditQuestion: (index: number) => void;
   onBack: (event: React.MouseEvent<HTMLButtonElement>) => void;
   onImportQuestions: (importedQuestions: Question[]) => void;
+  onSelectTemplate: (templateName: string) => void;
 }
 
 const QuizEditorComponent: React.FC<QuizEditorComponentProps> = ({ questions, onAddQuestion, onEditQuestion, onBack, onImportQuestions }) => {
@@ -953,6 +985,17 @@ const QuizEditorComponent: React.FC<QuizEditorComponentProps> = ({ questions, on
         </span>{' '}
         Quiz Question List
       </h2>
+       <div className="templates-section" style={{ marginTop: '20px', paddingTop: '20px', borderTop: '1px solid #eee' }}>
+                <h3>Or, start with a template:</h3>
+                <div className="template-buttons" style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+                    <button className="template-btn" onClick={() => onSelectTemplate('health-supplement-template')}>
+                        💪 Health Supplements
+                    </button>
+                    <button className="template-btn" onClick={() => onSelectTemplate('ecommerce-product-finder-template')}>
+                        🎁 Product Finder
+                    </button>
+                </div>
+            </div>
       <div className="quiz-editor-actions">
         <button className="add-button" onClick={onAddQuestion}>
           <span role="img" aria-label="add">
