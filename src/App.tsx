@@ -901,19 +901,27 @@ const QuizEditorComponent: React.FC<QuizEditorComponentProps> = ({ questions, on
 
   // 2. 使用 useEffect 在组件加载时获取列表
   useEffect(() => {
-    const fetchTemplates = async () => {
-      try {
-        // 注意：这里需要替换为您的后端API的实际URL
-        const response = await fetch('https://grant-admin-role-498506838505.us-central1.run.app/api/templates');
-        const files: string[] = await response.json();
-        setTemplateFiles(files);
-      } catch (error) {
-        console.error("Failed to fetch templates list:", error);
+  const fetchTemplates = async () => {
+    try {
+      // 您的后端 URL
+      const backendUrl = 'https://grant-admin-role-498506838505.us-central1.run.app';
+      
+      // 使用完整的 URL 来请求模板列表
+      const response = await fetch(`${backendUrl}/api/templates`);
+      
+      if (!response.ok) {
+        throw new Error(`Network response was not ok: ${response.statusText}`);
       }
-    };
 
-    fetchTemplates();
-  }, []);
+      const files: string[] = await response.json();
+      setTemplateFiles(files);
+    } catch (error) {
+      console.error("Failed to fetch templates list:", error);
+    }
+  };
+
+  fetchTemplates();
+}, []);
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
   const file = event.target.files?.[0];
   if (!file) {
