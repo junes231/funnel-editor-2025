@@ -8,13 +8,7 @@ admin.initializeApp();
 const app = express();
 const port = process.env.PORT || 8080;
 
-// 日志中间件（调试用）
-app.use((req, res, next) => {
-  console.log('Request URL:', req.url);
-  console.log('Request Headers:', req.headers);
-  next();
-});
-
+// --- CORS 配置 ---
 const corsOptions = {
   origin: "https://funnel-editor2025.netlify.app",
   methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
@@ -23,26 +17,36 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 app.use(express.json());
+
+// --- 静态文件服务 (非常重要) ---
 app.use(express.static(path.join(__dirname, 'build')));
 
+// --- API 路由定义 ---
+
+// 健康检查路由
 app.get("/api/health", (req, res) => {
   res.status(200).send({ status: "ok" });
 });
 
+// grant-admin-role 路由
+app.post("/api/grant-admin-role", async (req, res) => {
+  // ... 您的授权逻辑 ...
+});
+
+// templates 路由
 app.get("/api/templates", (req, res) => {
   const templatesDirectory = path.join(__dirname, 'build', 'templates');
-  console.log(`Reading directory: ${templatesDirectory}`);
   fs.readdir(templatesDirectory, (err, files) => {
     if (err) {
-      console.error(`Error reading directory: ${err.message}`);
       if (err.code === 'ENOENT') { return res.json([]); }
-      return res.status(500).json({ error: "Failed to list templates", details: err.message });
+      return res.status(500).json({ error: "Failed to list templates" });
     }
     const jsonFiles = files.filter(file => path.extname(file).toLowerCase() === '.json');
     res.json(jsonFiles);
   });
 });
 
+// --- 启动服务器 ---
 app.listen(port, () => {
   console.log(`Backend server for funnel-editor listening on port ${port}`);
 });
