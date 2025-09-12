@@ -4,9 +4,19 @@ const express = require("express");
 const cors = require("cors");
 const admin = require("firebase-admin");
 
-// --- 初始化 Firebase Admin SDK ---
-// Cloud Run 会自动提供必要的凭证
-admin.initializeApp();
+// --- 修改开始 ---
+// 使用 try...catch 结构包裹初始化过程
+try {
+  admin.initializeApp();
+  // 如果成功，打印一条日志，方便我们在日志中确认
+  console.log("Firebase Admin SDK initialized successfully.");
+} catch (error) {
+  // 如果失败，打印出详细的错误信息
+  console.error("CRITICAL: Error initializing Firebase Admin SDK:", error);
+  
+  // 强制退出进程。这能确保Cloud Run知道程序是因为这个特定错误而终止的。
+  process.exit(1); 
+}
 
 const app = express();
 const port = process.env.PORT || 8080;
