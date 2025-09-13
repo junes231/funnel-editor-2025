@@ -426,7 +426,18 @@ const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData }) => 
   const [currentSubView, setCurrentSubView] = useState('mainEditorDashboard');
   const [templateFiles, setTemplateFiles] = useState<string[]>([]);
   const [debugLinkValue, setDebugLinkValue] = useState('Debug: N/A');
-
+  useEffect(() => {
+  // Hardcode the list of available template files.
+  // This avoids the need for a server-side call on a static site.
+  const availableTemplates = [
+    'education-learning.json',
+    'entrepreneurship-business.json',
+    'fitness-health.json',
+    'marketing-funnel.json',
+    'personal-growth.json',
+  ];
+  setTemplateFiles(availableTemplates);
+}, []);
   useEffect(() => {
     const getFunnel = async () => {
       if (!funnelId) return;
@@ -630,6 +641,7 @@ const handleImportQuestions = (importedQuestions: Question[]) => {
             onBack={() => setCurrentSubView('mainEditorDashboard')}
             onImportQuestions={handleImportQuestions}
             onSelectTemplate={handleSelectTemplate}
+            templateFiles={templateFiles}
             />
         );
       case 'questionForm':
@@ -887,9 +899,18 @@ interface QuizEditorComponentProps {
   onBack: () => void;
   onImportQuestions: (importedQuestions: Question[]) => void;
   onSelectTemplate: (templateName: string) => void;
+  templateFiles: string[];
 }
 
-const QuizEditorComponent: React.FC<QuizEditorComponentProps> = ({ questions, onAddQuestion, onEditQuestion, onBack, onImportQuestions }) => {
+const QuizEditorComponent: React.FC<QuizEditorComponentProps> = ({ 
+  questions, 
+  onAddQuestion, 
+  onEditQuestion, 
+  onBack, 
+  onImportQuestions,
+  onSelectTemplate,
+  templateFiles // <-- Destructure the prop here
+}) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
