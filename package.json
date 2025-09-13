@@ -5,7 +5,8 @@
   "homepage": ".",
   "scripts": {
     "start": "node server.js",
-    "build": "react-scripts build && npm run build:server","build:server": "mkdir -p build && cp server.js build/ && cp package.json build/"
+    "build": "react-scripts build && npm run build:server",
+    "build:server": "mkdir -p build && cp server.js build/ && cp package.json build/",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d build"
   },
