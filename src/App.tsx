@@ -58,25 +58,6 @@ interface AppProps {
   db: Firestore;
 }
 
-interface FunnelEditorProps {
-  db: Firestore;
-  updateFunnelData: (funnelId: string, newData: FunnelData) => Promise<void>;
-  showNotification: (message: string, type?: 'success' | 'error') => void; // 添加了 showNotification
-}
-
-interface FunnelDashboardProps {
-  db: Firestore;
-  user: User; // <-- 添加这一行
-  isAdmin: boolean;
-  funnels: Funnel[];
-  setFunnels: React.Dispatch<React.SetStateAction<Funnel[]>>;
-  createFunnel: (name: string) => Promise<void>;
-  deleteFunnel: (funnelId: string) => Promise<void>;
-}
-
-interface QuizPlayerProps {
-  db: Firestore;
-}
 const defaultFunnelData: FunnelData = {
   questions: [],
   finalRedirectLink: '',
@@ -263,12 +244,8 @@ useEffect(() => {
                     </span>
                     <button onClick={() => signOut(getAuth())} style={{ padding: '8px 15px' }}>Logout</button>
                   </div>
-                  <FunnelEditor 
-                  db={db} 
-                 updateFunnelData={updateFunnelData} 
-                showNotification={showNotification} // <-- 确保传递了这个 prop
-              />
-            </>
+                  <FunnelEditor db={db} updateFunnelData={updateFunnelData} />
+                </>
           }
         />
         
@@ -286,7 +263,15 @@ useEffect(() => {
 }
 
 
-
+interface FunnelDashboardProps {
+  db: Firestore;
+  user: User; // <-- 添加这一行
+  isAdmin: boolean;
+  funnels: Funnel[];
+  setFunnels: React.Dispatch<React.SetStateAction<Funnel[]>>;
+  createFunnel: (name: string) => Promise<void>;
+  deleteFunnel: (funnelId: string) => Promise<void>;
+}
 
 // REPLACE your old FunnelDashboard component with this new one
 const FunnelDashboard: React.FC<FunnelDashboardProps> = ({ db, user, isAdmin, funnels, setFunnels, createFunnel, deleteFunnel }) => {
@@ -417,8 +402,12 @@ const FunnelDashboard: React.FC<FunnelDashboardProps> = ({ db, user, isAdmin, fu
     </div>
   );
 };
+interface FunnelEditorProps {
+  db: Firestore;
+  updateFunnelData: (funnelId: string, newData: FunnelData) => Promise<void>;
+}
 
-const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData, showNotification }) => {
+const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData }) => {
   const { funnelId } = useParams<{ funnelId: string }>();
   const navigate = useNavigate();
 
@@ -512,7 +501,38 @@ const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData, showN
     textColor,
     saveFunnelToFirestore,
   ]);
-  
+  // 在 FunnelEditor 组件内部，可以放在 saveFunnelToFirestore 函数的下面
+
+const handleSelectTemplate = async (templateName: string) => {
+  console.log(`[LOG] handleSelectTemplate called with: ${templateName}`);
+  // 检查是否会超出6个问题的限制
+  if (questions.length >= 6) {
+    setNotification({ message: 'Cannot add from template, the 6-question limit has been reached.', type: 'error' });
+    return;
+  }
+
+  try {
+    // 从 public/templates/ 文件夹中获取模板文件
+    const response = await fetch(`/templates/${templateName}.json`);
+    const templateQuestions: Question[] = await response.json();
+
+    // 将模板中的问题与现有问题合并
+    const newQuestions = [...questions, ...templateQuestions];
+
+    // 再次检查合并后是否超出限制
+    if (newQuestions.length > 6) {
+      setNotification({ message: `Cannot add all questions from template, it would exceed the 6-question limit.`, type: 'error' });
+      return;
+    }
+
+    setQuestions(newQuestions);
+    setNotification({ message: `Template "${templateName}" loaded successfully!`, type: 'success' });
+
+  } catch (error) {
+    console.error('Error loading template:', error);
+    setNotification({ message: 'Failed to load the template.', type: 'error' });
+  }
+};
   const handleAddQuestion = () => {
     if (questions.length >= 6) {
       alert('You can only have up to 6 questions for this quiz.');
@@ -535,35 +555,7 @@ const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData, showN
     setSelectedQuestionIndex(index);
     setCurrentSubView('questionForm');
   };
-   // 在 FunnelEditor 组件内部...
 
-const handleSelectTemplate = async (templateName: string) => {
-  console.log(`[DEBUG] Attempting to load template: '${templateName}'`);
-  
-  // 如果当前已有问题，则询问用户是否确认替换
-  if (questions.length > 0) {
-    if (!window.confirm('This will replace all current questions with the selected template. Are you sure?')) {
-      return; // 如果用户点击“取消”，则函数提前结束
-    }
-  }
-
-  try {
-    const response = await fetch(`/templates/${templateName}.json`);
-    if (!response.ok) {
-      throw new Error(`File not found (status: ${response.status})`);
-    }
-
-    const templateQuestions: Question[] = await response.json();
-    
-    // 直接用模板内容替换现有问题
-    setQuestions(templateQuestions); 
-    showNotification(`Template '${templateName}' loaded successfully!`, 'success');
-
-  } catch (error: any) {
-    console.error('[CRITICAL] Error loading template:', error);
-    showNotification(`Failed to load template: ${error.message}`, 'error');
-  }
-};
   const handleDeleteQuestion = () => {
   if (selectedQuestionIndex !== null) {
     setIsDeleting(true); // 开始动画
@@ -737,7 +729,9 @@ const handleImportQuestions = (importedQuestions: Question[]) => {
   return <div className="App">{renderEditorContent()}</div>;
 };
 
-
+interface QuizPlayerProps {
+  db: Firestore;
+}
 
 const QuizPlayer: React.FC<QuizPlayerProps> = ({ db }) => {
   const { funnelId } = useParams<{ funnelId: string }>();
@@ -897,31 +891,7 @@ interface QuizEditorComponentProps {
 
 const QuizEditorComponent: React.FC<QuizEditorComponentProps> = ({ questions, onAddQuestion, onEditQuestion, onBack, onImportQuestions }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
-   const [templateFiles, setTemplateFiles] = useState<string[]>([]);
 
-  // 2. 使用 useEffect 在组件加载时获取列表
-  useEffect(() => {
-  const fetchTemplates = async () => {
-    try {
-      // 您的后端 URL
-      const backendUrl = 'https://grant-admin-role-498506838505.us-central1.run.app';
-      
-      // 使用完整的 URL 来请求模板列表
-      const response = await fetch(`${backendUrl}/api/templates`);
-      
-      if (!response.ok) {
-        throw new Error(`Network response was not ok: ${response.statusText}`);
-      }
-
-      const files: string[] = await response.json();
-      setTemplateFiles(files);
-    } catch (error) {
-      console.error("Failed to fetch templates list:", error);
-    }
-  };
-
-  fetchTemplates();
-}, []);
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
   const file = event.target.files?.[0];
   if (!file) {
@@ -1033,7 +1003,7 @@ const QuizEditorComponent: React.FC<QuizEditorComponentProps> = ({ questions, on
         <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".json" style={{ display: 'none' }} />
       </div>
          
-         
+         {/* --- 模板库区域 --- */}
       <div style={{ textAlign: 'center', marginTop: '20px', paddingTop: '20px', borderTop: '1px solid #eee' }}>
         <h3 style={{ marginBottom: '15px' }}>Or, start with a template:</h3>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', justifyContent: 'center' }}>
