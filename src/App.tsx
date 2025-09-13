@@ -897,7 +897,31 @@ interface QuizEditorComponentProps {
 
 const QuizEditorComponent: React.FC<QuizEditorComponentProps> = ({ questions, onAddQuestion, onEditQuestion, onBack, onImportQuestions }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+   const [templateFiles, setTemplateFiles] = useState<string[]>([]);
 
+  // 2. 使用 useEffect 在组件加载时获取列表
+  useEffect(() => {
+  const fetchTemplates = async () => {
+    try {
+      // 您的后端 URL
+      const backendUrl = 'https://grant-admin-role-498506838505.us-central1.run.app';
+      
+      // 使用完整的 URL 来请求模板列表
+      const response = await fetch(`${backendUrl}/api/templates`);
+      
+      if (!response.ok) {
+        throw new Error(`Network response was not ok: ${response.statusText}`);
+      }
+
+      const files: string[] = await response.json();
+      setTemplateFiles(files);
+    } catch (error) {
+      console.error("Failed to fetch templates list:", error);
+    }
+  };
+
+  fetchTemplates();
+}, []);
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
   const file = event.target.files?.[0];
   if (!file) {
@@ -1009,30 +1033,30 @@ const QuizEditorComponent: React.FC<QuizEditorComponentProps> = ({ questions, on
         <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".json" style={{ display: 'none' }} />
       </div>
          
-         {/* --- 模板库区域 --- */}
+         
       <div style={{ textAlign: 'center', marginTop: '20px', paddingTop: '20px', borderTop: '1px solid #eee' }}>
-      <h3 style={{ marginBottom: '15px' }}>Or, start with a template:</h3>
-     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', justifyContent: 'center' }}>
-    
-    {/* --- 以下是根据您上传的文件名进行的修正 --- */}
-    <button className="template-btn" onClick={() => onSelectTemplate('fitness-health')}>
-      💪 Fitness & Health
-    </button>
-    <button className="template-btn" onClick={() => onSelectTemplate('entrepreneurship-business')}>
-      🚀 Entrepreneurship
-    </button>
-    <button className="template-btn" onClick={() => onSelectTemplate('personal-growth')}>
-      🌱 Personal Growth
-    </button>
-    <button className="template-btn" onClick={() => onSelectTemplate('education-learning')}>
-      📚 Education & Learning
-    </button>
-    <button className="template-btn" onClick={() => onSelectTemplate('marketing-funnel')}>
-      📈 Marketing Funnel
-    </button>
+        <h3 style={{ marginBottom: '15px' }}>Or, start with a template:</h3>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', justifyContent: 'center' }}>
 
-  </div>
-</div>
+          {templateFiles.length > 0 ? (
+            templateFiles.map(fileName => {
+              // 从文件名生成一个更易读的按钮标签
+              const buttonLabel = fileName.replace('.json', '').replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+              return (
+                <button 
+                  key={fileName}
+                  className="template-btn" 
+                  onClick={() => onSelectTemplate(fileName.replace('.json', ''))}
+                >
+                  {buttonLabel}
+                </button>
+              );
+            })
+          ) : (
+            <p>Loading templates...</p>
+          )}
+      </div>
+      </div>
       {questions.length === 0 ? (
         <p className="no-questions-message">No questions added yet. Click "Add New Question" or "Import Questions" to start!</p>
       ) : (
