@@ -424,7 +424,7 @@ const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData }) => 
   const [selectedQuestionIndex, setSelectedQuestionIndex] = useState<number | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [currentSubView, setCurrentSubView] = useState('mainEditorDashboard');
-
+  const [templateFiles, setTemplateFiles] = useState<string[]>([]);
   const [debugLinkValue, setDebugLinkValue] = useState('Debug: N/A');
 
   useEffect(() => {
