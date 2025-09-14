@@ -35,6 +35,9 @@ interface Question {
   title: string;
   type: 'single-choice' | 'text-input';
   answers: Answer[];
+ data?: { // <-- 添加这个可选的 'data' 字段
+    affiliateLinks?: string[];
+  };
 }
 
 interface FunnelData {
