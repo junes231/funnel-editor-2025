@@ -696,6 +696,14 @@ const handleImportQuestions = (importedQuestions: Question[]) => {
             onBack={() => setCurrentSubView('mainEditorDashboard')}
           />
         );
+        case 'analytics':
+    return (
+      <AnalyticsComponent
+        questions={questions}
+        finalRedirectLink={finalRedirectLink}
+        onBack={() => setCurrentSubView('mainEditorDashboard')}
+         />
+       );
       default:
         return (
           <div className="dashboard-container">
@@ -733,8 +741,17 @@ const handleImportQuestions = (importedQuestions: Question[]) => {
               </h3>
               <p>Customize theme colors for this funnel.</p>
             </div>
+            <div className="dashboard-card" onClick={() => setCurrentSubView('analytics')}>
+          <h3>
+            <span role="img" aria-label="analytics">
+              📊
+            </span>{' '}
+            Minimalist analysis
+          </h3>
+          <p>Get optimization suggestions to improve your funnel conversion rate.</p>
+        </div>
             <BackButton goBack={true}>
-  <span role="img" aria-label="back">←</span> Back to All Funnels
+       <span role="img" aria-label="back">←</span> Back to All Funnels
             </BackButton>
             <div style={{ marginTop: '20px', padding: '10px', border: '1px dashed #ccc', fontSize: '0.8em', wordBreak: 'break-all', textAlign: 'left' }}>
               <strong>DEBUG:</strong> {debugLinkValue}
