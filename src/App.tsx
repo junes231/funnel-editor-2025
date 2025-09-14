@@ -791,25 +791,24 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ db }) => {
 
     setIsAnimating(true);
     setClickedAnswerIndex(answerIndex);
-     const currentQuestion = funnelData.questions[currentQuestionIndex];
-    if (currentQuestion && currentQuestion.data?.affiliateLinks?.[answerIndex]) {
+
+    // 修正：不再重新声明 currentQuestion，因为它在函数外部已经存在
+    if (currentQuestion?.data?.affiliateLinks?.[answerIndex]) {
         const affiliateLink = currentQuestion.data.affiliateLinks[answerIndex];
-        if (affiliateLink.trim() !== '') {
-            // 在新标签页中打开独立的推广链接
+        if (affiliateLink && affiliateLink.trim() !== '') {
             window.open(affiliateLink, '_blank');
         }
     }
+
     setTimeout(() => {
         setIsAnimating(false);
         setClickedAnswerIndex(null);
 
         if (!funnelData || funnelData.questions.length === 0) return;
 
-        // --- 改进：智能判断是否为最后一题 ---
         const isLastQuestion = currentQuestionIndex >= funnelData.questions.length - 1;
 
         if (isLastQuestion) {
-            // 如果是最后一题，执行最终的重定向
             const redirectLink = funnelData.finalRedirectLink;
             if (redirectLink && redirectLink.trim() !== '') {
                 let finalUrl = redirectLink;
@@ -818,19 +817,17 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ db }) => {
                     finalUrl = `${finalUrl}${hasQueryParams ? '&' : '?'}${funnelData.tracking.trim()}`;
                 }
                 console.log('QuizPlayer: Attempting final redirect to:', finalUrl);
-                window.location.href = finalUrl; // 跳转到最终页面
+                window.location.href = finalUrl;
             } else {
-                // 如果没有设置最终链接，可以给个提示
-                 console.log('Quiz complete! No final redirect link set.');
+                console.log('Quiz complete! No final redirect link set.');
             }
-            return; // 结束函数
+            return; 
         }
 
-        // 如果不是最后一题，进入下一题
         setCurrentQuestionIndex(currentQuestionIndex + 1);
 
     }, 500);
-
+};
   if (isLoading) {
   return (
     <div className="quiz-player-container" style={{ textAlign: 'center', marginTop: '80px' }}>
