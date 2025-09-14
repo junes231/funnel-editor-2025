@@ -809,7 +809,7 @@ const AnalyticsComponent: React.FC<AnalyticsComponentProps> = ({ questions, fina
 
     // [中文注释] 4. 检查最终重定向链接是否设置
     if (!finalRedirectLink || finalRedirectLink.trim() === '') {
-      suggestions.push({ type: 'warning', text: 'You haven't set a final redirect link. Users will have nowhere to go after answering all the questions.' });
+      suggestions.push({ type: 'warning', text: "You haven't set a final redirect link. Users will have nowhere to go after answering all the questions." });
     }
 
     return suggestions;
