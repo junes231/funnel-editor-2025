@@ -7,7 +7,7 @@ import VerifyPage from './pages/VerifyPage.tsx';
 import FinishEmailVerification from './pages/FinishEmailVerification.tsx';
 import { checkPasswordStrength } from './utils/passwordStrength.ts';
 import BackButton from './components/BackButton.tsx'; 
-import { useNavigate, useParams, Routes, Route } from 'react-router-dom';
+import { useNavigate, useParams, Routes, Route, useLocation } from 'react-router-dom';
 import {
   collection,
   doc,
@@ -74,7 +74,7 @@ const defaultFunnelData: FunnelData = {
 // REPLACE your old App function with this new one
 export default function App({ db }: AppProps) {
   const navigate = useNavigate();
-
+  const location = useLocation();
   // New state variables to manage authentication and user roles
   const [user, setUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
@@ -196,9 +196,12 @@ useEffect(() => {
   };
 
   // --- Render Logic ---
-   if (isLoading) {
+   const isPublicPlayPath = location.pathname.startsWith('/play/');
+
+  // 只有当页面正在加载，并且访问的不是公开播放页时，才显示用户状态验证
+  if (isLoading && !isPublicPlayPath) {
     return <div style={{ textAlign: 'center', marginTop: '50px' }}>Verifying user status...</div>;
-  } 
+  }
   return (
     <div style={{ padding: 24, fontFamily: 'Arial' }}>
       <Routes>
