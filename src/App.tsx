@@ -791,33 +791,45 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ db }) => {
 
     setIsAnimating(true);
     setClickedAnswerIndex(answerIndex);
-
+     const currentQuestion = funnelData.questions[currentQuestionIndex];
+    if (currentQuestion && currentQuestion.data?.affiliateLinks?.[answerIndex]) {
+        const affiliateLink = currentQuestion.data.affiliateLinks[answerIndex];
+        if (affiliateLink.trim() !== '') {
+            // 在新标签页中打开独立的推广链接
+            window.open(affiliateLink, '_blank');
+        }
+    }
     setTimeout(() => {
-      setIsAnimating(false);
-      setClickedAnswerIndex(null);
+        setIsAnimating(false);
+        setClickedAnswerIndex(null);
 
-      if (!funnelData || funnelData.questions.length === 0) return;
+        if (!funnelData || funnelData.questions.length === 0) return;
 
-      if (currentQuestionIndex === 5 && funnelData.questions.length === 6) {
-        let redirectLink = funnelData.finalRedirectLink || 'https://example.com/default-final-redirect-link';
+        // --- 改进：智能判断是否为最后一题 ---
+        const isLastQuestion = currentQuestionIndex >= funnelData.questions.length - 1;
 
-        if (funnelData.tracking && funnelData.tracking.trim() !== '') {
-          const hasQueryParams = redirectLink.includes('?');
-          redirectLink = `${redirectLink}${hasQueryParams ? '&' : '?'}${funnelData.tracking.trim()}`;
+        if (isLastQuestion) {
+            // 如果是最后一题，执行最终的重定向
+            const redirectLink = funnelData.finalRedirectLink;
+            if (redirectLink && redirectLink.trim() !== '') {
+                let finalUrl = redirectLink;
+                if (funnelData.tracking && funnelData.tracking.trim() !== '') {
+                    const hasQueryParams = finalUrl.includes('?');
+                    finalUrl = `${finalUrl}${hasQueryParams ? '&' : '?'}${funnelData.tracking.trim()}`;
+                }
+                console.log('QuizPlayer: Attempting final redirect to:', finalUrl);
+                window.location.href = finalUrl; // 跳转到最终页面
+            } else {
+                // 如果没有设置最终链接，可以给个提示
+                 console.log('Quiz complete! No final redirect link set.');
+            }
+            return; // 结束函数
         }
 
-        console.log('QuizPlayer: Attempting redirect to:', redirectLink);
-        window.location.href = redirectLink;
-        return;
-      }
-
-      if (currentQuestionIndex < funnelData.questions.length - 1) {
+        // 如果不是最后一题，进入下一题
         setCurrentQuestionIndex(currentQuestionIndex + 1);
-      } else {
-        alert('Quiz complete! No more questions.');
-      }
+
     }, 500);
-  };
 
   if (isLoading) {
   return (
