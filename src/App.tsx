@@ -747,6 +747,84 @@ const handleImportQuestions = (importedQuestions: Question[]) => {
   return <div className="App">{renderEditorContent()}</div>;
 };
 
+interface AnalyticsComponentProps {
+  questions: Question[];
+  finalRedirectLink: string;
+  onBack: () => void;
+}
+
+const AnalyticsComponent: React.FC<AnalyticsComponentProps> = ({ questions, finalRedirectLink, onBack }) => {
+  
+  const analyzeFunnel = () => {
+    const suggestions: { type: 'tip' | 'warning'; text: string }[] = [];
+
+    // 1. 检查漏斗长度
+    if (questions.length < 3) {
+      suggestions.push({ type: 'tip', text: 'There are currently fewer than 3 questions. Adding more questions will help filter users better, but please keep it within 6.' });
+    }
+    if (questions.length > 5) {
+      suggestions.push({ type: 'warning', text: 'More than 5 questions may cause users to lose. Please make sure that each question is absolutely necessary.' });
+    }
+
+    // 2. 检查问题和答案的质量
+    questions.forEach((q, index) => {
+      if (q.title.length < 10) {
+        suggestions.push({ type: 'tip', text: `question ${index + 1} The title is too short. Try making it more descriptive.` });
+      }
+      if (q.answers.some(a => a.text.length < 2 || a.text.length > 35)) {
+        suggestions.push({ type: 'warning', text: `question ${index + 1} Some answers are too short or too long. We recommend keeping them between 2 and 35 characters.` });
+      }
+    });
+
+    // 3. 检查盈利潜力
+    const linksCount = questions.reduce((acc, q) => {
+      return acc + (q.data?.affiliateLinks?.filter(link => link && link.trim() !== '').length || 0);
+    }, 0);
+
+    if (linksCount === 0) {
+      suggestions.push({ type: 'warning', text: 'Your Q&A does not have any independent promotional links configured, which will miss a lot of profit opportunities!' });
+    }
+
+    // 4. 检查最终重定向链接
+    if (!finalRedirectLink || finalRedirectLink.trim() === '') {
+      suggestions.push({ type: 'warning', text: 'You haven't set a final redirect link. Users will have nowhere to go after answering all the questions.' });
+    }
+
+    return suggestions;
+  };
+
+  const analysisResults = analyzeFunnel();
+
+  return (
+    <div className="analytics-container">
+      <h2>
+        <span role="img" aria-label="analytics">📊</span> 
+        Minimalist analysis report
+      </h2>
+      <p>Based on your current setup, we found a few areas that could be optimized:</p>
+      
+      <div className="suggestions-list">
+        {analysisResults.length > 0 ? (
+          analysisResults.map((suggestion, index) => (
+            <div key={index} className={`suggestion-card ${suggestion.type}`}>
+              <span className="suggestion-icon">{suggestion.type === 'tip' ? '💡' : '⚠️'}</span>
+              <p>{suggestion.text}</p>
+            </div>
+          ))
+        ) : (
+          <div className="suggestion-card good">
+            <span className="suggestion-icon">✅</span>
+            <p>Great! Based on the minimal analysis, your funnel setup looks great!</p>
+          </div>
+        )}
+      </div>
+
+      <BackButton onClick={onBack}>
+        <span role="img" aria-label="back">←</span> Return to Editor
+      </BackButton>
+    </div>
+  );
+};
 interface QuizPlayerProps {
   db: Firestore;
 }
