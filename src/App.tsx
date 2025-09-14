@@ -1138,35 +1138,43 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
     updatedLinks[index] = value;
     setAffiliateLinks(updatedLinks);
   };
-  const handleSave = async () => {
-    setIsSaving(true);
-    try {
-      const filteredAnswers = answers.filter((ans) => ans.text.trim() !== "");
-      if (!title.trim()) {
-        console.error("Question title cannot be empty!");
-        return;
-      }
-      if (filteredAnswers.length === 0) {
-        console.error("Please provide at least one answer option.");
-        return;
-      }
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      onSave({
-        id: question?.id || Date.now().toString(),
-        title,
-        type: "single-choice",
-        answers: filteredAnswers,
-        data: { // <-- 添加 data 字段
-        affiliateLinks: affiliateLinks,
-      },
-      });
-    } catch (error) {
-      console.error("Error saving question:", error);
-    } finally {
-      setIsSaving(false);
-    }
-  };
+  // src/App.tsx -> 在 QuestionFormComponent 组件内部
 
+const handleSave = async () => {
+  setIsSaving(true);
+  try {
+    const filteredAnswers = answers.filter((ans) => ans.text.trim() !== "");
+    if (!title.trim()) {
+      console.error("Question title cannot be empty!");
+      return;
+    }
+    if (filteredAnswers.length === 0) {
+      console.error("Please provide at least one answer option.");
+      return;
+    }
+
+    // --- ↓↓↓ 这是新增的核心修复逻辑 ↓↓↓ ---
+    // 创建一个干净的链接数组，确保将所有 undefined/null 值转换为空字符串
+    const cleanAffiliateLinks = Array.from({ length: 4 }).map((_, index) => affiliateLinks[index] || '');
+    // --- ↑↑↑ 修复逻辑结束 ↑↑↑ ---
+
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    
+    onSave({
+      id: question?.id || Date.now().toString(),
+      title,
+      type: "single-choice",
+      answers: filteredAnswers,
+      data: { 
+        affiliateLinks: cleanAffiliateLinks, // <-- 使用处理过的干净数组
+      },
+    });
+  } catch (error) {
+    console.error("Error saving question:", error);
+  } finally {
+    setIsSaving(false);
+  }
+};
   const handleCancel = () => {
     const button = document.querySelector('.cancel-button');
     if (button) {
