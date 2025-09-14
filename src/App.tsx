@@ -1095,6 +1095,9 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
             text: `Option ${String.fromCharCode(65 + i)}`,
           }))
   );
+  const [affiliateLinks, setAffiliateLinks] = useState<string[]>(
+  question?.data?.affiliateLinks || []
+  );
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -1118,7 +1121,11 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
     updatedAnswers[index].text = value;
     setAnswers(updatedAnswers);
   };
-
+  const handleLinkChange = (index: number, value: string) => {
+    const updatedLinks = [...affiliateLinks];
+    updatedLinks[index] = value;
+    setAffiliateLinks(updatedLinks);
+  };
   const handleSave = async () => {
     setIsSaving(true);
     try {
@@ -1137,6 +1144,9 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
         title,
         type: "single-choice",
         answers: filteredAnswers,
+        data: { // <-- 添加 data 字段
+        affiliateLinks: affiliateLinks,
+      },
       });
     } catch (error) {
       console.error("Error saving question:", error);
@@ -1208,6 +1218,13 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
               onChange={(e) => handleAnswerTextChange(index, e.target.value)}
               placeholder={`Option ${String.fromCharCode(65 + index)}`}
             />
+             <input
+        type="url"
+        value={affiliateLinks[index] || ''}
+        onChange={(e) => handleLinkChange(index, e.target.value)}
+        placeholder="Affiliate link (optional)"
+        className="affiliate-link-input"
+           />
           </div>
         ))}
       </div>
