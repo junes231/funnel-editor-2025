@@ -18,18 +18,22 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 
-// --- 静态文件服务 (非常重要) ---
+// --- 静态文件服务 ---
 const buildPath = path.join(__dirname, 'build');
 app.use(express.static(buildPath));
 
-// --- API 路由定义 ---
+// React 路由刷新返回 index.html
+app.get('*', (req, res) => {
+  // 只处理非 API 路径
+  if (req.path.startsWith('/api')) return;
+  res.sendFile(path.join(buildPath, 'index.html'));
+});
 
-// 健康检查路由
+// --- API 路由定义 ---
 app.get("/api/health", (req, res) => {
   res.status(200).send({ status: "ok" });
 });
 
-// grant-admin-role 路由
 app.post("/api/grant-admin-role", async (req, res) => {
   try {
     // 你的授权逻辑
@@ -39,7 +43,6 @@ app.post("/api/grant-admin-role", async (req, res) => {
   }
 });
 
-// templates 路由
 app.get("/api/templates", (req, res) => {
   const templatesDirectory = path.join(buildPath, 'templates');
   fs.readdir(templatesDirectory, (err, files) => {
