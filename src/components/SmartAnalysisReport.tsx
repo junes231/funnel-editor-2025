@@ -130,8 +130,8 @@ const SmartAnalysisReport: React.FC<SmartAnalysisReportProps> = ({ questions, fi
         <ul>{report.clarity.suggestions.map((text, i) => <li key={i}>{text}</li>)}</ul>
       </div>
 
-      <BackButton onClick={onBack}>
-        <span role="img" aria-label="back">←</span> Back to Editor
+      <BackButton to="/">
+         <span role="img" aria-label="back">←</span> Back to All Funnels
       </BackButton>
     </div>
   );
