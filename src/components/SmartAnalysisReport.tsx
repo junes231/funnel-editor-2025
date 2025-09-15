@@ -1,6 +1,7 @@
 // 文件路径: src/components/SmartAnalysisReport.tsx
 
 import React from 'react';
+import BackButton from './BackButton.tsx'; // [中文注释] 关键修正：确保从外部导入我们创建的动画按钮
 
 // [中文注释] 定义 App.tsx 中用到的类型，让这个组件可以独立工作
 interface Answer {
@@ -18,27 +19,17 @@ interface Question {
   };
 }
 
-// [中文注释] 这是一个自包含的返回按钮组件
-const BackButton: React.FC<{ onClick: () => void; children: React.ReactNode }> = ({ onClick, children }) => {
-  return (
-    <button className="back-button" onClick={onClick}>
-      {children}
-    </button>
-  );
-};
-
-
 // [中文注释] 定义智能分析组件所需的 props 类型
 interface SmartAnalysisReportProps {
   questions: Question[];
   finalRedirectLink: string;
-  onBack: () => void;
+  onBack: () => void; // onBack 仍然保留，以备将来使用
 }
 
 // [中文注释] 这是“智能分析报告”功能的主组件
 const SmartAnalysisReport: React.FC<SmartAnalysisReportProps> = ({ questions, finalRedirectLink, onBack }) => {
   
-  // [中文注释] 执行智能分析并返回一个包含各类建议的报告对象
+  // [中文注释] 分析漏斗并返回一个包含各类建议的报告对象
   const analyzeFunnel = () => {
     const report = {
       monetization: { score: 0, suggestions: [] as string[] },
@@ -131,7 +122,7 @@ const SmartAnalysisReport: React.FC<SmartAnalysisReportProps> = ({ questions, fi
       </div>
 
       <BackButton to="/">
-         <span role="img" aria-label="back">←</span> Back to All Funnels
+          <span role="img" aria-label="back">←</span> Back to All Funnels
       </BackButton>
     </div>
   );
