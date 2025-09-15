@@ -17,15 +17,16 @@
   align-items: center;
   border-bottom: 1px solid #f0f0f0;
   padding-bottom: 20px;
-  margin-bottom: 20px;
+  margin-bottom: 25px;
 }
 
 .smart-analysis-header h2 {
   margin: 0;
   color: #333;
+  font-size: 1.8em;
 }
 
-.overall-score {
+.overall-score-circle {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -33,58 +34,60 @@
   width: 90px;
   height: 90px;
   border-radius: 50%;
-  color: white;
+  color: white; /* [中文注释] 分数文字颜色设为白色 */
   text-align: center;
 }
 
-.overall-score span {
-  font-size: 0.8em;
-  opacity: 0.8;
-}
-
-.overall-score strong {
-  font-size: 2.2em;
+.overall-score-circle strong {
+  font-size: 2.5em;
   font-weight: 700;
   line-height: 1;
+}
+
+.overall-score-circle span {
+  font-size: 0.8em;
+  opacity: 0.9;
+  margin-top: 2px;
 }
 
 .analysis-section {
   margin-bottom: 25px;
 }
 
-.analysis-section h3 {
-  padding-bottom: 8px;
-  border-bottom: 2px solid;
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 12px;
+}
+
+.section-header h3 {
+  margin: 0;
+  color: #333;
+}
+
+.score-badge {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-weight: 600;
+  color: white; /* [中文注释] 分数文字颜色设为白色 */
+  font-size: 0.9em;
 }
 
 .analysis-section ul {
   list-style-type: '👉';
   padding-left: 20px;
+  margin: 0;
 }
 
 .analysis-section li {
   margin-bottom: 8px;
   padding-left: 10px;
   color: #555;
+  line-height: 1.6;
 }
 
-/* [中文注释] 分数颜色 */
-.score-high { color: #4caf50; border-color: #4caf50; background-color: #4caf50; }
-.score-medium { color: #ff9800; border-color: #ff9800; background-color: #ff9800; }
-.score-low { color: #f44336; border-color: #f44336; background-color: #f44336; }
-
-/* [中文注释] 重写返回按钮的样式，使其更突出 */
-.smart-analysis-container .back-button {
-  width: 100%;
-  margin-top: 20px;
-  background-color: #6c757d;
-  color: white;
-  padding: 12px;
-  border-radius: 8px;
-  font-size: 1em;
-  font-weight: 600;
-}
-.smart-analysis-container .back-button:hover {
-  background-color: #5a6268;
-}
+/* [中文注释] 分数颜色 - 现在只设置背景色，避免冲突 */
+.score-high { background-color: #4caf50; }
+.score-medium { background-color: #ff9800; }
+.score-low { background-color: #f44336; }
