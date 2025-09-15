@@ -7,8 +7,8 @@ import VerifyPage from './pages/VerifyPage.tsx';
 import FinishEmailVerification from './pages/FinishEmailVerification.tsx';
 import { checkPasswordStrength } from './utils/passwordStrength.ts';
 import BackButton from './components/BackButton.tsx'; 
-import AnalyticsComponent from './components/AnalyticsComponent.tsx';
-import './components/AnalyticsComponent.css';
+import SmartAnalysisReport from './components/SmartAnalysisReport.tsx';
+import './components/SmartAnalysisReport.css';
 import { useNavigate, useParams, Routes, Route, useLocation } from 'react-router-dom';
 import {
   collection,
@@ -698,14 +698,16 @@ const handleImportQuestions = (importedQuestions: Question[]) => {
             onBack={() => setCurrentSubView('mainEditorDashboard')}
           />
         );
-        case 'analytics':
-    return (
-      <AnalyticsComponent
-        questions={questions}
-        finalRedirectLink={finalRedirectLink}
-        onBack={() => setCurrentSubView('mainEditorDashboard')}
-         />
-       );
+        // ...
+case 'analytics':
+  return (
+    <SmartAnalysisReport
+      questions={questions}
+      finalRedirectLink={finalRedirectLink}
+      onBack={() => setCurrentSubView('mainEditorDashboard')}
+    />
+  );
+// ...
       default:
         return (
           <div className="dashboard-container">
@@ -746,11 +748,11 @@ const handleImportQuestions = (importedQuestions: Question[]) => {
             <div className="dashboard-card" onClick={() => setCurrentSubView('analytics')}>
             <h3>
             <span role="img" aria-label="analytics">
-               📊
+             🚀
            </span>{' '}
-              Minimal Analysis
+           Smart Analysis
            </h3>
-          <p>Get optimization tips to improve your funnel's conversion rate.</p>
+          <p>Get data-driven insights to boost your funnel's performance.</p>
           </div>
             <BackButton goBack={true}>
        <span role="img" aria-label="back">←</span> Back to All Funnels
