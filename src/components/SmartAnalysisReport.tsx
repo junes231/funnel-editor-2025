@@ -1,25 +1,17 @@
 // 文件路径: src/components/SmartAnalysisReport.tsx
 
 import React from 'react';
-import BackButton from './BackButton.tsx'; // [中文注释] 关键：我们从外部导入通用的动画按钮
+import BackButton from './BackButton.tsx';
 
-// [中文注释] 定义 App.tsx 中用到的类型
-interface Answer {
-  id: string;
-  text: string;
-}
-
+// [中文注释] 组件所需的类型定义...
+interface Answer { id: string; text: string; }
 interface Question {
   id: string;
   title: string;
   type: 'single-choice' | 'text-input';
   answers: Answer[];
-  data?: {
-    affiliateLinks?: string[];
-  };
+  data?: { affiliateLinks?: string[]; };
 }
-
-// [中文注释] 定义智能分析组件所需的 props 类型
 interface SmartAnalysisReportProps {
   questions: Question[];
   finalRedirectLink: string;
@@ -29,40 +21,30 @@ interface SmartAnalysisReportProps {
 // [中文注释] 这是“智能分析报告”功能的主组件
 const SmartAnalysisReport: React.FC<SmartAnalysisReportProps> = ({ questions, finalRedirectLink, onBack }) => {
   
+  // [中文注释] 分析逻辑... (这部分保持不变)
   const analyzeFunnel = () => {
     const report = {
       monetization: { score: 0, suggestions: [] as string[] },
       engagement: { score: 0, suggestions: [] as string[] },
       clarity: { score: 0, suggestions: [] as string[] },
     };
-
     if (questions.length === 0) return report;
-
-    // --- 1. 盈利潜力分析 ---
     const totalAnswers = questions.reduce((acc, q) => acc + q.answers.length, 0);
-    const answersWithLinks = questions.reduce((acc, q) => {
-        return acc + (q.data?.affiliateLinks?.filter(link => link && link.trim() !== '').length || 0);
-    }, 0);
-    
+    const answersWithLinks = questions.reduce((acc, q) => acc + (q.data?.affiliateLinks?.filter(link => link && link.trim() !== '').length || 0), 0);
     report.monetization.score = totalAnswers > 0 ? Math.round((answersWithLinks / totalAnswers) * 100) : 0;
     if (report.monetization.score < 30) {
       report.monetization.suggestions.push("CRITICAL: Monetization is very low. Add affiliate links to most of your answers to increase earnings.");
     } else if (report.monetization.score < 70) {
       report.monetization.suggestions.push("TIP: Good start, but you can still add more affiliate links to answers that currently have none.");
     }
-
-    // --- 2. 用户参与度分析 ---
     let engagementScore = 100;
     if (questions.length < 3 || questions.length > 6) engagementScore -= 25;
-    
     const repetitiveStarts = questions.filter(q => q.title.toLowerCase().startsWith("what's your")).length;
     if (repetitiveStarts > questions.length / 2 && questions.length > 1) {
       engagementScore -= 20;
       report.engagement.suggestions.push("TIP: Multiple questions start with similar phrases. Try to vary your wording to keep users engaged.");
     }
     report.engagement.score = Math.max(0, engagementScore);
-
-    // --- 3. 内容清晰度分析 ---
     let clarityScore = 100;
     questions.forEach((q, index) => {
       if (q.title.split(' ').length > 15) {
@@ -74,51 +56,59 @@ const SmartAnalysisReport: React.FC<SmartAnalysisReportProps> = ({ questions, fi
         report.clarity.suggestions.push(`Some answers in Question ${index + 1} are a bit wordy. Shorter answers are easier to read.`);
       }
     });
-
     if (!finalRedirectLink || finalRedirectLink.trim() === '') {
         clarityScore -= 50;
         report.clarity.suggestions.push("CRITICAL: You haven't set a final redirect link. The user journey is incomplete.");
     }
     report.clarity.score = Math.max(0, clarityScore);
-
     return report;
   };
 
   const report = analyzeFunnel();
   const overallScore = Math.round((report.monetization.score + report.engagement.score + report.clarity.score) / 3);
 
-  const getScoreColor = (score: number) => {
+  const getScoreColorClass = (score: number) => {
     if (score < 40) return 'score-low';
     if (score < 75) return 'score-medium';
     return 'score-high';
   };
 
+  // [中文注释] 渲染分析报告的 JSX 界面 (已优化结构)
   return (
     <div className="smart-analysis-container">
       <div className="smart-analysis-header">
         <h2>Smart Analysis Report</h2>
-        <div className={`overall-score ${getScoreColor(overallScore)}`}>
-          <span>Overall Score</span>
+        <div className={`overall-score-circle ${getScoreColorClass(overallScore)}`}>
           <strong>{overallScore}</strong>
+          <span>Overall Score</span>
         </div>
       </div>
       
       <div className="analysis-section">
-        <h3 className={getScoreColor(report.monetization.score)}>Monetization Potential: {report.monetization.score}/100</h3>
+        <div className="section-header">
+          <h3>Monetization Potential</h3>
+          <span className={`score-badge ${getScoreColorClass(report.monetization.score)}`}>{report.monetization.score}/100</span>
+        </div>
         {report.monetization.suggestions.length > 0 && (
           <ul>{report.monetization.suggestions.map((text, i) => <li key={i}>{text}</li>)}</ul>
         )}
       </div>
 
       <div className="analysis-section">
-        <h3 className={getScoreColor(report.engagement.score)}>User Engagement: {report.engagement.score}/100</h3>
+        <div className="section-header">
+          <h3>User Engagement</h3>
+          <span className={`score-badge ${getScoreColorClass(report.engagement.score)}`}>{report.engagement.score}/100</span>
+        </div>
         {report.engagement.suggestions.length > 0 && (
           <ul>{report.engagement.suggestions.map((text, i) => <li key={i}>{text}</li>)}</ul>
         )}
       </div>
 
       <div className="analysis-section">
-        <h3 className={getScoreColor(report.clarity.score)}>Content Clarity: {report.clarity.score}/100</h3>
+        <div className="section-header">
+          <h3>Content Clarity</h3>
+          <span className={`score-badge ${getScoreColorClass(report.clarity.score)}`}>{report.clarity.score}/100</span>
+        </div>
         {report.clarity.suggestions.length > 0 && (
           <ul>{report.clarity.suggestions.map((text, i) => <li key={i}>{text}</li>)}</ul>
         )}
