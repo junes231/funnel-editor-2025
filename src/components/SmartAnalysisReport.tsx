@@ -1,7 +1,6 @@
 // 文件路径: src/components/SmartAnalysisReport.tsx
 
 import React from 'react';
-import BackButton from './BackButton.tsx'; // [中文注释] 关键修正：确保从外部导入我们创建的动画按钮
 
 // [中文注释] 定义 App.tsx 中用到的类型，让这个组件可以独立工作
 interface Answer {
@@ -19,17 +18,32 @@ interface Question {
   };
 }
 
+// [中文注释] 这是一个自包含的返回按钮组件
+const BackButton: React.FC<{ to?: string; children: React.ReactNode }> = ({ to, children }) => {
+  // [中文注释] 注意：这个按钮的动画和跳转逻辑现在由通用的 BackButton 组件处理
+  // [中文注释] 我们在这里简化它以便于理解，确保您的通用 BackButton.tsx 文件是正确的
+  const navigateTo = () => {
+    if (to) window.location.hash = to;
+  };
+  return (
+    <button className="back-button" onClick={navigateTo}>
+      {children}
+    </button>
+  );
+};
+
+
 // [中文注释] 定义智能分析组件所需的 props 类型
 interface SmartAnalysisReportProps {
   questions: Question[];
   finalRedirectLink: string;
-  onBack: () => void; // onBack 仍然保留，以备将来使用
+  onBack: () => void;
 }
 
 // [中文注释] 这是“智能分析报告”功能的主组件
 const SmartAnalysisReport: React.FC<SmartAnalysisReportProps> = ({ questions, finalRedirectLink, onBack }) => {
   
-  // [中文注释] 分析漏斗并返回一个包含各类建议的报告对象
+  // [中文注释] 执行智能分析并返回一个包含各类建议的报告对象
   const analyzeFunnel = () => {
     const report = {
       monetization: { score: 0, suggestions: [] as string[] },
@@ -57,7 +71,7 @@ const SmartAnalysisReport: React.FC<SmartAnalysisReportProps> = ({ questions, fi
     if (questions.length < 3 || questions.length > 6) engagementScore -= 25;
     
     const repetitiveStarts = questions.filter(q => q.title.toLowerCase().startsWith("what's your")).length;
-    if (repetitiveStarts > questions.length / 2) {
+    if (repetitiveStarts > questions.length / 2 && questions.length > 1) {
       engagementScore -= 20;
       report.engagement.suggestions.push("TIP: Multiple questions start with similar phrases. Try to vary your wording to keep users engaged.");
     }
@@ -75,12 +89,13 @@ const SmartAnalysisReport: React.FC<SmartAnalysisReportProps> = ({ questions, fi
         report.clarity.suggestions.push(`Some answers in Question ${index + 1} are a bit wordy. Shorter answers are easier to read.`);
       }
     });
-    report.clarity.score = Math.max(0, clarityScore);
 
-    // [中文注释] 检查最终链接
+    // [中文注释] 关键修正：当最终链接缺失时，不仅要提示，还要扣分
     if (!finalRedirectLink || finalRedirectLink.trim() === '') {
+        clarityScore -= 50; // [中文注释] 这是一个严重问题，所以扣除大量分数
         report.clarity.suggestions.push("CRITICAL: You haven't set a final redirect link. The user journey is incomplete.");
     }
+    report.clarity.score = Math.max(0, clarityScore);
 
     return report;
   };
@@ -88,14 +103,12 @@ const SmartAnalysisReport: React.FC<SmartAnalysisReportProps> = ({ questions, fi
   const report = analyzeFunnel();
   const overallScore = Math.round((report.monetization.score + report.engagement.score + report.clarity.score) / 3);
 
-  // [中文注释] 根据分数决定总评颜色
   const getScoreColor = (score: number) => {
     if (score < 40) return 'score-low';
     if (score < 75) return 'score-medium';
     return 'score-high';
   };
 
-  // [中文注释] 渲染分析报告的 JSX 界面
   return (
     <div className="smart-analysis-container">
       <div className="smart-analysis-header">
@@ -108,19 +121,27 @@ const SmartAnalysisReport: React.FC<SmartAnalysisReportProps> = ({ questions, fi
       
       <div className="analysis-section">
         <h3 className={getScoreColor(report.monetization.score)}>Monetization Potential: {report.monetization.score}/100</h3>
-        <ul>{report.monetization.suggestions.map((text, i) => <li key={i}>{text}</li>)}</ul>
+        {/* [中文注释] 关键修正：只有在有建议时才渲染列表 */}
+        {report.monetization.suggestions.length > 0 && (
+          <ul>{report.monetization.suggestions.map((text, i) => <li key={i}>{text}</li>)}</ul>
+        )}
       </div>
 
       <div className="analysis-section">
         <h3 className={getScoreColor(report.engagement.score)}>User Engagement: {report.engagement.score}/100</h3>
-        <ul>{report.engagement.suggestions.map((text, i) => <li key={i}>{text}</li>)}</ul>
+        {report.engagement.suggestions.length > 0 && (
+          <ul>{report.engagement.suggestions.map((text, i) => <li key={i}>{text}</li>)}</ul>
+        )}
       </div>
 
       <div className="analysis-section">
         <h3 className={getScoreColor(report.clarity.score)}>Content Clarity: {report.clarity.score}/100</h3>
-        <ul>{report.clarity.suggestions.map((text, i) => <li key={i}>{text}</li>)}</ul>
+        {report.clarity.suggestions.length > 0 && (
+          <ul>{report.clarity.suggestions.map((text, i) => <li key={i}>{text}</li>)}</ul>
+        )}
       </div>
-
+      
+      {/* [中文注释] 注意：这个按钮现在应该使用您项目中的通用 BackButton 组件 */}
       <BackButton to="/">
           <span role="img" aria-label="back">←</span> Back to All Funnels
       </BackButton>
