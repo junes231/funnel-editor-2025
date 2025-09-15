@@ -1,0 +1,68 @@
+.analytics-container {
+  background-color: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  padding: 40px;
+  max-width: 600px;
+  width: 95%;
+  margin: 20px auto;
+  box-sizing: border-box;
+  text-align: center;
+}
+
+.analytics-container h2 {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: #333;
+}
+
+/* 建议列表的样式 */
+.suggestions-list {
+  margin: 30px 0;
+  text-align: left;
+}
+
+/* 单个建议卡片的样式 */
+.suggestion-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 15px;
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  border-left: 5px solid;
+}
+
+.suggestion-card p {
+  margin: 0;
+  line-height: 1.6;
+  color: #555;
+}
+
+.suggestion-icon {
+  font-size: 1.5em;
+  line-height: 1.6;
+}
+
+/* 不同类型建议的颜色 */
+.suggestion-card.tip {
+  background-color: #e7f3fe;
+  border-color: #2196f3; /* 蓝色代表提示 */
+}
+
+.suggestion-card.warning {
+  background-color: #fff4e5;
+  border-color: #ff9800; /* 橙色代表警告 */
+}
+
+.suggestion-card.good {
+  background-color: #e8f5e9;
+  border-color: #4caf50; /* 绿色代表状态良好 */
+}
+
+/* "极简分析"卡片的边框颜色 */
+.dashboard-card:nth-child(4) { 
+  border-color: #9c27b0; /* 紫色 */
+}
