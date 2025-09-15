@@ -77,18 +77,36 @@ p {
     transform: translateY(-2px);
 }
 
-/* App.css */
-
-/* 动画效果 */
-/* src/App.css */
 .animate-out {
-  animation: fadeOut 3s;
+  /* [中文注释] 动画名称为 fadeOut，持续时间为1秒 */
+  animation: fadeOut 1s forwards; /* 'forwards' 确保动画停在最后一帧 */
   opacity: 0;
 }
 
 @keyframes fadeOut {
   from { opacity: 1; }
   to { opacity: 0; }
+}
+
+/* [中文注释] back-button 的基础样式，确保它存在 */
+.back-button {
+    /* [中文注释] 您可以根据需要调整基础样式 */
+    padding: 10px 20px;
+    border: 1px solid #6c757d;
+    background-color: #6c757d;
+    color: white;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1em;
+    font-weight: 500;
+    transition: background-color 0.2s;
+}
+.back-button:hover {
+    background-color: #5a6268;
+}
+.back-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.7;
 }
 
 /* 按钮基础样式 */
