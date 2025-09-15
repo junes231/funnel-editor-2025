@@ -7,6 +7,8 @@ import VerifyPage from './pages/VerifyPage.tsx';
 import FinishEmailVerification from './pages/FinishEmailVerification.tsx';
 import { checkPasswordStrength } from './utils/passwordStrength.ts';
 import BackButton from './components/BackButton.tsx'; 
+import AnalyticsComponent from './components/AnalyticsComponent.tsx';
+import './components/AnalyticsComponent.css';
 import { useNavigate, useParams, Routes, Route, useLocation } from 'react-router-dom';
 import {
   collection,
@@ -764,90 +766,6 @@ const handleImportQuestions = (importedQuestions: Question[]) => {
   return <div className="App">{renderEditorContent()}</div>;
 };
 
-// src/App.tsx -> 请将下面这个新组件粘贴到 FunnelEditor 组件的末尾
-
-// [中文注释] 定义分析组件所需的 props 类型
-interface AnalyticsComponentProps {
-  questions: Question[];
-  finalRedirectLink: string;
-  onBack: () => void;
-}
-
-// [中文注释] 这是“极简分析”功能的主组件
-const AnalyticsComponent: React.FC<AnalyticsComponentProps> = ({ questions, finalRedirectLink, onBack }) => {
-  
-  // [中文注释] 分析漏斗并返回一个建议数组的函数
-  const analyzeFunnel = () => {
-    const suggestions: { type: 'tip' | 'warning'; text: string }[] = [];
-
-    // [中文注释] 1. 检查漏斗的长度
-    if (questions.length < 3) {
-      suggestions.push({ type: 'tip', text: 'There are currently fewer than 3 questions. Adding more questions will help filter users better, but please keep the number to 6 or less.' });
-    }
-    if (questions.length > 5) {
-      suggestions.push({ type: 'warning', text: 'Having more than 5 questions may cause users to churn. Make sure each question is absolutely necessary.' });
-    }
-
-    // [中文注释] 2. 检查问题和答案的质量
-    questions.forEach((q, index) => {
-      if (q.title.length < 10) {
-        suggestions.push({ type: 'tip', text: `question ${index + 1} The title is too short. Try making it more descriptive.` });
-      }
-      if (q.answers.some(a => a.text.length < 2 || a.text.length > 35)) {
-        suggestions.push({ type: 'warning', text: `question ${index + 1} Some answers are too short or too long. We recommend keeping them between 2 and 35 characters.` });
-      }
-    });
-
-    // [中文注释] 3. 检查盈利潜力（推广链接的数量）
-    const linksCount = questions.reduce((acc, q) => {
-      return acc + (q.data?.affiliateLinks?.filter(link => link && link.trim() !== '').length || 0);
-    }, 0);
-
-    if (linksCount === 0) {
-      suggestions.push({ type: 'warning', text: 'Your Q&A does not have any independent promotional links configured, which will miss a lot of profit opportunities!' });
-    }
-
-    // [中文注释] 4. 检查最终重定向链接是否设置
-    if (!finalRedirectLink || finalRedirectLink.trim() === '') {
-      suggestions.push({ type: 'warning', text: "You haven't set a final redirect link. Users will have nowhere to go after answering all the questions." });
-    }
-
-    return suggestions;
-  };
-
-  const analysisResults = analyzeFunnel();
-
-  // [中文注释] 渲染分析报告的 JSX 界面
-  return (
-    <div className="analytics-container">
-      <h2>
-        <span role="img" aria-label="analytics">📊</span> 
-        Minimalist analysis report
-      </h2>
-      <p>Based on your current setup, we found a few areas that could be optimized:</p>
-      
-      <div className="suggestions-list">
-        {analysisResults.length > 0 ? (
-          analysisResults.map((suggestion, index) => (
-            <div key={index} className={`suggestion-card ${suggestion.type}`}>
-              <span className="suggestion-icon">{suggestion.type === 'tip' ? '💡' : '⚠️'}</span>
-              <p>{suggestion.text}</p>
-            </div>
-          ))
-        ) : (
-          <div className="suggestion-card good">
-            <span className="suggestion-icon">✅</span>
-            <p>Great! Based on the minimal analysis, your funnel setup looks great!</p>
-          </div>
-        )}
-      </div>
-
-      <BackButton onClick={onBack}>
-        <span role="img" aria-label="back">←</span> Return to Editor
-      </BackButton>
-    </div>
-  );
-};
 interface QuizPlayerProps {
   db: Firestore;
 }
