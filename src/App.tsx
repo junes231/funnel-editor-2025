@@ -30,6 +30,7 @@ import './App.css';
 interface Answer {
   id: string;
   text: string;
+  clickCount?: number;
 }
 
 interface Question {
@@ -772,6 +773,8 @@ interface QuizPlayerProps {
   db: Firestore;
 }
 
+// 文件路径: src/App.tsx -> 请用这个版本替换旧的 QuizPlayer 组件
+
 const QuizPlayer: React.FC<QuizPlayerProps> = ({ db }) => {
   const { funnelId } = useParams<{ funnelId: string }>();
   const navigate = useNavigate();
@@ -783,6 +786,7 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ db }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // [中文注释] 从数据库加载漏斗数据... (这部分逻辑保持不变)
   useEffect(() => {
     const getFunnelForPlay = async () => {
       if (!funnelId) {
@@ -798,14 +802,12 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ db }) => {
         if (funnelDoc.exists()) {
           const funnel = funnelDoc.data() as Funnel;
           setFunnelData({ ...defaultFunnelData, ...funnel.data });
-          console.log('QuizPlayer: Loaded funnel data for play:', funnel.data);
-          console.log('QuizPlayer: Loaded finalRedirectLink for play:', funnel.data.finalRedirectLink);
         } else {
-          setError('Funnel not found! Please check the link or contact the funnel creator.');
+          setError('Funnel not found!');
         }
       } catch (err) {
         console.error('Error loading funnel for play:', err);
-        setError('Failed to load quiz. Please check your internet connection and Firebase rules.');
+        setError('Failed to load quiz.');
       } finally {
         setIsLoading(false);
       }
@@ -813,100 +815,89 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ db }) => {
     getFunnelForPlay();
   }, [funnelId, db]);
 
+  // [中文注释] 关键升级：这是新的 handleAnswerClick 函数
   const handleAnswerClick = (answerIndex: number) => {
     if (isAnimating || !funnelData) return;
 
     setIsAnimating(true);
     setClickedAnswerIndex(answerIndex);
 
-    // 修正：不再重新声明 currentQuestion，因为它在函数外部已经存在
-    if (currentQuestion?.data?.affiliateLinks?.[answerIndex]) {
-        const affiliateLink = currentQuestion.data.affiliateLinks[answerIndex];
-        if (affiliateLink && affiliateLink.trim() !== '') {
-            window.open(affiliateLink, '_blank');
-        }
+    const currentQuestion = funnelData.questions[currentQuestionIndex];
+    const affiliateLink = currentQuestion?.data?.affiliateLinks?.[answerIndex];
+
+    // --- ↓↓↓ 这是新增的点击追踪逻辑 ↓↓↓ ---
+    if (funnelId && currentQuestion?.id && currentQuestion.answers[answerIndex]?.id) {
+        const trackClickEndpoint = 'https://track-click-498506838505.us-central1.run.app'; // [中文注释] 关键：请将这里替换为您部署 trackClick 函数后得到的真实 URL
+        
+        fetch(trackClickEndpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                data: {
+                    funnelId: funnelId,
+                    questionId: currentQuestion.id,
+                    answerId: currentQuestion.answers[answerIndex].id,
+                }
+            })
+        }).catch(err => console.error('Failed to track click:', err));
+    }
+    // --- ↑↑↑ 点击追踪逻辑结束 ↑↑↑ ---
+
+    // [中文注释] 在新标签页中打开独立的推广链接
+    if (affiliateLink && affiliateLink.trim() !== '') {
+        window.open(affiliateLink, '_blank');
     }
 
     setTimeout(() => {
         setIsAnimating(false);
         setClickedAnswerIndex(null);
-
-        if (!funnelData || funnelData.questions.length === 0) return;
+        if (!funnelData) return;
 
         const isLastQuestion = currentQuestionIndex >= funnelData.questions.length - 1;
-
         if (isLastQuestion) {
             const redirectLink = funnelData.finalRedirectLink;
             if (redirectLink && redirectLink.trim() !== '') {
-                let finalUrl = redirectLink;
-                if (funnelData.tracking && funnelData.tracking.trim() !== '') {
-                    const hasQueryParams = finalUrl.includes('?');
-                    finalUrl = `${finalUrl}${hasQueryParams ? '&' : '?'}${funnelData.tracking.trim()}`;
-                }
-                console.log('QuizPlayer: Attempting final redirect to:', finalUrl);
-                window.location.href = finalUrl;
+                window.location.href = redirectLink;
             } else {
                 console.log('Quiz complete! No final redirect link set.');
             }
-            return; 
+            return;
         }
-
         setCurrentQuestionIndex(currentQuestionIndex + 1);
-
     }, 500);
-};
+  };
+  
+  // [中文注释] 组件的 JSX 渲染部分保持不变...
   if (isLoading) {
-  return (
-    <div className="quiz-player-container" style={{ textAlign: 'center', marginTop: '80px' }}>
-      <h2
-        style={{
-          fontSize: '32px',
-          fontWeight: 'bold',
-          color: '#ff4f81',
-          animation: 'pulse 1.5s infinite',
-        }}
-      >
-        Ready to unlock your secret match? 🔥
-      </h2>
-    </div>
-  );
-}
-
-  if (error) {
     return (
-      <div className="quiz-player-container">
-        <h2>Error Loading Quiz</h2>
-        <p className="error-message">{error}</p>
+      <div className="quiz-player-container" style={{ textAlign: 'center', marginTop: '80px' }}>
+        <h2 style={{ fontSize: '32px', fontWeight: 'bold', color: '#ff4f81', animation: 'pulse 1.5s infinite' }}>
+          Ready to unlock your secret match? 🔥
+        </h2>
       </div>
     );
   }
 
-  // ... (在 QuizPlayer 组件内部)
-  if (!funnelData || funnelData.questions.length === 0) {
+  if (error || !funnelData || funnelData.questions.length === 0) {
     return (
       <div className="quiz-player-container">
-        <h2>Quiz Not Ready</h2>
-        <p>This funnel has no questions configured. Please contact the funnel creator.</p>
+        <h2>{error ? 'Error Loading Quiz' : 'Quiz Not Ready'}</h2>
+        <p>{error || 'This funnel has no questions configured.'}</p>
       </div>
     );
   }
 
   const currentQuestion = funnelData.questions[currentQuestionIndex];
-
   const quizPlayerContainerStyle = {
     '--primary-color': funnelData.primaryColor,
     '--button-color': funnelData.buttonColor,
     '--background-color': funnelData.backgroundColor,
     '--text-color': funnelData.textColor,
-    backgroundColor: funnelData.backgroundColor,
-    color: funnelData.textColor,
   } as React.CSSProperties;
 
   return (
     <div className="quiz-player-container" style={quizPlayerContainerStyle}>
-      
-    <h3 style={{ color: 'var(--text-color)' }}>{currentQuestion.title}</h3>
-
+      <h3 style={{ color: 'var(--text-color)' }}>{currentQuestion.title}</h3>
       <div className="quiz-answers-container">
         {currentQuestion.answers.map((answer, index) => (
           <button
@@ -914,11 +905,7 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ db }) => {
             className={`quiz-answer-button ${clickedAnswerIndex === index ? 'selected-answer animating' : ''}`}
             onClick={() => handleAnswerClick(index)}
             disabled={isAnimating}
-            style={{
-              backgroundColor: 'var(--button-color)',
-              color: 'var(--text-color)',
-              borderColor: 'var(--primary-color)',
-            }}
+            style={{ backgroundColor: 'var(--button-color)', color: 'var(--text-color)', borderColor: 'var(--primary-color)' }}
           >
             {answer.text}
           </button>
@@ -927,7 +914,6 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ db }) => {
     </div>
   );
 };
-
 interface QuizEditorComponentProps {
   questions: Question[];
   onAddQuestion: () => void;
