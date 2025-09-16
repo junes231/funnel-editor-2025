@@ -582,23 +582,27 @@ const handleSelectTemplate = async (templateName: string) => {
     setNotification({ message: 'Failed to load the template.', type: 'error' });
   }
 };
-  const handleAddQuestion = () => {
-    if (questions.length >= 6) {
-      alert('You can only have up to 6 questions for this quiz.');
-      return;
-    }
-    const newQuestion: Question = {
-      id: Date.now().toString(),
-      title: `New Question ${questions.length + 1}`,
-      type: 'single-choice',
-      answers: Array(4)
-        .fill(null)
-        .map((_, i) => ({ id: `option-${Date.now()}-${i}`, text: `Option ${String.fromCharCode(65 + i)}` })),
-    };
-    setQuestions([...questions, newQuestion]);
-    setSelectedQuestionIndex(questions.length);
-    setCurrentSubView('questionForm');
+  // 在 FunnelEditor 组件中
+const handleAddQuestion = () => {
+  if (questions.length >= 6) {
+    alert('You can only have up to 6 questions for this quiz.');
+    return;
+  }
+  const newQuestion: Question = {
+    id: `q_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`, // <-- 确保问题ID唯一
+    title: `New Question ${questions.length + 1}`,
+    type: 'single-choice',
+    answers: Array(4)
+      .fill(null)
+      .map((_, i) => ({ 
+        id: `a_${Date.now()}_${i}_${Math.random().toString(36).substring(2, 9)}`, // <-- 确保答案ID唯一
+        text: `Option ${String.fromCharCode(65 + i)}` 
+      })),
   };
+  setQuestions([...questions, newQuestion]);
+  setSelectedQuestionIndex(questions.length);
+  setCurrentSubView('questionForm');
+};
 
   const handleEditQuestion = (index: number) => {
     setSelectedQuestionIndex(index);
@@ -1179,10 +1183,17 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
   };
   // src/App.tsx -> 在 QuestionFormComponent 组件内部
 
+// 在 QuestionFormComponent 组件中
 const handleSave = async () => {
   setIsSaving(true);
   try {
-    const filteredAnswers = answers.filter((ans) => ans.text.trim() !== "");
+    // 确保所有答案都有ID，特别是用户新输入的、原本可能没有ID的答案
+    const answersWithIds = answers.map((ans, index) => ({
+      ...ans,
+      id: ans.id || `a_${Date.now()}_${index}_${Math.random().toString(36).substring(2, 9)}` // <-- 为没有ID的答案补充ID
+    }));
+
+    const filteredAnswers = answersWithIds.filter((ans) => ans.text.trim() !== "");
     if (!title.trim()) {
       console.error("Question title cannot be empty!");
       return;
@@ -1192,20 +1203,17 @@ const handleSave = async () => {
       return;
     }
 
-    // --- ↓↓↓ 这是新增的核心修复逻辑 ↓↓↓ ---
-    // 创建一个干净的链接数组，确保将所有 undefined/null 值转换为空字符串
     const cleanAffiliateLinks = Array.from({ length: 4 }).map((_, index) => affiliateLinks[index] || '');
-    // --- ↑↑↑ 修复逻辑结束 ↑↑↑ ---
 
     await new Promise((resolve) => setTimeout(resolve, 1000));
-    
+
     onSave({
-      id: question?.id || Date.now().toString(),
+      id: question?.id || `q_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`, // <-- 确保问题本身也有ID
       title,
       type: "single-choice",
       answers: filteredAnswers,
       data: { 
-        affiliateLinks: cleanAffiliateLinks, // <-- 使用处理过的干净数组
+        affiliateLinks: cleanAffiliateLinks,
       },
     });
   } catch (error) {
