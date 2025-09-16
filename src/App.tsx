@@ -253,7 +253,7 @@ useEffect(() => {
                     </span>
                     <button onClick={() => signOut(getAuth())} style={{ padding: '8px 15px' }}>Logout</button>
                   </div>
-                  <FunnelEditor db={db} updateFunnelData={updateFunnelData} showNotification={showNotification} />
+                  <FunnelEditor db={db} updateFunnelData={updateFunnelData} />
                 </>
           }
         />
@@ -414,10 +414,10 @@ const FunnelDashboard: React.FC<FunnelDashboardProps> = ({ db, user, isAdmin, fu
 interface FunnelEditorProps {
   db: Firestore;
   updateFunnelData: (funnelId: string, newData: FunnelData) => Promise<void>;
-  showNotification: (message: string, type?: 'success' | 'error') => void;
+  
 }
 
-const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData, showNotification }) => {
+const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData }) => {
   const { funnelId } = useParams<{ funnelId: string }>();
   const navigate = useNavigate();
 
@@ -498,7 +498,7 @@ const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData, showN
       }
     } catch (error) {
         console.error("CRITICAL: Failed to fetch funnel data with clicks:", error);
-        showNotification('Failed to load click data. Check Firestore Rules.', 'error');
+        
     }
   };
 
