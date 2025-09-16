@@ -23,46 +23,74 @@ const SmartAnalysisReport: React.FC<SmartAnalysisReportProps> = ({ questions, fi
   
   // [中文注释] 分析逻辑... (这部分保持不变)
   const analyzeFunnel = () => {
-    const report = {
-      monetization: { score: 0, suggestions: [] as string[] },
-      engagement: { score: 0, suggestions: [] as string[] },
-      clarity: { score: 0, suggestions: [] as string[] },
-    };
-    if (questions.length === 0) return report;
-    const totalAnswers = questions.reduce((acc, q) => acc + q.answers.length, 0);
-    const answersWithLinks = questions.reduce((acc, q) => acc + (q.data?.affiliateLinks?.filter(link => link && link.trim() !== '').length || 0), 0);
-    report.monetization.score = totalAnswers > 0 ? Math.round((answersWithLinks / totalAnswers) * 100) : 0;
-    if (report.monetization.score < 30) {
-      report.monetization.suggestions.push("CRITICAL: Monetization is very low. Add affiliate links to most of your answers to increase earnings.");
-    } else if (report.monetization.score < 70) {
-      report.monetization.suggestions.push("TIP: Good start, but you can still add more affiliate links to answers that currently have none.");
-    }
-    let engagementScore = 100;
-    if (questions.length < 3 || questions.length > 6) engagementScore -= 25;
-    const repetitiveStarts = questions.filter(q => q.title.toLowerCase().startsWith("what's your")).length;
-    if (repetitiveStarts > questions.length / 2 && questions.length > 1) {
-      engagementScore -= 20;
-      report.engagement.suggestions.push("TIP: Multiple questions start with similar phrases. Try to vary your wording to keep users engaged.");
-    }
-    report.engagement.score = Math.max(0, engagementScore);
-    let clarityScore = 100;
-    questions.forEach((q, index) => {
-      if (q.title.split(' ').length > 15) {
-        clarityScore -= 10;
-        report.clarity.suggestions.push(`Question ${index + 1}'s title is very long. Consider simplifying it.`);
-      }
-      if (q.answers.some(a => a.text.split(' ').length > 7)) {
-        clarityScore -= 5;
-        report.clarity.suggestions.push(`Some answers in Question ${index + 1} are a bit wordy. Shorter answers are easier to read.`);
-      }
-    });
-    if (!finalRedirectLink || finalRedirectLink.trim() === '') {
-        clarityScore -= 50;
-        report.clarity.suggestions.push("CRITICAL: You haven't set a final redirect link. The user journey is incomplete.");
-    }
-    report.clarity.score = Math.max(0, clarityScore);
-    return report;
+  const report = {
+    monetization: { score: 0, suggestions: [] as string[] },
+    engagement: { score: 0, suggestions: [] as string[] },
+    clarity: { score: 0, suggestions: [] as string[] },
   };
+  if (questions.length === 0) return report;
+
+  // --- 变现潜力分析 (核心升级) ---
+  const totalClicks = questions.reduce((total, q) => 
+    total + (q.answers.reduce((answerTotal, a) => answerTotal + (a.clickCount || 0), 0)), 
+  0);
+
+  const totalAnswersWithLinks = questions.reduce((acc, q) => 
+      acc + (q.data?.affiliateLinks?.filter(link => link && link.trim() !== '').length || 0), 
+  0);
+
+  // 新的评分标准：基于平均点击数。假设每个带链接的答案平均获得5次点击算满分。
+  const averageClicks = totalAnswersWithLinks > 0 ? totalClicks / totalAnswersWithLinks : 0;
+  report.monetization.score = Math.min(100, Math.round((averageClicks / 5) * 100)); // 最高100分
+
+  // 提供基于真实点击数据的建议
+  if (totalClicks === 0) {
+    report.monetization.suggestions.push("Note: Your funnel doesn't have any clickthrough data yet. Share your funnel link to start collecting user feedback!");
+  } else {
+    questions.forEach((q, qIndex) => {
+      q.answers.forEach((a, aIndex) => {
+        const hasLink = q.data?.affiliateLinks?.[aIndex]?.trim();
+        if (hasLink && (a.clickCount || 0) > 5) {
+          report.monetization.suggestions.push(`Outstanding performance: Question ${qIndex + 1} The answer"${a.text}" Obtained ${a.clickCount} Clicks, very popular!`);
+        }
+        if (hasLink && (a.clickCount || 0) === 0) {
+          report.monetization.suggestions.push(`Optimization suggestion: Problem ${qIndex + 1} The answer"${a.text}" If there is a link but 0 clicks, you can try to optimize the copy or offer.`);
+        }
+      });
+    });
+  }
+  if (report.monetization.suggestions.length === 0) {
+    report.monetization.suggestions.push("Your monetization setup looks great and you've already received some clicks!");
+  }
+
+
+  // --- 用户参与度和内容清晰度分析 (保持不变) ---
+  let engagementScore = 100;
+  if (questions.length < 3 || questions.length > 6) engagementScore -= 25;
+  const repetitiveStarts = questions.filter(q => q.title.toLowerCase().startsWith("what's your")).length;
+  if (repetitiveStarts > questions.length / 2 && questions.length > 1) {
+    engagementScore -= 20;
+    report.engagement.suggestions.push("TIP: Multiple questions start with similar phrases. Try to vary your wording to keep users engaged.");
+  }
+  report.engagement.score = Math.max(0, engagementScore);
+  let clarityScore = 100;
+  questions.forEach((q, index) => {
+    if (q.title.split(' ').length > 15) {
+      clarityScore -= 10;
+      report.clarity.suggestions.push(`Question ${index + 1}'s title is very long. Consider simplifying it.`);
+    }
+    if (q.answers.some(a => a.text.split(' ').length > 7)) {
+      clarityScore -= 5;
+      report.clarity.suggestions.push(`Some answers in Question ${index + 1} are a bit wordy. Shorter answers are easier to read.`);
+    }
+  });
+  if (!finalRedirectLink || finalRedirectLink.trim() === '') {
+      clarityScore -= 50;
+      report.clarity.suggestions.push("CRITICAL: You haven't set a final redirect link. The user journey is incomplete.");
+  }
+  report.clarity.score = Math.max(0, clarityScore);
+  return report;
+};
 
   const report = analyzeFunnel();
   const overallScore = Math.round((report.monetization.score + report.engagement.score + report.clarity.score) / 3);
