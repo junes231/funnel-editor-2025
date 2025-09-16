@@ -806,10 +806,9 @@ interface QuizPlayerProps {
   db: Firestore;
 }
 
-// 文件路径: src/App.tsx -> 请用这个版本替换旧的 QuizPlayer 组件
-
+// 在 src/App.tsx 文件中，这是 QuizPlayer 组件的最终正确版本
 const QuizPlayer: React.FC<QuizPlayerProps> = ({ db }) => {
-  const { funnelId } = useParams<{ funnelId: string }>();
+  const { funnelId } = useParams<{ funnelId: string }>(); // <-- 这是正确获取 funnelId 的方法
   const navigate = useNavigate();
 
   const [funnelData, setFunnelData] = useState<FunnelData | null>(null);
@@ -819,8 +818,8 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ db }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // [中文注释] 从数据库加载漏斗数据... (这部分逻辑保持不变)
   useEffect(() => {
+    // ... (这部分 useEffect 的数据加载逻辑保持不变) ...
     const getFunnelForPlay = async () => {
       if (!funnelId) {
         setError('No funnel ID provided!');
@@ -848,7 +847,6 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ db }) => {
     getFunnelForPlay();
   }, [funnelId, db]);
 
-  // [中文注释] 关键升级：这是新的 handleAnswerClick 函数
   const handleAnswerClick = (answerIndex: number) => {
     if (isAnimating || !funnelData) return;
 
@@ -858,47 +856,48 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ db }) => {
     const currentQuestion = funnelData.questions[currentQuestionIndex];
     const affiliateLink = currentQuestion?.data?.affiliateLinks?.[answerIndex];
 
-    // --- ↓↓↓ 这是新增的点击追踪逻辑 ↓↓↓ ---
+    // --- 这是最终的、与后台完全匹配的点击追踪逻辑 ---
     if (funnelId && currentQuestion?.id && currentQuestion.answers[answerIndex]?.id) {
-        const trackClickEndpoint = 'https://track-click-498506838505.us-central1.run.app'; // [中文注释] 关键：请将这里替换为您部署 trackClick 函数后得到的真实 URL
-        
+        const trackClickEndpoint = 'https://track-click-498506838505.us-central1.run.app'; // <-- 请确保这里是您自己的URL
+
+        const payload = {
+            funnelId: funnelId,
+            questionId: currentQuestion.id,
+            answerId: currentQuestion.answers[answerIndex].id,
+        };
+
+        console.log("即将发送的正确数据包:", JSON.stringify(payload));
+
         fetch(trackClickEndpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                data: {
-                    funnelId: funnelId,
-                    questionId: currentQuestion.id,
-                    answerId: currentQuestion.answers[answerIndex].id,
-                }
-            })
+            body: JSON.stringify({ data: payload })
         }).catch(err => console.error('Failed to track click:', err));
     }
-    // --- ↑↑↑ 点击追踪逻辑结束 ↑↑↑ ---
+    // --- 点击追踪逻辑结束 ---
 
-    // [中文注释] 在新标签页中打开独立的推广链接
     if (affiliateLink && affiliateLink.trim() !== '') {
         window.open(affiliateLink, '_blank');
     }
 
     setTimeout(() => {
-        setIsAnimating(false);
-        setClickedAnswerIndex(null);
-        if (!funnelData) return;
+      setIsAnimating(false);
+      setClickedAnswerIndex(null);
+      if (!funnelData) return;
 
-        const isLastQuestion = currentQuestionIndex >= funnelData.questions.length - 1;
-        if (isLastQuestion) {
-            const redirectLink = funnelData.finalRedirectLink;
-            if (redirectLink && redirectLink.trim() !== '') {
-                window.location.href = redirectLink;
-            } else {
-                console.log('Quiz complete! No final redirect link set.');
-            }
-            return;
-        }
-        setCurrentQuestionIndex(currentQuestionIndex + 1);
+      const isLastQuestion = currentQuestionIndex >= funnelData.questions.length - 1;
+      if (isLastQuestion) {
+          const redirectLink = funnelData.finalRedirectLink;
+          if (redirectLink && redirectLink.trim() !== '') {
+              window.location.href = redirectLink;
+          }
+          return;
+      }
+      setCurrentQuestionIndex(currentQuestionIndex + 1);
     }, 500);
   };
+
+ 
   
   // [中文注释] 组件的 JSX 渲染部分保持不变...
   if (isLoading) {
