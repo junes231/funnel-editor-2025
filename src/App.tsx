@@ -253,7 +253,7 @@ useEffect(() => {
                     </span>
                     <button onClick={() => signOut(getAuth())} style={{ padding: '8px 15px' }}>Logout</button>
                   </div>
-                  <FunnelEditor db={db} updateFunnelData={updateFunnelData} />
+                  <FunnelEditor db={db} updateFunnelData={updateFunnelData} showNotification={showNotification} />
                 </>
           }
         />
