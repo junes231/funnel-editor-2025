@@ -8,8 +8,5 @@
   },
   "engines": {
     "node": "18"
-  },
-  "scripts": {
-    "start": "functions-framework --target=grantAdminRole"
   }
 }
