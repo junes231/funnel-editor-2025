@@ -18,6 +18,7 @@ import {
   updateDoc,
   deleteDoc,
   Firestore,
+  onSnapshot,
   query,
   where,
   getDoc
@@ -448,13 +449,15 @@ const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData }) => 
   setTemplateFiles(availableTemplates);
 }, []);
   useEffect(() => {
-    const getFunnel = async () => {
-      if (!funnelId) return;
-      const funnelDocRef = doc(db, 'funnels', funnelId);
-      const funnelDoc = await getDoc(funnelDocRef);
+    if (!funnelId) return;
+    const funnelDocRef = doc(db, 'funnels', funnelId);
+
+    // 设置一个实时监听器
+    const unsubscribe = onSnapshot(funnelDocRef, (funnelDoc) => {
       if (funnelDoc.exists()) {
         const funnel = funnelDoc.data() as Funnel;
         setFunnelName(funnel.name);
+        // 现在，'questions' state 将会自动包含最新的点击次数数据
         setQuestions(funnel.data.questions || []);
         setFinalRedirectLink(funnel.data.finalRedirectLink || '');
         setTracking(funnel.data.tracking || '');
@@ -463,17 +466,21 @@ const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData }) => 
         setButtonColor(funnel.data.buttonColor || defaultFunnelData.buttonColor);
         setBackgroundColor(funnel.data.backgroundColor || defaultFunnelData.backgroundColor);
         setTextColor(funnel.data.textColor || defaultFunnelData.textColor);
-
-        const loadedLink = funnel.data.finalRedirectLink || 'Empty';
-        setDebugLinkValue(`Loaded: ${loadedLink}`);
-        console.log('FunnelEditor: Loaded finalRedirectLink from Firestore:', loadedLink);
         setIsDataLoaded(true);
       } else {
-        alert('Funnel not found!');
+        console.log('未找到该漏斗!');
         navigate('/');
       }
+    }, (error) => {
+        console.error("监听漏斗数据变化时出错:", error);
+        console.log('加载漏斗数据失败。');
+        navigate('/');
+    });
+
+    // 清理函数：当组件被卸载时，这个函数会运行，以停止监听
+    return () => {
+      unsubscribe();
     };
-    getFunnel();
   }, [funnelId, db, navigate]);
 
   const saveFunnelToFirestore = useCallback(() => {
@@ -555,7 +562,7 @@ const handleSelectTemplate = async (templateName: string) => {
 };
   const handleAddQuestion = () => {
     if (questions.length >= 6) {
-      alert('You can only have up to 6 questions for this quiz.');
+    //  alert('You can only have up to 6 questions for this quiz.');
       return;
     }
     const newQuestion: Question = {
@@ -1255,6 +1262,24 @@ const handleSave = async () => {
         placeholder="Affiliate link (optional)"
         className="affiliate-link-input"
            />
+            <div style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        padding: '8px 12px', 
+        backgroundColor: '#f0f0f0', // 背景色
+        borderRadius: '6px', // 圆角
+        marginTop: '5px',
+        width: '100%',
+        color: '#333',
+        fontSize: '14px',
+        cursor: 'default' // 鼠标样式为默认
+         }}>
+          <span role="img" aria-label="clicks" style={{ marginRight: '8px' }}>👁️</span>
+      {/* 显示 clickCount，如果数据不存在则默认为 0 */}
+      <strong>{answers[index]?.clickCount || 0} clicks</strong>
+        </div>
+         {/* --- 新增部分结束 --- */}
           </div>
         ))}
       </div>
