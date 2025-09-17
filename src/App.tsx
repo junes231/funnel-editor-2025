@@ -505,24 +505,25 @@ const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData }) => 
   getFunnel();
 }, [funnelId, db, navigate]);
 
-  const saveFunnelToFirestore = useCallback(() => {
-    if (!funnelId) return;
-    const newData: FunnelData = {
-      questions,
-      finalRedirectLink,
-      tracking,
-      conversionGoal,
-      primaryColor,
-      buttonColor,
-      backgroundColor,
-      textColor,
-    };
-    setDebugLinkValue(`Saving: ${finalRedirectLink || 'Empty'}`);
-    console.log('FunnelEditor: Saving finalRedirectLink to Firestore:', finalRedirectLink);
-    updateFunnelData(funnelId, newData);
-  }, [
-    funnelId,
-    questions,
+  // 在 src/App.tsx -> FunnelEditor 组件中
+const saveFunnelToFirestore = useCallback(() => {
+  if (!funnelId) return;
+
+  // --- 核心修复：在保存前，必须清理掉从子集合读来的临时 clickCount 数据 ---
+  // 我们创建一个新的、干净的 questions 数组用于保存
+  const questionsToSave = questions.map(q => {
+    // 对于每个问题，我们创建一个新的、干净的 answers 数组
+    const cleanAnswers = q.answers.map(a => {
+      // 复制答案对象，但排除 clickCount 字段
+      const { clickCount, ...restOfAnswer } = a;
+      return restOfAnswer;
+    });
+    // 返回包含干净 answers 数组的问题对象
+    return { ...q, answers: cleanAnswers };
+  });
+
+  const newData: FunnelData = {
+    questions: questionsToSave, // <-- 使用清理过的数据进行保存
     finalRedirectLink,
     tracking,
     conversionGoal,
@@ -530,9 +531,23 @@ const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData }) => 
     buttonColor,
     backgroundColor,
     textColor,
-    updateFunnelData,
-  ]);
+  };
 
+  console.log('FunnelEditor: Saving finalRedirectLink to Firestore:', finalRedirectLink);
+  updateFunnelData(funnelId, newData);
+
+}, [
+  funnelId,
+  questions,
+  finalRedirectLink,
+  tracking,
+  conversionGoal,
+  primaryColor,
+  buttonColor,
+  backgroundColor,
+  textColor,
+  updateFunnelData,
+]);
   useEffect(() => {
     if (!isDataLoaded) return;
     const handler = setTimeout(() => {
