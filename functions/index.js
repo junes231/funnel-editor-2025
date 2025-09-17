@@ -3,7 +3,8 @@ const functions = require('@google-cloud/functions-framework');
 
 // 初始化 Firebase Admin SDK
 admin.initializeApp();
-
+const { getFirestore } = require('firebase-admin/firestore');
+const db = getFirestore();
 /**
  * 一个安全的 HTTP 云函数，用于给指定 email 的用户授予管理员权限。
  * 它会先验证发起请求的用户本身是否为管理员。
