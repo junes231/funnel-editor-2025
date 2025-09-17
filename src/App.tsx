@@ -13,7 +13,6 @@ import { useNavigate, useParams, Routes, Route, useLocation } from 'react-router
 import {
   collection,
   doc,
-  setDoc,
   addDoc,
   getDocs,
   updateDoc,
@@ -254,7 +253,7 @@ useEffect(() => {
                     </span>
                     <button onClick={() => signOut(getAuth())} style={{ padding: '8px 15px' }}>Logout</button>
                   </div>
-                  <FunnelEditor db={db} updateFunnelData={updateFunnelData} />
+                  <FunnelEditor db={db} updateFunnelData={updateFunnelData} showNotification={showNotification} />
                 </>
           }
         />
@@ -415,10 +414,10 @@ const FunnelDashboard: React.FC<FunnelDashboardProps> = ({ db, user, isAdmin, fu
 interface FunnelEditorProps {
   db: Firestore;
   updateFunnelData: (funnelId: string, newData: FunnelData) => Promise<void>;
-  
+  showNotification: (message: string, type?: 'success' | 'error') => void;
 }
 
-const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData }) => {
+const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData, showNotification }) => {
   const { funnelId } = useParams<{ funnelId: string }>();
   const navigate = useNavigate();
 
@@ -451,77 +450,79 @@ const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData }) => 
 }, []);
   useEffect(() => {
   const getFunnel = async () => {
-    if (!funnelId || !db) return;
+    if (!funnelId) return;
 
     try {
-      // 步骤 1: 获取主漏斗文档，用于设置名称、颜色等
+      // --- 第一步：获取主要的漏斗文档 (这部分不变) ---
       const funnelDocRef = doc(db, 'funnels', funnelId);
       const funnelDoc = await getDoc(funnelDocRef);
 
-      if (!funnelDoc.exists()) {
+      if (funnelDoc.exists()) {
+        const funnel = funnelDoc.data() as Funnel;
+        setFunnelName(funnel.name);
+
+        // --- 第二步（核心升级）：为每个答案补充真实的点击数据 ---
+        const questionsWithClickData = await Promise.all(
+          (funnel.data.questions || []).map(async (question) => {
+            const answersWithClickData = await Promise.all(
+              (question.answers || []).map(async (answer) => {
+                // 为每个答案构建指向其独立数据文档的引用
+                const answerStatsRef = doc(db, 'funnels', funnelId, 'questions', question.id, 'answers', answer.id);
+                const answerStatsDoc = await getDoc(answerStatsRef);
+
+                // 如果该答案的统计数据存在，则读取 clickCount，否则默认为 0
+                const clickCount = answerStatsDoc.exists() ? answerStatsDoc.data().clickCount : 0;
+
+                return { ...answer, clickCount }; // 将点击数合并到答案对象中
+              })
+            );
+            return { ...question, answers: answersWithClickData }; // 返回包含点击数据的完整问题对象
+          })
+        );
+
+        // --- 第三步：使用包含点击数据的完整信息来更新页面状态 ---
+        setQuestions(questionsWithClickData);
+        setFinalRedirectLink(funnel.data.finalRedirectLink || '');
+        setTracking(funnel.data.tracking || '');
+        setConversionGoal(funnel.data.conversionGoal || 'Product Purchase');
+        setPrimaryColor(funnel.data.primaryColor || defaultFunnelData.primaryColor);
+        setButtonColor(funnel.data.buttonColor || defaultFunnelData.buttonColor);
+        setBackgroundColor(funnel.data.backgroundColor || defaultFunnelData.backgroundColor);
+        setTextColor(funnel.data.textColor || defaultFunnelData.textColor);
+
+        setIsDataLoaded(true);
+
+      } else {
         alert('Funnel not found!');
         navigate('/');
-        return;
       }
-
-      const funnel = funnelDoc.data() as Funnel;
-      setFunnelName(funnel.name);
-      const funnelSettings = { ...defaultFunnelData, ...funnel.data };
-      setFinalRedirectLink(funnelSettings.finalRedirectLink);
-      setTracking(funnelSettings.tracking);
-      setConversionGoal(funnelSettings.conversionGoal);
-      setPrimaryColor(funnelSettings.primaryColor);
-      setButtonColor(funnelSettings.buttonColor);
-      setBackgroundColor(funnelSettings.backgroundColor);
-      setTextColor(funnelSettings.textColor);
-
-      // 步骤 2: 从 "questions" 子集合中获取所有问题文档
-      const questionsCollectionRef = collection(db, 'funnels', funnelId, 'questions');
-      const questionsSnapshot = await getDocs(questionsCollectionRef);
-
-      // 步骤 3: 遍历每个问题，并从其 "answers" 子集合中获取答案
-      const loadedQuestions = await Promise.all(
-        questionsSnapshot.docs.map(async (questionDoc) => {
-          const questionData = questionDoc.data() as Omit<Question, 'answers' | 'id'>;
-
-          const answersCollectionRef = collection(db, 'funnels', funnelId, 'questions', questionDoc.id, 'answers');
-          const answersSnapshot = await getDocs(answersCollectionRef);
-          
-          const loadedAnswers = answersSnapshot.docs.map(answerDoc => {
-            const answerData = answerDoc.data();
-            return {
-              id: answerDoc.id,
-              text: answerData.text || '',
-              clickCount: answerData.clickCount || 0
-            };
-          });
-
-          return {
-            ...questionData,
-            id: questionDoc.id,
-            answers: loadedAnswers
-          };
-        })
-      );
-
-      setQuestions(loadedQuestions);
-      setIsDataLoaded(true);
-
     } catch (error) {
-      console.error("CRITICAL: Failed to fetch funnel data from subcollections:", error);
-      // 在这里可以设置一个错误状态来通知用户
+        console.error("CRITICAL: Failed to fetch funnel data with clicks:", error);
+        showNotification('Failed to load click data. Check Firestore Rules.', 'error');
     }
   };
 
   getFunnel();
 }, [funnelId, db, navigate]);
 
-// 在 src/App.tsx -> FunnelEditor 组件中
-const saveFunnelToFirestore = useCallback(async () => {
-  if (!funnelId || !db) return;
-
-  // 1. 定义核心漏斗数据 (不含问题)
-  const coreFunnelData: Omit<FunnelData, 'questions'> = {
+  const saveFunnelToFirestore = useCallback(() => {
+    if (!funnelId) return;
+    const newData: FunnelData = {
+      questions,
+      finalRedirectLink,
+      tracking,
+      conversionGoal,
+      primaryColor,
+      buttonColor,
+      backgroundColor,
+      textColor,
+    };
+    setDebugLinkValue(`Saving: ${finalRedirectLink || 'Empty'}`);
+    console.log('FunnelEditor: Saving finalRedirectLink to Firestore:', finalRedirectLink);
+    updateFunnelData(funnelId, newData);
+  }, [
+    funnelId,
+    questions,
     finalRedirectLink,
     tracking,
     conversionGoal,
@@ -529,55 +530,9 @@ const saveFunnelToFirestore = useCallback(async () => {
     buttonColor,
     backgroundColor,
     textColor,
-  };
+    updateFunnelData,
+  ]);
 
-  try {
-    // 2. 更新主漏斗文档，只保存核心设置
-    const funnelDocRef = doc(db, 'funnels', funnelId);
-    await updateDoc(funnelDocRef, { data: coreFunnelData });
-
-    // 3. 异步处理所有问题的子集合保存
-    await Promise.all(
-      questions.map(async (question) => {
-        const questionDocRef = doc(db, 'funnels', funnelId, 'questions', question.id);
-
-        // 提取问题自身的数据 (不含答案)
-        const { answers, ...questionData } = question;
-        await setDoc(questionDocRef, questionData); // 使用 setDoc 确保创建或覆盖
-
-        // 4. 为当前问题下的每个答案创建/更新文档
-        await Promise.all(
-          answers.map(async (answer) => {
-            const answerDocRef = doc(db, 'funnels', funnelId, 'questions', question.id, 'answers', answer.id);
-            // 只保存答案的核心数据，点击统计数据由云函数独立处理
-            await setDoc(answerDocRef, { text: answer.text }, { merge: true });
-          })
-        );
-      })
-    );
-    
-    // 你可以保留一个成功的提示，但由于是自动保存，通常可以省略
-    // console.log('✅ Funnel and its subcollections saved successfully!');
-
-  } catch (error) {
-    console.error("CRITICAL: Failed to save funnel with subcollections:", error);
-    // 在这里可以调用一个错误通知
-    // showNotification('Failed to save funnel changes.', 'error');
-  }
-
-}, [
-  funnelId,
-  db, // 确保 db 在依赖项中
-  questions,
-  finalRedirectLink,
-  tracking,
-  conversionGoal,
-  primaryColor,
-  buttonColor,
-  backgroundColor,
-  textColor,
-  // updateFunnelData 不再需要，因为我们直接在这里操作数据库
-]);
   useEffect(() => {
     if (!isDataLoaded) return;
     const handler = setTimeout(() => {
@@ -598,26 +553,17 @@ const saveFunnelToFirestore = useCallback(async () => {
   // 在 FunnelEditor 组件内部，可以放在 saveFunnelToFirestore 函数的下面
 
 const handleSelectTemplate = async (templateName: string) => {
+  console.log(`[LOG] handleSelectTemplate called with: ${templateName}`);
+  // 检查是否会超出6个问题的限制
   if (questions.length >= 6) {
-    showNotification('Cannot add from template, the 6-question limit has been reached.', 'error');
+    setNotification({ message: 'Cannot add from template, the 6-question limit has been reached.', type: 'error' });
     return;
   }
 
   try {
+    // 从 public/templates/ 文件夹中获取模板文件
     const response = await fetch(`/templates/${templateName}.json`);
-    if (!response.ok) throw new Error("Template file not found");
-    const templateData = await response.json();
-
-    // --- 核心修复：为模板中的每一个问题和答案都生成唯一的ID ---
-    const templateQuestions: Question[] = templateData.map((q: any) => ({
-      ...q,
-      id: `q_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
-      type: 'single-choice', // 确保类型存在
-      answers: q.answers.map((a: any, i: number) => ({
-        ...a,
-        id: `a_${Date.now()}_${i}_${Math.random().toString(36).substring(2, 9)}`,
-      })),
-    }));
+    const templateQuestions: Question[] = await response.json();
 
     // 将模板中的问题与现有问题合并
     const newQuestions = [...questions, ...templateQuestions];
@@ -636,27 +582,23 @@ const handleSelectTemplate = async (templateName: string) => {
     setNotification({ message: 'Failed to load the template.', type: 'error' });
   }
 };
-  // 在 FunnelEditor 组件中
-const handleAddQuestion = () => {
-  if (questions.length >= 6) {
-    alert('You can only have up to 6 questions for this quiz.');
-    return;
-  }
-  const newQuestion: Question = {
-    id: `q_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`, // <-- 确保问题ID唯一
-    title: `New Question ${questions.length + 1}`,
-    type: 'single-choice',
-    answers: Array(4)
-      .fill(null)
-      .map((_, i) => ({ 
-        id: `a_${Date.now()}_${i}_${Math.random().toString(36).substring(2, 9)}`, // <-- 确保答案ID唯一
-        text: `Option ${String.fromCharCode(65 + i)}` 
-      })),
+  const handleAddQuestion = () => {
+    if (questions.length >= 6) {
+      alert('You can only have up to 6 questions for this quiz.');
+      return;
+    }
+    const newQuestion: Question = {
+      id: Date.now().toString(),
+      title: `New Question ${questions.length + 1}`,
+      type: 'single-choice',
+      answers: Array(4)
+        .fill(null)
+        .map((_, i) => ({ id: `option-${Date.now()}-${i}`, text: `Option ${String.fromCharCode(65 + i)}` })),
+    };
+    setQuestions([...questions, newQuestion]);
+    setSelectedQuestionIndex(questions.length);
+    setCurrentSubView('questionForm');
   };
-  setQuestions([...questions, newQuestion]);
-  setSelectedQuestionIndex(questions.length);
-  setCurrentSubView('questionForm');
-};
 
   const handleEditQuestion = (index: number) => {
     setSelectedQuestionIndex(index);
@@ -734,7 +676,7 @@ const handleImportQuestions = (importedQuestions: Question[]) => {
             questions={questions}
             onAddQuestion={handleAddQuestion}
             onEditQuestion={handleEditQuestion}
-            onBack={saveFunnelToFirestore} 
+            onBack={() => setCurrentSubView('mainEditorDashboard')}
             onImportQuestions={handleImportQuestions}
             onSelectTemplate={handleSelectTemplate}
             templateFiles={templateFiles}
@@ -860,9 +802,10 @@ interface QuizPlayerProps {
   db: Firestore;
 }
 
-// 在 src/App.tsx 文件中，这是 QuizPlayer 组件的最终正确版本
+// 文件路径: src/App.tsx -> 请用这个版本替换旧的 QuizPlayer 组件
+
 const QuizPlayer: React.FC<QuizPlayerProps> = ({ db }) => {
-  const { funnelId } = useParams<{ funnelId: string }>(); // <-- 这是正确获取 funnelId 的方法
+  const { funnelId } = useParams<{ funnelId: string }>();
   const navigate = useNavigate();
 
   const [funnelData, setFunnelData] = useState<FunnelData | null>(null);
@@ -872,8 +815,8 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ db }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // [中文注释] 从数据库加载漏斗数据... (这部分逻辑保持不变)
   useEffect(() => {
-    // ... (这部分 useEffect 的数据加载逻辑保持不变) ...
     const getFunnelForPlay = async () => {
       if (!funnelId) {
         setError('No funnel ID provided!');
@@ -901,6 +844,7 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ db }) => {
     getFunnelForPlay();
   }, [funnelId, db]);
 
+  // [中文注释] 关键升级：这是新的 handleAnswerClick 函数
   const handleAnswerClick = (answerIndex: number) => {
     if (isAnimating || !funnelData) return;
 
@@ -910,48 +854,47 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ db }) => {
     const currentQuestion = funnelData.questions[currentQuestionIndex];
     const affiliateLink = currentQuestion?.data?.affiliateLinks?.[answerIndex];
 
-    // --- 这是最终的、与后台完全匹配的点击追踪逻辑 ---
+    // --- ↓↓↓ 这是新增的点击追踪逻辑 ↓↓↓ ---
     if (funnelId && currentQuestion?.id && currentQuestion.answers[answerIndex]?.id) {
-        const trackClickEndpoint = 'https://track-click-498506838505.us-central1.run.app'; // <-- 请确保这里是您自己的URL
-
-        const payload = {
-            funnelId: funnelId,
-            questionId: currentQuestion.id,
-            answerId: currentQuestion.answers[answerIndex].id,
-        };
-
-        console.log("即将发送的正确数据包:", JSON.stringify(payload));
-
+        const trackClickEndpoint = 'https://track-click-498506838505.us-central1.run.app'; // [中文注释] 关键：请将这里替换为您部署 trackClick 函数后得到的真实 URL
+        
         fetch(trackClickEndpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ data: payload })
+            body: JSON.stringify({
+                data: {
+                    funnelId: funnelId,
+                    questionId: currentQuestion.id,
+                    answerId: currentQuestion.answers[answerIndex].id,
+                }
+            })
         }).catch(err => console.error('Failed to track click:', err));
     }
-    // --- 点击追踪逻辑结束 ---
+    // --- ↑↑↑ 点击追踪逻辑结束 ↑↑↑ ---
 
+    // [中文注释] 在新标签页中打开独立的推广链接
     if (affiliateLink && affiliateLink.trim() !== '') {
         window.open(affiliateLink, '_blank');
     }
 
     setTimeout(() => {
-      setIsAnimating(false);
-      setClickedAnswerIndex(null);
-      if (!funnelData) return;
+        setIsAnimating(false);
+        setClickedAnswerIndex(null);
+        if (!funnelData) return;
 
-      const isLastQuestion = currentQuestionIndex >= funnelData.questions.length - 1;
-      if (isLastQuestion) {
-          const redirectLink = funnelData.finalRedirectLink;
-          if (redirectLink && redirectLink.trim() !== '') {
-              window.location.href = redirectLink;
-          }
-          return;
-      }
-      setCurrentQuestionIndex(currentQuestionIndex + 1);
+        const isLastQuestion = currentQuestionIndex >= funnelData.questions.length - 1;
+        if (isLastQuestion) {
+            const redirectLink = funnelData.finalRedirectLink;
+            if (redirectLink && redirectLink.trim() !== '') {
+                window.location.href = redirectLink;
+            } else {
+                console.log('Quiz complete! No final redirect link set.');
+            }
+            return;
+        }
+        setCurrentQuestionIndex(currentQuestionIndex + 1);
     }, 500);
   };
-
- 
   
   // [中文注释] 组件的 JSX 渲染部分保持不变...
   if (isLoading) {
@@ -1169,7 +1112,7 @@ const QuizEditorComponent: React.FC<QuizEditorComponentProps> = ({
       )}
 
      
-         <BackButton onBeforeClick={onBack} to="/">
+         <BackButton onClick={onBack}>
   <span role="img" aria-label="back">←</span> Back to Funnel Dashboard
         </BackButton>
     </div>
@@ -1236,17 +1179,10 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
   };
   // src/App.tsx -> 在 QuestionFormComponent 组件内部
 
-// 在 QuestionFormComponent 组件中
 const handleSave = async () => {
   setIsSaving(true);
   try {
-    // 确保所有答案都有ID，特别是用户新输入的、原本可能没有ID的答案
-    const answersWithIds = answers.map((ans, index) => ({
-      ...ans,
-      id: ans.id || `a_${Date.now()}_${index}_${Math.random().toString(36).substring(2, 9)}` // <-- 为没有ID的答案补充ID
-    }));
-
-    const filteredAnswers = answersWithIds.filter((ans) => ans.text.trim() !== "");
+    const filteredAnswers = answers.filter((ans) => ans.text.trim() !== "");
     if (!title.trim()) {
       console.error("Question title cannot be empty!");
       return;
@@ -1256,17 +1192,20 @@ const handleSave = async () => {
       return;
     }
 
+    // --- ↓↓↓ 这是新增的核心修复逻辑 ↓↓↓ ---
+    // 创建一个干净的链接数组，确保将所有 undefined/null 值转换为空字符串
     const cleanAffiliateLinks = Array.from({ length: 4 }).map((_, index) => affiliateLinks[index] || '');
+    // --- ↑↑↑ 修复逻辑结束 ↑↑↑ ---
 
     await new Promise((resolve) => setTimeout(resolve, 1000));
-
+    
     onSave({
-      id: question?.id || `q_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`, // <-- 确保问题本身也有ID
+      id: question?.id || Date.now().toString(),
       title,
       type: "single-choice",
       answers: filteredAnswers,
       data: { 
-        affiliateLinks: cleanAffiliateLinks,
+        affiliateLinks: cleanAffiliateLinks, // <-- 使用处理过的干净数组
       },
     });
   } catch (error) {
