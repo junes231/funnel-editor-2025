@@ -509,21 +509,28 @@ const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData }) => 
 const saveFunnelToFirestore = useCallback(() => {
   if (!funnelId) return;
 
-  // --- 核心修复：在保存前，必须清理掉从子集合读来的临时 clickCount 数据 ---
-  // 我们创建一个新的、干净的 questions 数组用于保存
-  const questionsToSave = questions.map(q => {
-    // 对于每个问题，我们创建一个新的、干净的 answers 数组
-    const cleanAnswers = q.answers.map(a => {
-      // 复制答案对象，但排除 clickCount 字段
-      const { clickCount, ...restOfAnswer } = a;
-      return restOfAnswer;
+const questionsToSave = questions.map(question => {
+    // 1. 净化每一个答案，只保留 id 和 text
+    const cleanAnswers = question.answers.map(answer => {
+      return {
+        id: answer.id,
+        text: answer.text
+      };
     });
-    // 返回包含干净 answers 数组的问题对象
-    return { ...q, answers: cleanAnswers };
+
+    // 2. 净化问题本身，只保留核心字段
+    return {
+      id: question.id,
+      title: question.title,
+      type: question.type,
+      answers: cleanAnswers,
+      data: question.data // affiliateLinks 等数据在这里
+    };
   });
+  // --- 净化结束 ---
 
   const newData: FunnelData = {
-    questions: questionsToSave, // <-- 使用清理过的数据进行保存
+    questions: questionsToSave, // <-- 使用绝对纯净的数据进行保存
     finalRedirectLink,
     tracking,
     conversionGoal,
@@ -533,7 +540,6 @@ const saveFunnelToFirestore = useCallback(() => {
     textColor,
   };
 
-  console.log('FunnelEditor: Saving finalRedirectLink to Firestore:', finalRedirectLink);
   updateFunnelData(funnelId, newData);
 
 }, [
@@ -568,17 +574,26 @@ const saveFunnelToFirestore = useCallback(() => {
   // 在 FunnelEditor 组件内部，可以放在 saveFunnelToFirestore 函数的下面
 
 const handleSelectTemplate = async (templateName: string) => {
-  console.log(`[LOG] handleSelectTemplate called with: ${templateName}`);
-  // 检查是否会超出6个问题的限制
   if (questions.length >= 6) {
-    setNotification({ message: 'Cannot add from template, the 6-question limit has been reached.', type: 'error' });
+    showNotification('Cannot add from template, the 6-question limit has been reached.', 'error');
     return;
   }
 
   try {
-    // 从 public/templates/ 文件夹中获取模板文件
     const response = await fetch(`/templates/${templateName}.json`);
-    const templateQuestions: Question[] = await response.json();
+    if (!response.ok) throw new Error("Template file not found");
+    const templateData = await response.json();
+
+    // --- 核心修复：为模板中的每一个问题和答案都生成唯一的ID ---
+    const templateQuestions: Question[] = templateData.map((q: any) => ({
+      ...q,
+      id: `q_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+      type: 'single-choice', // 确保类型存在
+      answers: q.answers.map((a: any, i: number) => ({
+        ...a,
+        id: `a_${Date.now()}_${i}_${Math.random().toString(36).substring(2, 9)}`,
+      })),
+    }));
 
     // 将模板中的问题与现有问题合并
     const newQuestions = [...questions, ...templateQuestions];
