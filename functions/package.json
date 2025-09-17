@@ -8,5 +8,8 @@
   },
   "engines": {
     "node": "18"
+  },
+  "scripts": {
+    "lint": "echo 'No linting configured'"
   }
 }
