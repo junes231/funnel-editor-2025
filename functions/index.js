@@ -79,24 +79,21 @@ functions.http('grantAdminRole', async (req, res) => {
  * 它接收 funnelId, questionId, 和 answerId，然后为对应的答案增加点击次数
  */
 functions.http('trackClick', async (req, res) => {
-  // [中文注释] 设置 CORS 跨域请求头，允许您的前端应用调用
+  // [中文注释] CORS 跨域请求头设置 (保持不变)
   res.set('Access-Control-Allow-Origin', '*');
   res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.set('Access-Control-Allow-Headers', 'Content-Type');
 
-  // [中文注释] 处理 CORS 预检请求
   if (req.method === 'OPTIONS') {
     res.status(204).send('');
     return;
   }
-
-  // [中文注释] 确保请求方法是 POST
   if (req.method !== 'POST') {
     res.status(405).send('Method Not Allowed');
     return;
   }
 
-  // [中文注释] 从请求体中获取必要的 ID
+  // [中文注释] 从请求体中获取必要的 ID (保持不变)
   const { funnelId, questionId, answerId } = req.body.data || {};
 
   if (!funnelId || !questionId || !answerId) {
@@ -104,37 +101,55 @@ functions.http('trackClick', async (req, res) => {
     return;
   }
 
+  // --- 这是核心修正逻辑 ---
   try {
-    // [中文注释] 构建指向特定答案的 Firestore 文档引用
-    // [中文注释] 注意：这个路径假设您的数据结构是 funnels -> questions -> answers
-    // [中文注释] 我们稍后会在前端代码中确保这个结构
-    const answerRef = db.collection('funnels').doc(funnelId)
-                        .collection('questions').doc(questionId)
-                        .collection('answers').doc(answerId);
+    // 1. [中文注释] 获取指向主漏斗文档的引用
+    const funnelRef = db.collection('funnels').doc(funnelId);
 
-    // [中文注释] 使用原子性的 increment 操作来增加 clickCount 字段的值
-    await answerRef.update({
-      clickCount: admin.firestore.FieldValue.increment(1)
+    // 2. [中文注释] 使用 Firestore 事务来安全地读取和写入数据，避免冲突
+    await db.runTransaction(async (transaction) => {
+      const funnelDoc = await transaction.get(funnelRef);
+      if (!funnelDoc.exists) {
+        throw new Error("Funnel document not found!");
+      }
+
+      // 3. [中文注释] 从文档中获取当前的数据
+      const funnelData = funnelDoc.data();
+      const questions = funnelData.data.questions || [];
+
+      // 4. [中文注释] 在 questions 数组中找到需要更新的问题
+      let questionFound = false;
+      let answerFound = false;
+      const updatedQuestions = questions.map(q => {
+        if (q.id === questionId) {
+          questionFound = true;
+          // 5. [中文注释] 在该问题的 answers 数组中找到需要更新的答案
+          q.answers = q.answers.map(a => {
+            if (a.id === answerId) {
+              answerFound = true;
+              // 6. [中文注释] 增加 clickCount 字段的值，如果不存在则初始化为 1
+              a.clickCount = (a.clickCount || 0) + 1;
+            }
+            return a;
+          });
+        }
+        return q;
+      });
+
+      if (!questionFound || !answerFound) {
+        console.error(`Question or Answer not found. Q_ID: ${questionId}, A_ID: ${answerId}`);
+        // [中文注释] 即使找不到也不抛出错误，静默失败，避免客户端报错
+        return; 
+      }
+      
+      // 7. [中文注释] 用更新后的 questions 数组，更新整个文档
+      transaction.update(funnelRef, { 'data.questions': updatedQuestions });
     });
 
     res.status(200).send({ success: true, message: 'Click tracked successfully.' });
 
   } catch (error) {
     console.error("Error tracking click:", error);
-    // [中文注释] 如果文档或字段不存在，尝试创建它并设置点击为1
-    if (error.code === 5) { // 'NOT_FOUND' error code
-        try {
-            const answerRef = db.collection('funnels').doc(funnelId)
-                                .collection('questions').doc(questionId)
-                                .collection('answers').doc(answerId);
-            await answerRef.set({ clickCount: 1 }, { merge: true });
-            res.status(200).send({ success: true, message: 'Click tracked and document created.' });
-        } catch (set_error) {
-            console.error("Error creating document for click tracking:", set_error);
-            res.status(500).send({ error: 'Internal Server Error' });
-        }
-    } else {
-        res.status(500).send({ error: 'Internal Server Error' });
-    }
+    res.status(500).send({ error: 'Internal Server Error: ' + error.message });
   }
 });
