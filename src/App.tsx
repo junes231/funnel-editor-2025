@@ -1159,9 +1159,9 @@ const QuizEditorComponent: React.FC<QuizEditorComponentProps> = ({
       )}
 
      
-         <BackButton onBeforeClick={onBack} goBack={true}>
+         <BackButton onBeforeClick={onBack} to="/">
   <span role="img" aria-label="back">←</span> Back to Funnel Dashboard
-         </BackButton>
+        </BackButton>
     </div>
   );
 };
