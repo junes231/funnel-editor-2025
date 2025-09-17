@@ -724,7 +724,7 @@ const handleImportQuestions = (importedQuestions: Question[]) => {
             questions={questions}
             onAddQuestion={handleAddQuestion}
             onEditQuestion={handleEditQuestion}
-            onBack={() => setCurrentSubView('mainEditorDashboard')}
+            onBack={saveFunnelToFirestore} 
             onImportQuestions={handleImportQuestions}
             onSelectTemplate={handleSelectTemplate}
             templateFiles={templateFiles}
@@ -1159,9 +1159,9 @@ const QuizEditorComponent: React.FC<QuizEditorComponentProps> = ({
       )}
 
      
-         <BackButton onClick={onBack}>
+         <BackButton onBeforeClick={onBack} goBack={true}>
   <span role="img" aria-label="back">←</span> Back to Funnel Dashboard
-        </BackButton>
+         </BackButton>
     </div>
   );
 };
