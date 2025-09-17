@@ -253,7 +253,7 @@ useEffect(() => {
                     </span>
                     <button onClick={() => signOut(getAuth())} style={{ padding: '8px 15px' }}>Logout</button>
                   </div>
-                  <FunnelEditor db={db} updateFunnelData={updateFunnelData} showNotification={showNotification} />
+                  <FunnelEditor db={db} updateFunnelData={updateFunnelData} />
                 </>
           }
         />
@@ -414,10 +414,9 @@ const FunnelDashboard: React.FC<FunnelDashboardProps> = ({ db, user, isAdmin, fu
 interface FunnelEditorProps {
   db: Firestore;
   updateFunnelData: (funnelId: string, newData: FunnelData) => Promise<void>;
-  showNotification: (message: string, type?: 'success' | 'error') => void;
 }
 
-const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData, showNotification }) => {
+const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData }) => {
   const { funnelId } = useParams<{ funnelId: string }>();
   const navigate = useNavigate();
 
@@ -498,7 +497,7 @@ const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData, showN
       }
     } catch (error) {
         console.error("CRITICAL: Failed to fetch funnel data with clicks:", error);
-        showNotification('Failed to load click data. Check Firestore Rules.', 'error');
+        alert('Failed to load funnel data. See console for details.');
     }
   };
 
@@ -1268,38 +1267,22 @@ const handleSave = async () => {
         </select>
       </div>
       <div className="answer-options-section">
-  <p>Answer Options (Max 4):</p>
-  {Array.from({ length: 4 }).map((_, index) => (
-    <div key={index} className="answer-input-group" style={{ alignItems: 'center', display: 'flex', gap: '10px' }}>
-      <input
-        type="text"
-        style={{ flex: 1 }} // 让输入框占据更多空间
-        value={answers[index]?.text || ''}
-        onChange={(e) => handleAnswerTextChange(index, e.target.value)}
-        placeholder={`Option ${String.fromCharCode(65 + index)}`}
-      />
-       <input
+        <p>Answer Options (Max 4):</p>
+        {Array.from({ length: 4 }).map((_, index) => (
+          <div key={index} className="answer-input-group">
+            <input
+              type="text"
+              value={answers[index]?.text || ''}
+              onChange={(e) => handleAnswerTextChange(index, e.target.value)}
+              placeholder={`Option ${String.fromCharCode(65 + index)}`}
+            />
+             <input
         type="url"
-        style={{ flex: 1 }} // 让输入框占据更多空间
         value={affiliateLinks[index] || ''}
         onChange={(e) => handleLinkChange(index, e.target.value)}
         placeholder="Affiliate link (optional)"
         className="affiliate-link-input"
-       />
-       {/* --- 这是新增的点击数据显示部分 --- */}
-       <div style={{ 
-           flexShrink: 0, // 防止被压缩
-           minWidth: '100px', // 保证足够宽度
-           padding: '8px 12px', 
-           fontSize: '14px', 
-           fontWeight: '600',
-           color: '#007bff', // 蓝色字体
-           background: '#f0f8ff', // 淡蓝色背景
-           borderRadius: '6px',
-           textAlign: 'center'
-        }}>
-         👁️ {answers[index]?.clickCount || 0} clicks
-         </div>
+           />
           </div>
         ))}
       </div>
