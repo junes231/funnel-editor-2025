@@ -1157,38 +1157,58 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
   };
   // src/App.tsx -> 在 QuestionFormComponent 组件内部
 
+// src/App.tsx -> 在 QuestionFormComponent 组件内部
+
 const handleSave = async () => {
   setIsSaving(true);
   try {
     const filteredAnswers = answers.filter((ans) => ans.text.trim() !== "");
     if (!title.trim()) {
-      console.error("Question title cannot be empty!");
+      setNotification({ message: 'Question title cannot be empty!', type: 'error' }); // 使用通知
       return;
     }
     if (filteredAnswers.length === 0) {
-      console.error("Please provide at least one answer option.");
+      setNotification({ message: 'Please provide at least one answer option.', type: 'error' }); // 使用通知
       return;
     }
 
-    // --- ↓↓↓ 这是新增的核心修复逻辑 ↓↓↓ ---
-    // 创建一个干净的链接数组，确保将所有 undefined/null 值转换为空字符串
     const cleanAffiliateLinks = Array.from({ length: 4 }).map((_, index) => affiliateLinks[index] || '');
-    // --- ↑↑↑ 修复逻辑结束 ↑↑↑ ---
 
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    
+    // 先调用 onSave 将数据传递给父组件
+    // 这一步现在是即时的，父组件的 useEffect 会自动处理后台保存
     onSave({
       id: question?.id || Date.now().toString(),
       title,
       type: "single-choice",
       answers: filteredAnswers,
       data: { 
-        affiliateLinks: cleanAffiliateLinks, // <-- 使用处理过的干净数组
+        affiliateLinks: cleanAffiliateLinks,
       },
     });
+    
+    // --- 以下是恢复的核心动画和跳转逻辑 ---
+    
+    // 1. 显示成功的通知
+    showNotification('Question saved!', 'success');
+    
+    // 2. 找到按钮并添加淡出动画类
+    const button = document.querySelector('.save-button');
+    if (button) {
+      button.classList.add('animate-out');
+    }
+
+    // 3. 在动画播放的同时，稍作延迟后执行页面跳转
+    setTimeout(() => {
+      // onCancel 函数的作用就是返回列表页
+      onCancel(); 
+    }, 1000); // 1秒后跳转
+
   } catch (error) {
     console.error("Error saving question:", error);
+    setNotification({ message: `Save failed: ${error.message}`, type: 'error' });
   } finally {
+    // 即使跳转，也最好在 finally 块中重置加载状态
+    // 但因为即将跳转，用户看不到，所以此步可选
     setIsSaving(false);
   }
 };
