@@ -492,12 +492,12 @@ const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData }) => 
         setIsDataLoaded(true);
 
       } else {
-        alert('Funnel not found!');
+       // alert('Funnel not found!'); //
         navigate('/');
       }
     } catch (error) {
         console.error("CRITICAL: Failed to fetch funnel data with clicks:", error);
-        alert('Failed to load funnel data. See console for details.');
+      //   alert('Failed to load funnel data. See console for details.'); //
     }
   };
 
