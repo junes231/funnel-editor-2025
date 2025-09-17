@@ -505,32 +505,12 @@ const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData }) => 
   getFunnel();
 }, [funnelId, db, navigate]);
 
-  // 在 src/App.tsx -> FunnelEditor 组件中
-const saveFunnelToFirestore = useCallback(() => {
-  if (!funnelId) return;
+// 在 src/App.tsx -> FunnelEditor 组件中
+const saveFunnelToFirestore = useCallback(async () => {
+  if (!funnelId || !db) return;
 
-const questionsToSave = questions.map(question => {
-    // 1. 净化每一个答案，只保留 id 和 text
-    const cleanAnswers = question.answers.map(answer => {
-      return {
-        id: answer.id,
-        text: answer.text
-      };
-    });
-
-    // 2. 净化问题本身，只保留核心字段
-    return {
-      id: question.id,
-      title: question.title,
-      type: question.type,
-      answers: cleanAnswers,
-      data: question.data // affiliateLinks 等数据在这里
-    };
-  });
-  // --- 净化结束 ---
-
-  const newData: FunnelData = {
-    questions: questionsToSave, // <-- 使用绝对纯净的数据进行保存
+  // 1. 定义核心漏斗数据 (不含问题)
+  const coreFunnelData: Omit<FunnelData, 'questions'> = {
     finalRedirectLink,
     tracking,
     conversionGoal,
@@ -540,10 +520,43 @@ const questionsToSave = questions.map(question => {
     textColor,
   };
 
-  updateFunnelData(funnelId, newData);
+  try {
+    // 2. 更新主漏斗文档，只保存核心设置
+    const funnelDocRef = doc(db, 'funnels', funnelId);
+    await updateDoc(funnelDocRef, { data: coreFunnelData });
+
+    // 3. 异步处理所有问题的子集合保存
+    await Promise.all(
+      questions.map(async (question) => {
+        const questionDocRef = doc(db, 'funnels', funnelId, 'questions', question.id);
+
+        // 提取问题自身的数据 (不含答案)
+        const { answers, ...questionData } = question;
+        await setDoc(questionDocRef, questionData); // 使用 setDoc 确保创建或覆盖
+
+        // 4. 为当前问题下的每个答案创建/更新文档
+        await Promise.all(
+          answers.map(async (answer) => {
+            const answerDocRef = doc(db, 'funnels', funnelId, 'questions', question.id, 'answers', answer.id);
+            // 只保存答案的核心数据，点击统计数据由云函数独立处理
+            await setDoc(answerDocRef, { text: answer.text }, { merge: true });
+          })
+        );
+      })
+    );
+    
+    // 你可以保留一个成功的提示，但由于是自动保存，通常可以省略
+    // console.log('✅ Funnel and its subcollections saved successfully!');
+
+  } catch (error) {
+    console.error("CRITICAL: Failed to save funnel with subcollections:", error);
+    // 在这里可以调用一个错误通知
+    // showNotification('Failed to save funnel changes.', 'error');
+  }
 
 }, [
   funnelId,
+  db, // 确保 db 在依赖项中
   questions,
   finalRedirectLink,
   tracking,
@@ -552,7 +565,7 @@ const questionsToSave = questions.map(question => {
   buttonColor,
   backgroundColor,
   textColor,
-  updateFunnelData,
+  // updateFunnelData 不再需要，因为我们直接在这里操作数据库
 ]);
   useEffect(() => {
     if (!isDataLoaded) return;
