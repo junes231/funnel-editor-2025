@@ -13,6 +13,7 @@ import { useNavigate, useParams, Routes, Route, useLocation } from 'react-router
 import {
   collection,
   doc,
+  setDoc,
   addDoc,
   getDocs,
   updateDoc,
