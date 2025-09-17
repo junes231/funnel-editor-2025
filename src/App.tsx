@@ -451,55 +451,65 @@ const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData }) => 
 }, []);
   useEffect(() => {
   const getFunnel = async () => {
-    if (!funnelId) return;
+    if (!funnelId || !db) return;
 
     try {
-      // --- 第一步：获取主要的漏斗文档 (这部分不变) ---
+      // 步骤 1: 获取主漏斗文档，用于设置名称、颜色等
       const funnelDocRef = doc(db, 'funnels', funnelId);
       const funnelDoc = await getDoc(funnelDocRef);
 
-      if (funnelDoc.exists()) {
-        const funnel = funnelDoc.data() as Funnel;
-        setFunnelName(funnel.name);
-
-        // --- 第二步（核心升级）：为每个答案补充真实的点击数据 ---
-        const questionsWithClickData = await Promise.all(
-          (funnel.data.questions || []).map(async (question) => {
-            const answersWithClickData = await Promise.all(
-              (question.answers || []).map(async (answer) => {
-                // 为每个答案构建指向其独立数据文档的引用
-                const answerStatsRef = doc(db, 'funnels', funnelId, 'questions', question.id, 'answers', answer.id);
-                const answerStatsDoc = await getDoc(answerStatsRef);
-
-                // 如果该答案的统计数据存在，则读取 clickCount，否则默认为 0
-                const clickCount = answerStatsDoc.exists() ? answerStatsDoc.data().clickCount : 0;
-
-                return { ...answer, clickCount }; // 将点击数合并到答案对象中
-              })
-            );
-            return { ...question, answers: answersWithClickData }; // 返回包含点击数据的完整问题对象
-          })
-        );
-
-        // --- 第三步：使用包含点击数据的完整信息来更新页面状态 ---
-        setQuestions(questionsWithClickData);
-        setFinalRedirectLink(funnel.data.finalRedirectLink || '');
-        setTracking(funnel.data.tracking || '');
-        setConversionGoal(funnel.data.conversionGoal || 'Product Purchase');
-        setPrimaryColor(funnel.data.primaryColor || defaultFunnelData.primaryColor);
-        setButtonColor(funnel.data.buttonColor || defaultFunnelData.buttonColor);
-        setBackgroundColor(funnel.data.backgroundColor || defaultFunnelData.backgroundColor);
-        setTextColor(funnel.data.textColor || defaultFunnelData.textColor);
-
-        setIsDataLoaded(true);
-
-      } else {
+      if (!funnelDoc.exists()) {
         alert('Funnel not found!');
         navigate('/');
+        return;
       }
+
+      const funnel = funnelDoc.data() as Funnel;
+      setFunnelName(funnel.name);
+      const funnelSettings = { ...defaultFunnelData, ...funnel.data };
+      setFinalRedirectLink(funnelSettings.finalRedirectLink);
+      setTracking(funnelSettings.tracking);
+      setConversionGoal(funnelSettings.conversionGoal);
+      setPrimaryColor(funnelSettings.primaryColor);
+      setButtonColor(funnelSettings.buttonColor);
+      setBackgroundColor(funnelSettings.backgroundColor);
+      setTextColor(funnelSettings.textColor);
+
+      // 步骤 2: 从 "questions" 子集合中获取所有问题文档
+      const questionsCollectionRef = collection(db, 'funnels', funnelId, 'questions');
+      const questionsSnapshot = await getDocs(questionsCollectionRef);
+
+      // 步骤 3: 遍历每个问题，并从其 "answers" 子集合中获取答案
+      const loadedQuestions = await Promise.all(
+        questionsSnapshot.docs.map(async (questionDoc) => {
+          const questionData = questionDoc.data() as Omit<Question, 'answers' | 'id'>;
+
+          const answersCollectionRef = collection(db, 'funnels', funnelId, 'questions', questionDoc.id, 'answers');
+          const answersSnapshot = await getDocs(answersCollectionRef);
+          
+          const loadedAnswers = answersSnapshot.docs.map(answerDoc => {
+            const answerData = answerDoc.data();
+            return {
+              id: answerDoc.id,
+              text: answerData.text || '',
+              clickCount: answerData.clickCount || 0
+            };
+          });
+
+          return {
+            ...questionData,
+            id: questionDoc.id,
+            answers: loadedAnswers
+          };
+        })
+      );
+
+      setQuestions(loadedQuestions);
+      setIsDataLoaded(true);
+
     } catch (error) {
-        console.error("CRITICAL: Failed to fetch funnel data with clicks:", error);
-        
+      console.error("CRITICAL: Failed to fetch funnel data from subcollections:", error);
+      // 在这里可以设置一个错误状态来通知用户
     }
   };
 
