@@ -448,39 +448,14 @@ const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData }) => 
   setTemplateFiles(availableTemplates);
 }, []);
   useEffect(() => {
-  const getFunnel = async () => {
-    if (!funnelId) return;
-
-    try {
-      // --- 第一步：获取主要的漏斗文档 (这部分不变) ---
+    const getFunnel = async () => {
+      if (!funnelId) return;
       const funnelDocRef = doc(db, 'funnels', funnelId);
       const funnelDoc = await getDoc(funnelDocRef);
-
       if (funnelDoc.exists()) {
         const funnel = funnelDoc.data() as Funnel;
         setFunnelName(funnel.name);
-
-        // --- 第二步（核心升级）：为每个答案补充真实的点击数据 ---
-        const questionsWithClickData = await Promise.all(
-          (funnel.data.questions || []).map(async (question) => {
-            const answersWithClickData = await Promise.all(
-              (question.answers || []).map(async (answer) => {
-                // 为每个答案构建指向其独立数据文档的引用
-                const answerStatsRef = doc(db, 'funnels', funnelId, 'questions', question.id, 'answers', answer.id);
-                const answerStatsDoc = await getDoc(answerStatsRef);
-
-                // 如果该答案的统计数据存在，则读取 clickCount，否则默认为 0
-                const clickCount = answerStatsDoc.exists() ? answerStatsDoc.data().clickCount : 0;
-
-                return { ...answer, clickCount }; // 将点击数合并到答案对象中
-              })
-            );
-            return { ...question, answers: answersWithClickData }; // 返回包含点击数据的完整问题对象
-          })
-        );
-
-        // --- 第三步：使用包含点击数据的完整信息来更新页面状态 ---
-        setQuestions(questionsWithClickData);
+        setQuestions(funnel.data.questions || []);
         setFinalRedirectLink(funnel.data.finalRedirectLink || '');
         setTracking(funnel.data.tracking || '');
         setConversionGoal(funnel.data.conversionGoal || 'Product Purchase');
@@ -489,20 +464,17 @@ const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData }) => 
         setBackgroundColor(funnel.data.backgroundColor || defaultFunnelData.backgroundColor);
         setTextColor(funnel.data.textColor || defaultFunnelData.textColor);
 
+        const loadedLink = funnel.data.finalRedirectLink || 'Empty';
+        setDebugLinkValue(`Loaded: ${loadedLink}`);
+        console.log('FunnelEditor: Loaded finalRedirectLink from Firestore:', loadedLink);
         setIsDataLoaded(true);
-
       } else {
-       // alert('Funnel not found!'); //
+        alert('Funnel not found!');
         navigate('/');
       }
-    } catch (error) {
-        console.error("CRITICAL: Failed to fetch funnel data with clicks:", error);
-      //   alert('Failed to load funnel data. See console for details.'); //
-    }
-  };
-
-  getFunnel();
-}, [funnelId, db, navigate]);
+    };
+    getFunnel();
+  }, [funnelId, db, navigate]);
 
   const saveFunnelToFirestore = useCallback(() => {
     if (!funnelId) return;
