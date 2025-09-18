@@ -1140,17 +1140,26 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
   }, [question]);
 
   const handleAnswerTextChange = (index: number, value: string) => {
-    const updatedAnswers = [...answers];
-    if (!updatedAnswers[index] || !updatedAnswers[index].id) {
-      updatedAnswers[index] = {
-        id: `option-${Date.now()}-${index}`, // 如果没有id就创建一个
-        text: value,
-      };
-    } else {
-      updatedAnswers[index].text = value;
-    }
-    setAnswers(updatedAnswers);
-  };
+  const updatedAnswers = [...answers];
+  
+  // 1. 确保答案对象存在。
+  if (!updatedAnswers[index]) {
+    updatedAnswers[index] = {
+      id: `option-${Date.now()}-${index}`, // 如果不存在，创建一个新对象并分配ID
+      text: "",
+    };
+  }
+  
+  // 2. 确保答案对象有id。如果从旧数据加载的没有，则补上一个。
+  if (!updatedAnswers[index].id) {
+    updatedAnswers[index].id = `option-${Date.now()}-${index}`;
+  }
+  
+  // 3. 更新答案文本
+  updatedAnswers[index].text = value;
+  
+  setAnswers(updatedAnswers);
+};
   const handleLinkChange = (index: number, value: string) => {
     const updatedLinks = [...affiliateLinks];
     updatedLinks[index] = value;
