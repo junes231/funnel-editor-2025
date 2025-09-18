@@ -23,7 +23,7 @@ const QuizComponent: React.FC<QuizComponentProps> = ({
   const handleAnswerClick = async (answerId: string) => {
     try {
       // 替换为您的 Firebase Functions 的实际 URL
-      const response = await fetch('YOUR_FIREBASE_FUNCTIONS_URL/trackClick', {
+      const response = await fetch('https://us-central1-funnel-editor-netlify.cloudfunctions.net/trackClick', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
