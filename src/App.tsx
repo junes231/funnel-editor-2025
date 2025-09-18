@@ -834,7 +834,7 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ db }) => {
 
     // --- ↓↓↓ 这是新增的点击追踪逻辑 ↓↓↓ ---
     if (funnelId && currentQuestion?.id && currentQuestion.answers[answerIndex]?.id) {
-        const trackClickEndpoint = 'https://trackclick-jgett3ucqq-uc.a.run.app'; // [中文注释] 关键：请将这里替换为您部署 trackClick 函数后得到的真实 URL
+        const trackClickEndpoint = 'https://track-click-498506838505.us-central1.run.app'; // [中文注释] 关键：请将这里替换为您部署 trackClick 函数后得到的真实 URL
         
         fetch(trackClickEndpoint, {
             method: 'POST',
