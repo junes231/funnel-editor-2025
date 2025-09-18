@@ -1141,13 +1141,14 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
 
   const handleAnswerTextChange = (index: number, value: string) => {
     const updatedAnswers = [...answers];
-    if (!updatedAnswers[index]) {
+    if (!updatedAnswers[index] || !updatedAnswers[index].id) {
       updatedAnswers[index] = {
-        id: `option-${Date.now()}-${index}`,
-        text: "",
+        id: `option-${Date.now()}-${index}`, // 如果没有id就创建一个
+        text: value,
       };
+    } else {
+      updatedAnswers[index].text = value;
     }
-    updatedAnswers[index].text = value;
     setAnswers(updatedAnswers);
   };
   const handleLinkChange = (index: number, value: string) => {
