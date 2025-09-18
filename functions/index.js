@@ -59,8 +59,8 @@ exports.grantAdminRole = functions.https.onRequest(async (req, res) => {
 /**
  * 一个处理点击追踪的 HTTP 云函数 (使用 Firebase Functions SDK 的最终修正版)
  */
+// 在现有的 trackClick 函数中补充完整逻辑
 exports.trackClick = functions.https.onRequest(async (req, res) => {
-  // 设置 CORS 跨域请求头
   res.set("Access-Control-Allow-Origin", "*");
   res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.set("Access-Control-Allow-Headers", "Content-Type");
@@ -82,37 +82,47 @@ exports.trackClick = functions.https.onRequest(async (req, res) => {
 
   try {
     const funnelRef = db.collection("funnels").doc(funnelId);
-    await db.runTransaction(async (transaction) => {
-      const funnelDoc = await transaction.get(funnelRef);
-      if (!funnelDoc.exists) {
-        throw new Error("Funnel document not found!");
-      }
-      const funnelData = funnelDoc.data();
-      const questions = funnelData.data.questions || [];
-      let questionFound = false;
-      let answerFound = false;
-      const updatedQuestions = questions.map(q => {
-        if (q.id === questionId) {
-          questionFound = true;
-          q.answers = q.answers.map(a => {
-            if (a.id === answerId) {
-              answerFound = true;
-              a.clickCount = (a.clickCount || 0) + 1;
-            }
-            return a;
-          });
-        }
-        return q;
-      });
-      if (!questionFound || !answerFound) {
-        console.error(`Question or Answer not found. Q_ID: ${questionId}, A_ID: ${answerId}`);
-        return;
-      }
-      transaction.update(funnelRef, { "data.questions": updatedQuestions });
+    const funnelDoc = await funnelRef.get();
+    
+    if (!funnelDoc.exists) {
+      res.status(404).send({ error: "Funnel not found" });
+      return;
+    }
+
+    const funnelData = funnelDoc.data();
+    const questions = funnelData.data.questions || [];
+    
+    // 找到对应的问题和答案
+    const questionIndex = questions.findIndex(q => q.id === questionId);
+    if (questionIndex === -1) {
+      res.status(404).send({ error: "Question not found" });
+      return;
+    }
+    
+    const answerIndex = questions[questionIndex].answers.findIndex(a => a.id === answerId);
+    if (answerIndex === -1) {
+      res.status(404).send({ error: "Answer not found" });
+      return;
+    }
+    
+    // 更新点击次数
+    const currentCount = questions[questionIndex].answers[answerIndex].clickCount || 0;
+    questions[questionIndex].answers[answerIndex].clickCount = currentCount + 1;
+    
+    // 保存更新后的数据
+    await funnelRef.update({
+      'data.questions': questions
     });
-    res.status(200).send({ success: true, message: "Click tracked successfully." });
+    
+    res.status(200).send({ 
+      data: { 
+        success: true, 
+        newClickCount: questions[questionIndex].answers[answerIndex].clickCount 
+      } 
+    });
+    
   } catch (error) {
     console.error("Error tracking click:", error);
-    res.status(500).send({ error: "Internal Server Error: " + error.message });
+    res.status(500).send({ error: "Internal server error" });
   }
 });
