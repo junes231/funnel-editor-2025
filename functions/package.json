@@ -7,14 +7,6 @@
     "firebase-functions": "^5.0.1"
   },
   "engines": {
-    "node": "20"
-  },
-  "devDependencies": {
-    "eslint": "^8.50.0"
-  },
-  "scripts": {
-    "lint": "eslint .",
-    "start": "node index.js"
+    "node": "18"
   }
 }
-  
