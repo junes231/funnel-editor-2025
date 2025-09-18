@@ -31,10 +31,16 @@ const PropertyPanel: React.FC<PropertyPanelProps> = ({
   };
 
   const updateAnswer = (index: number, value: string) => {
-    const newAnswers = [...selectedComponent.data.answers];
-    newAnswers[index] = value;
-    updateData('answers', newAnswers);
-  };
+  const newAnswers = [...(selectedComponent.data.answers || [])];
+  // 确保答案对象存在，如果不存在则创建一个
+  if (!newAnswers[index]) {
+    newAnswers[index] = { id: 'answer-' + Date.now(), text: value };
+  } else {
+    // 只更新 text 字段
+    newAnswers[index].text = value;
+  }
+  updateData('answers', newAnswers);
+};
 
   const updateAffiliateLink = (index: number, value: string) => {
     const newLinks = [...(selectedComponent.data.affiliateLinks || [])];
