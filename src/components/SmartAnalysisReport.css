@@ -1,0 +1,93 @@
+/* 文件路径: src/components/SmartAnalysisReport.css */
+
+.smart-analysis-container {
+  background-color: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.07);
+  padding: 30px 40px;
+  max-width: 700px;
+  width: 95%;
+  margin: 20px auto;
+  box-sizing: border-box;
+}
+
+.smart-analysis-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #f0f0f0;
+  padding-bottom: 20px;
+  margin-bottom: 25px;
+}
+
+.smart-analysis-header h2 {
+  margin: 0;
+  color: #333;
+  font-size: 1.8em;
+}
+
+.overall-score-circle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  color: white; /* [中文注释] 分数文字颜色设为白色 */
+  text-align: center;
+}
+
+.overall-score-circle strong {
+  font-size: 2.5em;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.overall-score-circle span {
+  font-size: 0.8em;
+  opacity: 0.9;
+  margin-top: 2px;
+}
+
+.analysis-section {
+  margin-bottom: 25px;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.section-header h3 {
+  margin: 0;
+  color: #333;
+}
+
+.score-badge {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-weight: 600;
+  color: white; /* [中文注释] 分数文字颜色设为白色 */
+  font-size: 0.9em;
+}
+
+.analysis-section ul {
+  list-style-type: '👉';
+  padding-left: 20px;
+  margin: 0;
+}
+
+.analysis-section li {
+  margin-bottom: 8px;
+  padding-left: 10px;
+  color: #555;
+  line-height: 1.6;
+}
+
+/* [中文注释] 分数颜色 - 现在只设置背景色，避免冲突 */
+.score-high { background-color: #4caf50; }
+.score-medium { background-color: #ff9800; }
+.score-low { background-color: #f44336; }

@@ -77,18 +77,36 @@ p {
     transform: translateY(-2px);
 }
 
-/* App.css */
-
-/* 动画效果 */
-/* src/App.css */
 .animate-out {
-  animation: fadeOut 3s;
+  /* [中文注释] 动画名称为 fadeOut，持续时间为1秒 */
+  animation: fadeOut 1s forwards; /* 'forwards' 确保动画停在最后一帧 */
   opacity: 0;
 }
 
 @keyframes fadeOut {
   from { opacity: 1; }
   to { opacity: 0; }
+}
+
+/* [中文注释] back-button 的基础样式，确保它存在 */
+.back-button {
+    /* [中文注释] 您可以根据需要调整基础样式 */
+    padding: 10px 20px;
+    border: 1px solid #6c757d;
+    background-color: #6c757d;
+    color: white;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1em;
+    font-weight: 500;
+    transition: background-color 0.2s;
+}
+.back-button:hover {
+    background-color: #5a6268;
+}
+.back-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.7;
 }
 
 /* 按钮基础样式 */
@@ -303,8 +321,10 @@ p {
         font-size: 1.2em;
     }
     .home-button, .add-button, .save-button, .cancel-button, .delete-button, .quiz-answer-button, .back-button {
-        padding: 10px 15px;
-        font-size: 14px;
+        padding: 15px 20px; /* 增大垂直和水平内边距 */
+        font-size: 16px;   /* 增大字体大小 */
+        font-weight: 600;  /* 字体加粗，更清晰 */
+        width: 100%;       /* 让按钮宽度占满容器 */
         min-width: unset;
     }
     .home-buttons, .form-actions {
@@ -786,11 +806,32 @@ p {
     border: 1px dashed #ccc;
 }
 .question-list {
-  line-height: 1.8;      
+  list-style-type: none; /* 移除默认的黑点（项目符号） */
+  padding: 0;            /* 移除浏览器默认的左侧内边距 */
+  margin: 30px 0;        /* 增加列表上下的外边距，让布局更舒展 */
 }
 
+/* 每一个独立的问题项 */
 .question-item {
-  margin-bottom: 10px;   
+  background-color: #f8f9fa;  /* 设置一个浅灰色背景 */
+  border: 1px solid #e9ecef;   /* 添加一个柔和的边框 */
+  border-radius: 8px;          /* 添加圆角，使其看起来像卡片 */
+  padding: 16px 20px;          /* 增加内部空间，让文字不拥挤 */
+  margin-bottom: 12px;         /* 设置卡片之间的间距 */
+  cursor: pointer;               /* 鼠标悬停时显示为可点击的手指图标 */
+  font-weight: 500;            /* 字体稍微加粗，更清晰 */
+  color: #343a40;             /* 使用更深的灰色，提高可读性 */
+  display: flex;               /* 使用 Flex 布局，方便对齐 */
+  align-items: center;         /* 垂直居中对齐 */
+  transition: all 0.2s ease-in-out; /* 为所有动态效果添加平滑的过渡动画 */
+}
+
+/* 鼠标悬停在问题项上时的效果 */
+.question-item:hover {
+  transform: translateY(-2px); /* 卡片向上轻微浮动 */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); /* 添加一个自然的阴影，增强立体感 */
+  border-color: #007bff; /* 边框变为蓝色，突出显示 */
+  background-color: #ffffff; /* 背景变为白色，与阴影形成对比 */
 }
 
 /* 文件末尾添加 */
@@ -899,3 +940,175 @@ p {
     opacity: 1;
   }
 }
+
+
+
+.loader {
+  border: 5px solid #f3f3f3; 
+  border-top: 5px solid #3498db; 
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  animation: spin 1.5s linear infinite;
+  margin: 25px auto;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+
+.success-checkmark {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 20px auto;
+  background-color: #28a745; 
+  color: white; 
+  font-size: 30px;
+  font-weight: bold;
+  animation: pop-in 0.4s ease-out;
+}
+
+@keyframes pop-in {
+  0% {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+
+/* 页面内容淡入动画 */
+.page-fade-in {
+  animation: fadeIn 0.5s ease-out;
+}
+
+@keyframes fadeIn {
+  0% { opacity: 0; transform: translateY(10px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+/* 错误消息抖动动画 */
+.error-shake {
+  animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+@keyframes shake {
+  10%, 90% { transform: translate3d(-1px, 0, 0); }
+  20%, 80% { transform: translate3d(2px, 0, 0); }
+  30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+  40%, 60% { transform: translate3d(4px, 0, 0); }
+}
+
+
+/* 漏斗列表页操作按钮的新样式 */
+.funnel-action-btn {
+  background-color: #e9ecef; /* 浅灰色背景 */
+  color: #495057; /* 深灰色文字 */
+  padding: 8px 16px;
+  border-radius: 20px; /* 圆角使其呈胶囊状 */
+  border: 1px solid transparent;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  margin: 0 5px; /* 增加按钮间距 */
+  
+  /* --- 核心动画设置 --- */
+  /* 您要求了1秒的动画，但通常0.3秒的用户体验会更流畅。*/
+  /* 您可以根据喜好将这里的 0.3s 修改为 1s。*/
+  transition: all 0.3s ease-in-out; 
+}
+
+/* 鼠标悬停时的动画效果 */
+.funnel-action-btn:hover {
+  background-color: #007bff; /* 悬停时变为蓝色 */
+  color: white; /* 文字变为白色 */
+  transform: translateY(-3px); /* 按钮向上浮动3像素 */
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15); /* 添加阴影 */
+}
+
+/* “删除”按钮的特殊样式 */
+.funnel-action-btn.delete {
+  color: #dc3545; /* 红色文字 */
+}
+
+/* “删除”按钮悬停时的特殊样式 */
+.funnel-action-btn.delete:hover {
+  background-color: #dc3545; /* 悬停时变为红色 */
+  color: white;
+}
+
+
+/* 为“返回/取消”等次要操作按钮添加灰色样式 */
+.funnel-action-btn.secondary {
+  background-color: #6c757d; /* 中性灰色背景 */
+  color: white;
+}
+
+/* 次要按钮的悬停效果 */
+.funnel-action-btn.secondary:hover {
+  background-color: #5a6268; /* 悬停时变为深灰色 */
+  border-color: transparent; /* 移除蓝色边框效果 */
+}
+
+/* 文件: junes231/funnel-editor-2025/funnel-editor-2025-main/src/App.css */
+
+.button-link {
+    background: none;
+    border: 1px solid #007bff; /* 添加边框 */
+    color: #007bff;
+    cursor: pointer;
+    text-decoration: none;
+    padding: 8px 16px; /* 增加内边距 */
+    border-radius: 8px; /* 添加圆角 */
+    transition: background-color 0.2s ease, color 0.2s ease;
+    font-size: 0.9em;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.button-link:hover {
+    background-color: #007bff; /* 鼠标悬停时改变背景色 */
+    color: white; /* 鼠标悬停时改变文字颜色 */
+    text-decoration: none;
+}
+
+/* 在文件末尾添加 */
+
+.template-btn {
+  background-color: #ffffff;
+  border: 1px solid #6f42c1; /* 紫色边框 */
+  color: #6f42c1; /* 紫色文字 */
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 1em;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.template-btn:hover {
+  background-color: #6f42c1; /* 鼠标悬停时变为紫色背景 */
+  color: #ffffff; /* 文字变为白色 */
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+
+
