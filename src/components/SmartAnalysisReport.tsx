@@ -4,12 +4,12 @@ import React from 'react';
 import BackButton from './BackButton.tsx';
 
 // [中文注释] 组件所需的类型定义...
-interface Answer { id: string; text: string; }
+interface Answer { id: string; text: string; clickCount?: number; }
 interface Question {
   id: string;
   title: string;
   type: 'single-choice' | 'text-input';
-  answers: Answer[];
+  answers: { [answerId: string]: Answer }; // Changed from Answer[] to object/Map
   data?: { affiliateLinks?: string[]; };
 }
 interface SmartAnalysisReportProps {
@@ -32,7 +32,7 @@ const SmartAnalysisReport: React.FC<SmartAnalysisReportProps> = ({ questions, fi
 
   // --- 变现潜力分析 (核心升级) ---
   const totalClicks = questions.reduce((total, q) => 
-    total + (q.answers.reduce((answerTotal, a) => answerTotal + (a.clickCount || 0), 0)), 
+    total + (Object.values(q.answers).reduce((answerTotal, a) => answerTotal + (a.clickCount || 0), 0)), 
   0);
 
   const totalAnswersWithLinks = questions.reduce((acc, q) => 
@@ -48,7 +48,7 @@ const SmartAnalysisReport: React.FC<SmartAnalysisReportProps> = ({ questions, fi
     report.monetization.suggestions.push("Note: Your funnel doesn't have any clickthrough data yet. Share your funnel link to start collecting user feedback!");
   } else {
     questions.forEach((q, qIndex) => {
-      q.answers.forEach((a, aIndex) => {
+      Object.values(q.answers).forEach((a, aIndex) => {
         const hasLink = q.data?.affiliateLinks?.[aIndex]?.trim();
         if (hasLink && (a.clickCount || 0) > 5) {
           report.monetization.suggestions.push(`Outstanding performance: Question ${qIndex + 1} The answer"${a.text}" Obtained ${a.clickCount} Clicks, very popular!`);
