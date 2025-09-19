@@ -2,6 +2,29 @@ import React from 'react';
 import { FunnelComponent } from '../../types/funnel';
 import './PropertyPanel.css';
 
+// Helper functions to handle both array and object formats for answers
+const getAnswersAsArray = (answers: any): { id: string; text: string; }[] => {
+  if (!answers) return [];
+  if (Array.isArray(answers)) return answers;
+  if (typeof answers === 'object') return Object.values(answers);
+  return [];
+};
+
+const updateAnswersFormat = (answers: any, index: number, value: string): { id: string; text: string; }[] => {
+  const answersArray = getAnswersAsArray(answers);
+  const newAnswers = [...answersArray];
+  
+  // Ensure answer object exists, create if not
+  if (!newAnswers[index]) {
+    newAnswers[index] = { id: 'answer-' + Date.now(), text: value };
+  } else {
+    // Only update text field
+    newAnswers[index].text = value;
+  }
+  
+  return newAnswers;
+};
+
 interface PropertyPanelProps {
   selectedComponent: FunnelComponent | null;
   onUpdateComponent: (id: string, updates: Partial<FunnelComponent>) => void;
@@ -31,16 +54,9 @@ const PropertyPanel: React.FC<PropertyPanelProps> = ({
   };
 
   const updateAnswer = (index: number, value: string) => {
-  const newAnswers = [...(selectedComponent.data.answers || [])];
-  // 确保答案对象存在，如果不存在则创建一个
-  if (!newAnswers[index]) {
-    newAnswers[index] = { id: 'answer-' + Date.now(), text: value };
-  } else {
-    // 只更新 text 字段
-    newAnswers[index].text = value;
-  }
-  updateData('answers', newAnswers);
-};
+    const newAnswers = updateAnswersFormat(selectedComponent.data.answers, index, value);
+    updateData('answers', newAnswers);
+  };
 
   const updateAffiliateLink = (index: number, value: string) => {
     const newLinks = [...(selectedComponent.data.affiliateLinks || [])];
@@ -71,11 +87,11 @@ const PropertyPanel: React.FC<PropertyPanelProps> = ({
 
               <div className="form-group">
                 <label>Answers:</label>
-                {selectedComponent.data.answers.map((answer: string, index: number) => (
+                {getAnswersAsArray(selectedComponent.data.answers).map((answer: { id: string; text: string; }, index: number) => (
                   <div key={index} className="answer-group">
                     <input
                       type="text"
-                      value={answer}
+                      value={answer.text}
                       onChange={(e) => updateAnswer(index, e.target.value)}
                       placeholder={`Answer ${index + 1}`}
                     />

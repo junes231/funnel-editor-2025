@@ -1,9 +1,17 @@
 import React from 'react';
 
+// Helper function to handle both array and object formats for answers
+const getAnswersAsArray = (answers: any): { id: string; text: string; }[] => {
+  if (!answers) return [];
+  if (Array.isArray(answers)) return answers;
+  if (typeof answers === 'object') return Object.values(answers);
+  return [];
+};
+
 interface QuizPreviewProps {
   quizData: {
     question: string;
-    answers: string[];
+    answers: { id: string; text: string; }[] | { [answerId: string]: { id: string; text: string; } };
     buttonColor: string;
     backgroundColor: string;
     textColor: string;
@@ -112,12 +120,12 @@ const QuizPreview: React.FC<QuizPreviewProps> = ({ quizData }) => {
           <h1 class="quiz-question">${quizData.question || 'What\'s your biggest challenge?'}</h1>
           
           <div class="quiz-answers">
-            ${(quizData.answers || ['Option A', 'Option B', 'Option C', 'Option D']).map((answer, index) => `
+            ${getAnswersAsArray(quizData.answers).map((answer, index) => `
               <button 
                 class="answer-button" 
                 onclick="handleAnswer(${index})"
               >
-                ${answer}
+                ${answer.text || answer || `Option ${String.fromCharCode(65 + index)}`}
               </button>
             `).join('')}
           </div>
