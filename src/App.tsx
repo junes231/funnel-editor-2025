@@ -457,8 +457,23 @@ const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData }) => 
       if (funnelDoc.exists()) {
         const funnel = funnelDoc.data() as Funnel;
         setFunnelName(funnel.name);
+        
+        // Add backward compatibility: convert answers from array to object if needed
+        let compatibleQuestions = funnel.data.questions || [];
+        compatibleQuestions = compatibleQuestions.map(question => {
+          if (Array.isArray(question.answers)) {
+            // Convert legacy array format to object format
+            const answersObj: { [answerId: string]: Answer } = {};
+            question.answers.forEach((answer: Answer) => {
+              answersObj[answer.id] = answer;
+            });
+            return { ...question, answers: answersObj };
+          }
+          return question; // Already in object format
+        });
+        
         // 现在，'questions' state 将会自动包含最新的点击次数数据
-        setQuestions(funnel.data.questions || []);
+        setQuestions(compatibleQuestions);
         setFinalRedirectLink(funnel.data.finalRedirectLink || '');
         setTracking(funnel.data.tracking || '');
         setConversionGoal(funnel.data.conversionGoal || 'Product Purchase');
@@ -808,7 +823,24 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ db }) => {
         const funnelDoc = await getDoc(funnelDocRef);
         if (funnelDoc.exists()) {
           const funnel = funnelDoc.data() as Funnel;
-          setFunnelData({ ...defaultFunnelData, ...funnel.data });
+          
+          // Add backward compatibility: convert answers from array to object if needed
+          const compatibleFunnelData = { ...defaultFunnelData, ...funnel.data };
+          if (compatibleFunnelData.questions) {
+            compatibleFunnelData.questions = compatibleFunnelData.questions.map(question => {
+              if (Array.isArray(question.answers)) {
+                // Convert legacy array format to object format
+                const answersObj: { [answerId: string]: Answer } = {};
+                question.answers.forEach((answer: Answer) => {
+                  answersObj[answer.id] = answer;
+                });
+                return { ...question, answers: answersObj };
+              }
+              return question; // Already in object format
+            });
+          }
+          
+          setFunnelData(compatibleFunnelData);
         } else {
           setError('Funnel not found!');
         }
