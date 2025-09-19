@@ -1008,19 +1008,20 @@ const QuizEditorComponent: React.FC<QuizEditorComponentProps> = ({
         return;
       }
 
-      const isValid = parsedData.every(
+      // More permissive validation: check structure but allow some invalid answers if there are enough valid ones
+      const isValidStructure = parsedData.every(
         (q) =>
           q.title &&
           typeof q.title === 'string' &&
           q.title.trim() !== '' &&
-          ((Array.isArray(q.answers) && q.answers.length > 0 && q.answers.every((a) => a.text && typeof a.text === 'string' && a.text.trim() !== '')) ||
-           (typeof q.answers === 'object' && Object.values(q.answers).length > 0 && Object.values(q.answers).every((a: any) => a.text && typeof a.text === 'string' && a.text.trim() !== '')))
+          ((Array.isArray(q.answers) && q.answers.length > 0) ||
+           (typeof q.answers === 'object' && Object.keys(q.answers).length > 0))
       );
 
-      if (!isValid) {
+      if (!isValidStructure) {
         setNotification({
           show: true,
-          message: 'Invalid JSON format. Please ensure it is an array of questions, each with a "title" and an "answers" array or object, where each answer has a "text" field.',
+          message: 'Invalid JSON format. Please ensure it is an array of questions, each with a "title" and an "answers" array or object.',
           type: 'error'
         });
         return;
