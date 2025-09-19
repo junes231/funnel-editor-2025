@@ -980,24 +980,27 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ db }) => {
     '--background-color': funnelData.backgroundColor,
     '--text-color': funnelData.textColor,
   } as React.CSSProperties;
-
-  return (
-    <div className="quiz-player-container" style={quizPlayerContainerStyle}>
-      <h3 style={{ color: 'var(--text-color)' }}>{currentQuestion.title}</h3>
-      <div className="quiz-answers-container">
-        {Object.values(currentQuestion.answers).map((answer, index) => (
-          <button
-            key={answer.id}
-            className={`quiz-answer-button ${clickedAnswerIndex === index ? 'selected-answer animating' : ''}`}
-            onClick={() => handleAnswerClick(index, answer.id)}
-            disabled={isAnimating}
-            style={{ backgroundColor: 'var(--button-color)', color: 'var(--text-color)', borderColor: 'var(--primary-color)' }}
-          >
-            {answer.text}
-          </button>
-        ))}
-      </div>
+   const sortedAnswers = Object.values(currentQuestion.answers).sort((a, b) => 
+    a.text.localeCompare(b.text)
+  );
+    return (
+    <div className="quiz-player-container" style={quizPlayer-container-style}>
+    <h3 style={{ color: 'var(--text-color)' }}>{currentQuestion.title}</h3>
+    <div className="quiz-answers-container">
+      {/* --- vvv THIS IS THE ONLY LINE YOU NEED TO CHANGE vvv --- */}
+      {sortedAnswers.map((answer, index) => (
+        <button
+          key={answer.id}
+          className={`quiz-answer-button ${clickedAnswerIndex === index ? 'selected-answer animating' : ''}`}
+          onClick={() => handleAnswerClick(index, answer.id)}
+          disabled={isAnimating}
+          style={{ backgroundColor: 'var(--button-color)', color: 'var(--text-color)', borderColor: 'var(--primary-color)' }}
+        >
+          {answer.text}
+        </button>
+      ))}
     </div>
+  </div>
   );
 };
 interface QuizEditorComponentProps {
