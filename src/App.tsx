@@ -1026,38 +1026,63 @@ const QuizEditorComponent: React.FC<QuizEditorComponentProps> = ({
         return;
       }
 
-      const questionsWithNewIds = parsedData.map((q) => {
+      const questionsWithNewIds = parsedData.map((q, questionIndex) => {
         let answersObj: { [answerId: string]: Answer };
         
         if (Array.isArray(q.answers)) {
-          // Convert array to object structure
+          // Convert array to object structure, filtering out invalid answers
           answersObj = {};
-          q.answers.forEach((answer: Answer) => {
-            const id = answer.id || Date.now().toString() + Math.random().toString();
-            answersObj[id] = {
-              ...answer,
-              id,
-            };
+          let validAnswerIndex = 0;
+          q.answers.forEach((answer: Answer, originalIndex) => {
+            // Only process answers with valid text content
+            if (answer.text && typeof answer.text === 'string' && answer.text.trim() !== '') {
+              // Generate more predictable and sequential IDs
+              const id = answer.id && answer.id.trim() !== '' ? answer.id : `answer-${questionIndex}-${validAnswerIndex}`;
+              answersObj[id] = {
+                ...answer,
+                id,
+                text: answer.text.trim(), // Ensure text is trimmed
+              };
+              validAnswerIndex++;
+            }
           });
         } else {
-          // Already object structure, just ensure IDs
+          // Already object structure, just ensure IDs and filter invalid answers
           answersObj = {};
+          let validAnswerIndex = 0;
           Object.entries(q.answers).forEach(([key, answer]) => {
-            const id = answer.id || key || Date.now().toString() + Math.random().toString();
-            answersObj[id] = {
-              ...answer,
-              id,
-            };
+            // Only process answers with valid text content
+            if (answer.text && typeof answer.text === 'string' && answer.text.trim() !== '') {
+              const id = answer.id && answer.id.trim() !== '' ? answer.id : (key && key.trim() !== '' ? key : `answer-${questionIndex}-${validAnswerIndex}`);
+              answersObj[id] = {
+                ...answer,
+                id,
+                text: answer.text.trim(), // Ensure text is trimmed
+              };
+              validAnswerIndex++;
+            }
           });
         }
 
         return {
           ...q,
-          id: Date.now().toString() + Math.random().toString(),
+          id: `question-${questionIndex}`,
           type: q.type || 'single-choice',
           answers: answersObj,
         };
       });
+
+      // Final validation: ensure each question has at least one valid answer after filtering
+      const hasValidAnswers = questionsWithNewIds.every(q => Object.keys(q.answers).length > 0);
+      
+      if (!hasValidAnswers) {
+        setNotification({
+          show: true,
+          message: 'Invalid JSON format. After filtering, some questions have no valid answers. Please ensure each question has at least one answer with non-empty text.',
+          type: 'error'
+        });
+        return;
+      }
 
       onImportQuestions(questionsWithNewIds);
       setNotification({
