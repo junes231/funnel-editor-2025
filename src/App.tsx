@@ -547,32 +547,69 @@ const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData }) => 
 
 const handleSelectTemplate = async (templateName: string) => {
   console.log(`[LOG] handleSelectTemplate called with: ${templateName}`);
-  // 检查是否会超出6个问题的限制
+  
   if (questions.length >= 6) {
     setNotification({ message: 'Cannot add from template, the 6-question limit has been reached.', type: 'error' });
     return;
   }
 
   try {
-    // 从 public/templates/ 文件夹中获取模板文件
     const response = await fetch(`/templates/${templateName}.json`);
-    const templateQuestions: Question[] = await response.json();
+    if (!response.ok) {
+        throw new Error(`Network response was not ok: ${response.statusText}`);
+    }
+    const templateData = await response.json();
 
-    // 将模板中的问题与现有问题合并
-    const newQuestions = [...questions, ...templateQuestions];
+    // --- 核心修复逻辑开始 ---
+    // 验证模板数据是一个数组
+    if (!Array.isArray(templateData)) {
+        throw new Error("Template format is invalid. Expected an array of questions.");
+    }
+    
+    // 为模板中的问题和答案生成新的、唯一的ID，并转换数据结构
+    const newQuestionsWithIds: Question[] = templateData.map((q: any, questionIndex: number) => {
+      const questionId = `question-${Date.now()}-${questionIndex}`;
+      const answersObj: { [answerId: string]: Answer } = {};
+      
+      // 确保 q.answers 是一个数组再进行遍历
+      if (Array.isArray(q.answers)) {
+        q.answers.forEach((answer: any, answerIndex: number) => {
+          // 确保答案文本存在且为字符串
+          if (answer && typeof answer.text === 'string') {
+            const answerId = `answer-${Date.now()}-${questionIndex}-${answerIndex}`;
+            answersObj[answerId] = {
+              id: answerId,
+              text: answer.text.trim(),
+              clickCount: 0 // 初始化点击次数
+            };
+          }
+        });
+      }
 
-    // 再次检查合并后是否超出限制
-    if (newQuestions.length > 6) {
+      // 返回符合您应用内部 Question 结构的对象
+      return {
+        ...q,
+        id: questionId,
+        type: q.type || 'single-choice', // 提供默认类型
+        answers: answersObj,
+      };
+    });
+    // --- 核心修复逻辑结束 ---
+
+    // 检查合并后是否超出限制
+    if (questions.length + newQuestionsWithIds.length > 6) {
       setNotification({ message: `Cannot add all questions from template, it would exceed the 6-question limit.`, type: 'error' });
       return;
     }
 
-    setQuestions(newQuestions);
+    setQuestions(prevQuestions => [...prevQuestions, ...newQuestionsWithIds]);
     setNotification({ message: `Template "${templateName}" loaded successfully!`, type: 'success' });
 
   } catch (error) {
     console.error('Error loading template:', error);
-    setNotification({ message: 'Failed to load the template.', type: 'error' });
+    // 强制类型转换以访问 message 属性
+    const errorMessage = (error as Error).message || 'Failed to load the template.';
+    setNotification({ message: errorMessage, type: 'error' });
   }
 };
   const handleAddQuestion = () => {
