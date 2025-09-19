@@ -2,6 +2,14 @@ import React from 'react';
 import { FunnelComponent } from '../../../types/funnel';
 import './QuizComponent.css';
 
+// Helper function to handle both array and object formats for answers
+const getAnswersAsArray = (answers: any): { id: string; text: string; }[] => {
+  if (!answers) return [];
+  if (Array.isArray(answers)) return answers;
+  if (typeof answers === 'object') return Object.values(answers);
+  return [];
+};
+
 interface QuizComponentProps {
   component: FunnelComponent;
   isSelected: boolean;
@@ -33,16 +41,16 @@ const QuizComponent: React.FC<QuizComponentProps> = ({
         <h3 className="quiz-question">{data.question}</h3>
         
         <div className="quiz-answers">
-          {data.answers.map((answer: string, index: number) => (
+          {getAnswersAsArray(data.answers).map((answer: { id: string; text: string; }, index: number) => (
             <button
-              key={index}
+              key={answer.id || index}
               className="quiz-answer-btn"
               style={{
                 backgroundColor: data.buttonColor,
                 color: data.buttonTextColor,
               }}
             >
-              {answer || `Answer ${index + 1}`}
+              {answer.text || `Answer ${index + 1}`}
             </button>
           ))}
         </div>

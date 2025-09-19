@@ -1,9 +1,17 @@
 import React from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
 
+// Helper function to handle both array and object formats for answers
+const getAnswersAsArray = (answers: any): { id: string; text: string; }[] => {
+  if (!answers) return [];
+  if (Array.isArray(answers)) return answers;
+  if (typeof answers === 'object') return Object.values(answers);
+  return [];
+};
+
 interface QuizData {
   question: string;
-  answers: string[];
+  answers: { id: string; text: string; }[] | { [answerId: string]: { id: string; text: string; } };
   buttonColor: string;
   backgroundColor: string;
   textColor: string;
@@ -32,15 +40,20 @@ const QuizNode: React.FC<NodeProps<QuizData>> = ({ data, selected }) => {
         />
         
         <div className="quiz-answers">
-          {(data.answers || []).map((answer, index) => (
-            <div key={index} className="answer-group">
+          {getAnswersAsArray(data.answers).map((answer, index) => (
+            <div key={answer.id || index} className="answer-group">
               <input
                 type="text"
-                value={answer}
+                value={answer.text}
                 placeholder={`Answer ${index + 1}`}
                 onChange={(e) => {
-                  const newAnswers = [...(data.answers || [])];
-                  newAnswers[index] = e.target.value;
+                  const answersArray = getAnswersAsArray(data.answers);
+                  const newAnswers = [...answersArray];
+                  if (!newAnswers[index]) {
+                    newAnswers[index] = { id: 'answer-' + Date.now(), text: e.target.value };
+                  } else {
+                    newAnswers[index].text = e.target.value;
+                  }
                   data.onUpdate?.({ answers: newAnswers });
                 }}
                 className="answer-input"
