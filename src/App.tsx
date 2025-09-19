@@ -38,7 +38,7 @@ interface Question {
   id: string;
   title: string;
   type: 'single-choice' | 'text-input';
-  answers: Answer[];
+  answers: { [answerId: string]: Answer }; // Changed from Answer[] to object/Map
  data?: { // <-- 添加这个可选的 'data' 字段
     affiliateLinks?: string[];
   };
@@ -823,7 +823,7 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ db }) => {
   }, [funnelId, db]);
 
   // [中文注释] 关键升级：这是新的 handleAnswerClick 函数
-  const handleAnswerClick = (answerIndex: number) => {
+  const handleAnswerClick = (answerIndex: number, answerId: string) => {
     if (isAnimating || !funnelData) return;
 
     setIsAnimating(true);
@@ -833,7 +833,7 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ db }) => {
     const affiliateLink = currentQuestion?.data?.affiliateLinks?.[answerIndex];
 
     // --- ↓↓↓ 这是新增的点击追踪逻辑 ↓↓↓ ---
-    if (funnelId && currentQuestion?.id && currentQuestion.answers[answerIndex]?.id) {
+    if (funnelId && currentQuestion?.id && answerId) {
         const trackClickEndpoint = 'https://track-click-498506838505.us-central1.run.app'; // [中文注释] 关键：请将这里替换为您部署 trackClick 函数后得到的真实 URL
         
         fetch(trackClickEndpoint, {
@@ -843,7 +843,7 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ db }) => {
                 data: {
                     funnelId: funnelId,
                     questionId: currentQuestion.id,
-                    answerId: currentQuestion.answers[answerIndex].id,
+                    answerId: answerId, // Use the passed answerId directly
                 }
             })
         }).catch(err => console.error('Failed to track click:', err));
@@ -906,11 +906,11 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ db }) => {
     <div className="quiz-player-container" style={quizPlayerContainerStyle}>
       <h3 style={{ color: 'var(--text-color)' }}>{currentQuestion.title}</h3>
       <div className="quiz-answers-container">
-        {currentQuestion.answers.map((answer, index) => (
+        {Object.values(currentQuestion.answers).map((answer, index) => (
           <button
             key={answer.id}
             className={`quiz-answer-button ${clickedAnswerIndex === index ? 'selected-answer animating' : ''}`}
-            onClick={() => handleAnswerClick(index)}
+            onClick={() => handleAnswerClick(index, answer.id)}
             disabled={isAnimating}
             style={{ backgroundColor: 'var(--button-color)', color: 'var(--text-color)', borderColor: 'var(--primary-color)' }}
           >
@@ -981,29 +981,51 @@ const QuizEditorComponent: React.FC<QuizEditorComponentProps> = ({
           q.title &&
           typeof q.title === 'string' &&
           q.title.trim() !== '' &&
-          Array.isArray(q.answers) &&
-          q.answers.length > 0 &&
-          q.answers.every((a) => a.text && typeof a.text === 'string' && a.text.trim() !== '')
+          ((Array.isArray(q.answers) && q.answers.length > 0 && q.answers.every((a) => a.text && typeof a.text === 'string' && a.text.trim() !== '')) ||
+           (typeof q.answers === 'object' && Object.values(q.answers).length > 0 && Object.values(q.answers).every((a: any) => a.text && typeof a.text === 'string' && a.text.trim() !== '')))
       );
 
       if (!isValid) {
         setNotification({
           show: true,
-          message: 'Invalid JSON format. Please ensure it is an array of questions, each with a "title" and an "answers" array, where each answer has a "text" field.',
+          message: 'Invalid JSON format. Please ensure it is an array of questions, each with a "title" and an "answers" array or object, where each answer has a "text" field.',
           type: 'error'
         });
         return;
       }
 
-      const questionsWithNewIds = parsedData.map((q) => ({
-        ...q,
-        id: Date.now().toString() + Math.random().toString(),
-        type: q.type || 'single-choice',
-        answers: q.answers.map((a) => ({
-          ...a,
-          id: a.id || Date.now().toString() + Math.random().toString(),
-        })),
-      }));
+      const questionsWithNewIds = parsedData.map((q) => {
+        let answersObj: { [answerId: string]: Answer };
+        
+        if (Array.isArray(q.answers)) {
+          // Convert array to object structure
+          answersObj = {};
+          q.answers.forEach((answer: Answer) => {
+            const id = answer.id || Date.now().toString() + Math.random().toString();
+            answersObj[id] = {
+              ...answer,
+              id,
+            };
+          });
+        } else {
+          // Already object structure, just ensure IDs
+          answersObj = {};
+          Object.entries(q.answers).forEach(([key, answer]) => {
+            const id = answer.id || key || Date.now().toString() + Math.random().toString();
+            answersObj[id] = {
+              ...answer,
+              id,
+            };
+          });
+        }
+
+        return {
+          ...q,
+          id: Date.now().toString() + Math.random().toString(),
+          type: q.type || 'single-choice',
+          answers: answersObj,
+        };
+      });
 
       onImportQuestions(questionsWithNewIds);
       setNotification({
@@ -1114,16 +1136,54 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
 }) => {
   const navigate = useNavigate();
   const [title, setTitle] = useState(question ? question.title : "");
-  const [answers, setAnswers] = useState<Answer[]>(
-    question && question.answers.length > 0
-      ? question.answers
-      : Array(4)
-          .fill(null)
-          .map((_, i) => ({
-            id: `option-${Date.now()}-${i}`,
-            text: `Option ${String.fromCharCode(65 + i)}`,
-          }))
-  );
+  
+  // Helper function to convert array to object structure and vice versa
+  const convertAnswersArrayToObject = (answersArray: Answer[]): { [answerId: string]: Answer } => {
+    const answersObj: { [answerId: string]: Answer } = {};
+    answersArray.forEach(answer => {
+      answersObj[answer.id] = answer;
+    });
+    return answersObj;
+  };
+
+  const convertAnswersObjectToArray = (answersObj: { [answerId: string]: Answer }): Answer[] => {
+    return Object.values(answersObj);
+  };
+
+  // Initialize answers as object/Map structure
+  const [answers, setAnswers] = useState<{ [answerId: string]: Answer }>(() => {
+    if (question && question.answers && typeof question.answers === 'object') {
+      // If question already has object structure
+      return question.answers;
+    } else if (question && Array.isArray(question.answers) && question.answers.length > 0) {
+      // Convert from legacy array structure
+      return convertAnswersArrayToObject(question.answers);
+    } else {
+      // Create default answers as object
+      const defaultAnswers: { [answerId: string]: Answer } = {};
+      for (let i = 0; i < 4; i++) {
+        const id = `option-${Date.now()}-${i}`;
+        defaultAnswers[id] = {
+          id,
+          text: `Option ${String.fromCharCode(65 + i)}`,
+        };
+      }
+      return defaultAnswers;
+    }
+  });
+
+  // Keep track of answer order for UI rendering (since object doesn't preserve order)
+  const [answerOrder, setAnswerOrder] = useState<string[]>(() => {
+    if (question && question.answers) {
+      if (typeof question.answers === 'object') {
+        return Object.keys(question.answers);
+      } else if (Array.isArray(question.answers)) {
+        return question.answers.map(answer => answer.id);
+      }
+    }
+    return Object.keys(answers);
+  });
+
   const [affiliateLinks, setAffiliateLinks] = useState<string[]>(
   question?.data?.affiliateLinks || []
   );
@@ -1132,34 +1192,47 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
 
   useEffect(() => {
     setTitle(question ? question.title : "");
-    setAnswers(
-      question && question.answers.length > 0
-        ? question.answers
-        : answers
-    );
+    if (question && question.answers) {
+      if (typeof question.answers === 'object') {
+        setAnswers(question.answers);
+        setAnswerOrder(Object.keys(question.answers));
+      } else if (Array.isArray(question.answers) && question.answers.length > 0) {
+        const answersObj = convertAnswersArrayToObject(question.answers);
+        setAnswers(answersObj);
+        setAnswerOrder(Object.keys(answersObj));
+      }
+    }
   }, [question]);
 
   const handleAnswerTextChange = (index: number, value: string) => {
-  const updatedAnswers = [...answers];
-  
-  // 1. 确保答案对象存在。
-  if (!updatedAnswers[index]) {
-    updatedAnswers[index] = {
-      id: `option-${Date.now()}-${index}`, // 如果不存在，创建一个新对象并分配ID
-      text: "",
-    };
-  }
-  
-  // 2. 确保答案对象有id。如果从旧数据加载的没有，则补上一个。
-  if (!updatedAnswers[index].id) {
-    updatedAnswers[index].id = `option-${Date.now()}-${index}`;
-  }
-  
-  // 3. 更新答案文本
-  updatedAnswers[index].text = value;
-  
-  setAnswers(updatedAnswers);
-};
+    const answerId = answerOrder[index];
+    if (!answerId) return;
+
+    const updatedAnswers = { ...answers };
+    
+    // 1. 确保答案对象存在。
+    if (!updatedAnswers[answerId]) {
+      const newId = `option-${Date.now()}-${index}`;
+      updatedAnswers[newId] = {
+        id: newId,
+        text: "",
+      };
+      // Update order if we created a new answer
+      const newOrder = [...answerOrder];
+      newOrder[index] = newId;
+      setAnswerOrder(newOrder);
+    }
+    
+    // 2. 确保答案对象有id。如果从旧数据加载的没有，则补上一个。
+    if (!updatedAnswers[answerId].id) {
+      updatedAnswers[answerId].id = answerId;
+    }
+    
+    // 3. 更新答案文本
+    updatedAnswers[answerId].text = value;
+    
+    setAnswers(updatedAnswers);
+  };
   const handleLinkChange = (index: number, value: string) => {
     const updatedLinks = [...affiliateLinks];
     updatedLinks[index] = value;
@@ -1172,7 +1245,8 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
 const handleSave = async () => {
   setIsSaving(true);
   try {
-    const filteredAnswers = answers.filter((ans) => ans.text.trim() !== "");
+    const answersArray = convertAnswersObjectToArray(answers);
+    const filteredAnswers = answersArray.filter((ans) => ans.text.trim() !== "");
     if (!title.trim()) {
       console.error("Question title cannot be empty!");
       return;
@@ -1189,11 +1263,14 @@ const handleSave = async () => {
 
     await new Promise((resolve) => setTimeout(resolve, 1000));
     
+    // Convert filtered answers back to object structure for saving
+    const filteredAnswersObj = convertAnswersArrayToObject(filteredAnswers);
+    
     onSave({
       id: question?.id || Date.now().toString(),
       title,
       type: "single-choice",
-      answers: filteredAnswers,
+      answers: filteredAnswersObj, // Save as object structure
       data: { 
         affiliateLinks: cleanAffiliateLinks, // <-- 使用处理过的干净数组
       },
@@ -1259,41 +1336,45 @@ const handleSave = async () => {
       </div>
       <div className="answer-options-section">
         <p>Answer Options (Max 4):</p>
-        {Array.from({ length: 4 }).map((_, index) => (
-          <div key={index} className="answer-input-group">
-            <input
-              type="text"
-              value={answers[index]?.text || ''}
-              onChange={(e) => handleAnswerTextChange(index, e.target.value)}
-              placeholder={`Option ${String.fromCharCode(65 + index)}`}
-            />
-             <input
-        type="url"
-        value={affiliateLinks[index] || ''}
-        onChange={(e) => handleLinkChange(index, e.target.value)}
-        placeholder="Affiliate link (optional)"
-        className="affiliate-link-input"
-           />
-            <div style={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center',
-        padding: '8px 12px', 
-        backgroundColor: '#f0f0f0', // 背景色
-        borderRadius: '6px', // 圆角
-        marginTop: '5px',
-        width: '100%',
-        color: '#333',
-        fontSize: '14px',
-        cursor: 'default' // 鼠标样式为默认
-         }}>
-          <span role="img" aria-label="clicks" style={{ marginRight: '8px' }}>👁️</span>
-      {/* 显示 clickCount，如果数据不存在则默认为 0 */}
-      <strong>{answers[index]?.clickCount || 0} clicks</strong>
-        </div>
-         {/* --- 新增部分结束 --- */}
+        {Array.from({ length: 4 }).map((_, index) => {
+          const answerId = answerOrder[index];
+          const answer = answerId ? answers[answerId] : null;
+          return (
+            <div key={index} className="answer-input-group">
+              <input
+                type="text"
+                value={answer?.text || ''}
+                onChange={(e) => handleAnswerTextChange(index, e.target.value)}
+                placeholder={`Option ${String.fromCharCode(65 + index)}`}
+              />
+               <input
+          type="url"
+          value={affiliateLinks[index] || ''}
+          onChange={(e) => handleLinkChange(index, e.target.value)}
+          placeholder="Affiliate link (optional)"
+          className="affiliate-link-input"
+             />
+              <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center',
+          padding: '8px 12px', 
+          backgroundColor: '#f0f0f0', // 背景色
+          borderRadius: '6px', // 圆角
+          marginTop: '5px',
+          width: '100%',
+          color: '#333',
+          fontSize: '14px',
+          cursor: 'default' // 鼠标样式为默认
+           }}>
+            <span role="img" aria-label="clicks" style={{ marginRight: '8px' }}>👁️</span>
+        {/* 显示 clickCount，如果数据不存在则默认为 0 */}
+        <strong>{answer?.clickCount || 0} clicks</strong>
           </div>
-        ))}
+           {/* --- 新增部分结束 --- */}
+            </div>
+          );
+        })}
       </div>
       <div className="form-actions">
         <button className="save-button" onClick={handleSave}>
