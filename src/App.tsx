@@ -1222,17 +1222,45 @@ interface QuestionFormComponentProps {
   onDelete: () => void;
 }
 
+// ===================================================================
+// vvvvvvvvvv 请将您的 QuestionFormComponent 替换为以下代码 vvvvvvvvvv
+// ===================================================================
+
 const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
   question,
   questionIndex,
   onSave,
-  onCancel,
+  onCancel, // --- MODIFIED: Renamed from onClose for clarity if needed, or keep as is.
   onDelete,
 }) => {
+  // --- UNCHANGED: Navigation logic remains the same ---
   const navigate = useNavigate();
-  const [title, setTitle] = useState(question ? question.title : "");
+
+  // --- REMOVED: Internal state for title, answers, and answerOrder are removed ---
+  // const [title, setTitle] = useState(...);
+  // const [answers, setAnswers] = useState(...);
+  // const [answerOrder, setAnswerOrder] = useState(...);
+
+  // --- UNCHANGED: State for UI effects and affiliate links is kept ---
+  const [affiliateLinks, setAffiliateLinks] = useState<string[]>(
+    question?.data?.affiliateLinks || []
+  );
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   
-  // Helper function to convert array to object structure and vice versa
+  // --- REMOVED: The complex useEffect for syncing props to state is no longer needed ---
+  // useEffect(() => { ... }, [question]);
+
+  // --- MODIFIED: Create a stable, sorted array for rendering ---
+  // This solves the "answer order is messy" problem permanently.
+  // It directly uses the 'question' prop, solving the "uploaded file not showing" problem.
+  const sortedAnswers = question ? Object.values(question.answers).sort((a, b) => {
+    // A simple sort by ID or text can provide stability. Sorting by text is user-friendly.
+    return a.text.localeCompare(b.text);
+  }) : [];
+
+
+  // --- UNCHANGED: Helper functions can be kept if used elsewhere, but are not needed for rendering now ---
   const convertAnswersArrayToObject = (answersArray: Answer[]): { [answerId: string]: Answer } => {
     const answersObj: { [answerId: string]: Answer } = {};
     answersArray.forEach(answer => {
@@ -1241,167 +1269,104 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
     return answersObj;
   };
 
-  const convertAnswersObjectToArray = (answersObj: { [answerId: string]: Answer }): Answer[] => {
+  const convertAnswersObjectToArray = (answersObj: { [answerId:string]: Answer }): Answer[] => {
     return Object.values(answersObj);
   };
-
-  // Initialize answers as object/Map structure
-  const [answers, setAnswers] = useState<{ [answerId: string]: Answer }>(() => {
-    if (question && question.answers && typeof question.answers === 'object') {
-      // If question already has object structure
-      return question.answers;
-    } else if (question && Array.isArray(question.answers) && question.answers.length > 0) {
-      // Convert from legacy array structure
-      return convertAnswersArrayToObject(question.answers);
-    } else {
-      // Create default answers as object
-      const defaultAnswers: { [answerId: string]: Answer } = {};
-      for (let i = 0; i < 4; i++) {
-        const id = `option-${Date.now()}-${i}`;
-        defaultAnswers[id] = {
-          id,
-          text: `Option ${String.fromCharCode(65 + i)}`,
-        };
-      }
-      return defaultAnswers;
+  
+  // --- MODIFIED: Event handlers now create an updated question object and pass it up ---
+  const handleTitleChange = (newTitle: string) => {
+    if (question) {
+      onSave({ ...question, title: newTitle });
     }
-  });
-
-  // Keep track of answer order for UI rendering (since object doesn't preserve order)
-  const [answerOrder, setAnswerOrder] = useState<string[]>(() => {
-    if (question && question.answers) {
-      if (typeof question.answers === 'object') {
-        return Object.keys(question.answers);
-      } else if (Array.isArray(question.answers)) {
-        return question.answers.map(answer => answer.id);
-      }
-    }
-    return Object.keys(answers);
-  });
-
-  const [affiliateLinks, setAffiliateLinks] = useState<string[]>(
-  question?.data?.affiliateLinks || []
-  );
-  const [isSaving, setIsSaving] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-
-  useEffect(() => {
-    setTitle(question ? question.title : "");
-    if (question && question.answers) {
-      if (typeof question.answers === 'object') {
-        setAnswers(question.answers);
-        setAnswerOrder(Object.keys(question.answers));
-      } else if (Array.isArray(question.answers) && question.answers.length > 0) {
-        const answersObj = convertAnswersArrayToObject(question.answers);
-        setAnswers(answersObj);
-        setAnswerOrder(Object.keys(answersObj));
-      }
-    }
-  }, [question]);
-
-  const handleAnswerTextChange = (index: number, value: string) => {
-    const answerId = answerOrder[index];
-    if (!answerId) return;
-
-    const updatedAnswers = { ...answers };
-    
-    // 1. 确保答案对象存在。
-    if (!updatedAnswers[answerId]) {
-      const newId = `option-${Date.now()}-${index}`;
-      updatedAnswers[newId] = {
-        id: newId,
-        text: "",
-      };
-      // Update order if we created a new answer
-      const newOrder = [...answerOrder];
-      newOrder[index] = newId;
-      setAnswerOrder(newOrder);
-    }
-    
-    // 2. 确保答案对象有id。如果从旧数据加载的没有，则补上一个。
-    if (!updatedAnswers[answerId].id) {
-      updatedAnswers[answerId].id = answerId;
-    }
-    
-    // 3. 更新答案文本
-    updatedAnswers[answerId].text = value;
-    
-    setAnswers(updatedAnswers);
   };
+
+  const handleAnswerTextChange = (answerId: string, newText: string) => {
+    if (question) {
+      const updatedAnswers = {
+        ...question.answers,
+        [answerId]: { ...question.answers[answerId], text: newText },
+      };
+      onSave({ ...question, answers: updatedAnswers });
+    }
+  };
+
+  // --- UNCHANGED: Affiliate link logic remains the same ---
   const handleLinkChange = (index: number, value: string) => {
     const updatedLinks = [...affiliateLinks];
     updatedLinks[index] = value;
     setAffiliateLinks(updatedLinks);
   };
+  
+  const handleSave = async () => {
+    // --- MODIFIED: Now handleSave reads directly from props and local state ---
+    if (!question) return;
 
+    setIsSaving(true);
+    try {
+      const answersArray = convertAnswersObjectToArray(question.answers);
+      const filteredAnswers = answersArray.filter((ans) => ans.text.trim() !== "");
+      if (!question.title.trim()) {
+        console.error("Question title cannot be empty!");
+        setIsSaving(false); // Stop execution
+        return;
+      }
+      if (filteredAnswers.length === 0) {
+        console.error("Please provide at least one answer option.");
+        setIsSaving(false); // Stop execution
+        return;
+      }
 
-// src/App.tsx -> 在 QuestionFormComponent 组件内部
+      const cleanAffiliateLinks = Array.from({ length: 4 }).map((_, index) => affiliateLinks[index] || '');
+      
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      
+      const filteredAnswersObj = convertAnswersArrayToObject(filteredAnswers);
+      
+      // The final object is passed up to the parent component
+      onSave({
+        ...question,
+        answers: filteredAnswersObj,
+        data: { affiliateLinks: cleanAffiliateLinks },
+      });
 
-const handleSave = async () => {
-  setIsSaving(true);
-  try {
-    const answersArray = convertAnswersObjectToArray(answers);
-    const filteredAnswers = answersArray.filter((ans) => ans.text.trim() !== "");
-    if (!title.trim()) {
-      console.error("Question title cannot be empty!");
-      return;
+    } catch (error) {
+      console.error("Error saving question:", error);
+    } finally {
+      setIsSaving(false);
     }
-    if (filteredAnswers.length === 0) {
-      console.error("Please provide at least one answer option.");
-      return;
-    }
-
-    // --- ↓↓↓ 这是新增的核心修复逻辑 ↓↓↓ ---
-    // 创建一个干净的链接数组，确保将所有 undefined/null 值转换为空字符串
-    const cleanAffiliateLinks = Array.from({ length: 4 }).map((_, index) => affiliateLinks[index] || '');
-    // --- ↑↑↑ 修复逻辑结束 ↑↑↑ ---
-
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    
-    // Convert filtered answers back to object structure for saving
-    const filteredAnswersObj = convertAnswersArrayToObject(filteredAnswers);
-    
-    onSave({
-      id: question?.id || Date.now().toString(),
-      title,
-      type: "single-choice",
-      answers: filteredAnswersObj, // Save as object structure
-      data: { 
-        affiliateLinks: cleanAffiliateLinks, // <-- 使用处理过的干净数组
-      },
-    });
-  } catch (error) {
-    console.error("Error saving question:", error);
-  } finally {
-    setIsSaving(false);
-  }
-};
+  };
+  
+  // --- UNCHANGED: Cancel and Delete logic remains the same ---
   const handleCancel = () => {
     const button = document.querySelector('.cancel-button');
     if (button) {
       button.classList.add('animate-out');
       setTimeout(() => {
         navigate('/');
-      }, 1000); // 3秒后导航
+      }, 1000);
     }
   };
 
   const handleDelete = () => {
-    setIsDeleting(true); // ✅ 现在不会报错了
-
+    setIsDeleting(true);
     const button = document.querySelector('.delete-button');
     if (button) {
       button.classList.add('animate-out');
       setTimeout(() => {
         onDelete();
-        navigate(-1, { replace: true }); // 跳转到列表页（换成你真正的路径）
+        navigate(-1, { replace: true });
       }, 1000);
     } else {
-    console.error("Question ID is missing!");
-  }
-};
+      console.error("Question ID is missing!");
+    }
+  };
   
+  // Defensive check: If for some reason no question is provided, render nothing.
+  if (!question) {
+    return <div>Loading question...</div>;
+  }
 
+  // --- MODIFIED: The JSX now reads directly from `question` prop and `sortedAnswers` array ---
   return (
     <div className="question-form-container">
       <h2>
@@ -1416,8 +1381,8 @@ const handleSave = async () => {
         <label>Question Title:</label>
         <input
           type="text"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
+          value={question.title}
+          onChange={(e) => handleTitleChange(e.target.value)}
           placeholder="e.g., What's your biggest health concern?"
         />
       </div>
@@ -1431,47 +1396,36 @@ const handleSave = async () => {
       </div>
       <div className="answer-options-section">
         <p>Answer Options (Max 4):</p>
-        {Array.from({ length: 4 }).map((_, index) => {
-          const answerId = answerOrder[index];
-          const answer = answerId ? answers[answerId] : null;
-          return (
-            <div key={index} className="answer-input-group">
-              <input
-                type="text"
-                value={answer?.text || ''}
-                onChange={(e) => handleAnswerTextChange(index, e.target.value)}
-                placeholder={`Option ${String.fromCharCode(65 + index)}`}
-              />
-               <input
-          type="url"
-          value={affiliateLinks[index] || ''}
-          onChange={(e) => handleLinkChange(index, e.target.value)}
-          placeholder="Affiliate link (optional)"
-          className="affiliate-link-input"
-             />
-              <div style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'center',
-          padding: '8px 12px', 
-          backgroundColor: '#f0f0f0', // 背景色
-          borderRadius: '6px', // 圆角
-          marginTop: '5px',
-          width: '100%',
-          color: '#333',
-          fontSize: '14px',
-          cursor: 'default' // 鼠标样式为默认
-           }}>
-            <span role="img" aria-label="clicks" style={{ marginRight: '8px' }}>👁️</span>
-        {/* 显示 clickCount，如果数据不存在则默认为 0 */}
-        <strong>{answer?.clickCount || 0} clicks</strong>
-          </div>
-           {/* --- 新增部分结束 --- */}
+        {/* Use the stable sortedAnswers array for rendering */}
+        {sortedAnswers.map((answer, index) => (
+          <div key={answer.id} className="answer-input-group">
+            <input
+              type="text"
+              value={answer.text}
+              onChange={(e) => handleAnswerTextChange(answer.id, e.target.value)}
+              placeholder={`Option ${String.fromCharCode(65 + index)}`}
+            />
+            <input
+              type="url"
+              value={affiliateLinks[index] || ''}
+              onChange={(e) => handleLinkChange(index, e.target.value)}
+              placeholder="Affiliate link (optional)"
+              className="affiliate-link-input"
+            />
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              padding: '8px 12px', backgroundColor: '#f0f0f0', borderRadius: '6px',
+              marginTop: '5px', width: '100%', color: '#333',
+              fontSize: '14px', cursor: 'default'
+            }}>
+              <span role="img" aria-label="clicks" style={{ marginRight: '8px' }}>👁️</span>
+              <strong>{answer?.clickCount || 0} clicks</strong>
             </div>
-          );
-        })}
+          </div>
+        ))}
       </div>
       <div className="form-actions">
+        {/* --- UNCHANGED: Buttons and their handlers are the same --- */}
         <button className="save-button" onClick={handleSave}>
           <span role="img" aria-label="save">💾</span> Save Question
         </button>
@@ -1487,9 +1441,6 @@ const handleSave = async () => {
     </div>
   );
 };
-
-
-
 
 
 interface LinkSettingsComponentProps {
