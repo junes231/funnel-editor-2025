@@ -666,13 +666,23 @@ const handleImportQuestions = (importedQuestions: Question[]) => {
     }
 
     const validImportedQuestions = importedQuestions.filter(
-      (q) =>
-        q.title &&
-        typeof q.title === 'string' &&
-        q.title.trim() !== '' &&
-        Array.isArray(q.answers) &&
-        q.answers.length > 0 &&
-        q.answers.every((a) => a.text && typeof a.text === 'string' && a.text.trim() !== '')
+      (q) => {
+        // 检查 title 是否有效
+        const hasValidTitle = q.title && typeof q.title === 'string' && q.title.trim() !== '';
+        
+        // 检查 answers 是否为非空对象
+        const hasValidAnswersObject = 
+            typeof q.answers === 'object' && 
+            q.answers !== null && 
+            Object.keys(q.answers).length > 0;
+
+        // 如果答案是对象，则检查每个答案的文本是否有效
+        const allAnswersHaveText = hasValidAnswersObject 
+            ? Object.values(q.answers).every((a) => a.text && typeof a.text === 'string' && a.text.trim() !== '')
+            : false;
+
+        return hasValidTitle && hasValidAnswersObject && allAnswersHaveText;
+      }
     );
 
     if (validImportedQuestions.length === 0) {
