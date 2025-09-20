@@ -1110,23 +1110,27 @@ p {
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
 }
 
+
 .quiz-player-container .quiz-answer-button {
     display: flex;
-    align-items: center;    /* 垂直居中 */
-    justify-content: center;/* 水平居中 */
-    gap: 0.5em;             /* 序号和文本之间的间距 */
+    align-items: center;    /* Vertically center */
+    justify-content: center;/* Horizontally center the entire content group */
+    gap: 0.5em;             /* Space between prefix and content */
+    width: 100%;            /* Ensure buttons are uniform */
+    padding: 1em;           /* Add some comfortable padding */
+    box-sizing: border-box; /* Include padding in width calculation */
 }
 
-/* 序号样式 */
+/* The style for the prefix (e.g., "A.") */
 .quiz-player-container .answer-prefix {
     font-weight: 700;
-    width: 2em;             /* 给序号一个固定的宽度 */
-    flex-shrink: 0;         /* 防止序号被压缩 */
-    text-align: right;      /* 序号文本本身右对齐，看起来更整齐 */
+    width: 2em;             /* Give it a consistent width */
+    flex-shrink: 0;         /* Prevent it from shrinking */
+    text-align: right;      /* Align the text within the prefix to the right */
 }
 
-/* 答案内容样式 */
+/* The style for the answer text itself */
 .quiz-player-container .answer-content {
-    flex-grow: 1;           /* 让内容部分占据剩余空间 */
-    text-align: left;       /* 内容文本左对齐 */
+    /* REMOVED: flex-grow: 1; */
+    text-align: left;       /* Align the text to the left */
 }
