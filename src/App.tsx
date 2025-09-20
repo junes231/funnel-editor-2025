@@ -916,17 +916,36 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ db }) => {
         const trackClickEndpoint = 'https://track-click-498506838505.us-central1.run.app/trackClick'; // [中文注释] 关键：请将这里替换为您部署 trackClick 函数后得到的真实 URL
         
         fetch(trackClickEndpoint, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                data: {
-                    funnelId: funnelId,
-                    questionId: currentQuestion.id,
-                    answerId: answerId, // Use the passed answerId directly
-                }
-            })
-        }).catch(err => console.error('Failed to track click:', err));
-    }
+      method: 'POST',
+      mode: 'cors', // 关键：明确指定为跨域请求
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        data: {
+          funnelId: funnelId,
+          questionId: currentQuestion.id,
+          answerId: answerId,
+        }
+      })
+    })
+    .then(response => {
+      // 检查响应是否成功
+      if (!response.ok) {
+        // 如果不成功，将错误信息作为文本读出并打印
+        return response.text().then(text => {
+          throw new Error(`Network response was not ok: ${response.statusText}, Body: ${text}`);
+        });
+      }
+      return response.json(); // 如果成功，解析JSON
+    })
+    .then(data => {
+      console.log('Click tracked successfully:', data);
+    })
+    .catch(err => {
+      // 现在可以打印出更详细的错误信息
+      console.error('Failed to track click:', err);
+    });
     // --- ↑↑↑ 点击追踪逻辑结束 ↑↑↑ ---
 
     // [中文注释] 在新标签页中打开独立的推广链接
