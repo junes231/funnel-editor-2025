@@ -908,7 +908,6 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ db }) => {
     setIsAnimating(true);
     setClickedAnswerIndex(answerIndex);
 
-    const currentQuestion = funnelData.questions[currentQuestionIndex];
     const affiliateLink = currentQuestion?.data?.affiliateLinks?.[answerIndex];
 
     // --- ↓↓↓ 这是新增的点击追踪逻辑 ↓↓↓ ---
