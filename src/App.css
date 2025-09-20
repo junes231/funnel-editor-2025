@@ -1114,27 +1114,23 @@ p {
 
 /* 答案按钮总样式 */
 .quiz-player-container .quiz-answer-button {
-    display: flex;          /* 启用 Flexbox 布局，这是对齐的基础 */
-    align-items: center;    /* 垂直居中 */
-    justify-content: flex-start;/* 水平居中 */
-    gap: 0.5em;             /* 序号和文本之间的间距 */
-    width: 100%;            /* 确保所有按钮宽度一致 */
-    padding: 1em 2em;       /* 设置舒适的内边距 */
-    box-sizing: border-box; /* 让内边距包含在宽度内 */
-    /* 确保没有旧的 text-align: center; 规则干扰 */
-    text-align: left;       
+  display: flex;
+  align-items: center;
+  justify-content: flex-start; /* 左对齐，不要 center */
+  gap: 0.5em;
+  width: 100%;
+  padding: 1em 2em;
+  box-sizing: border-box;
 }
 
-/* 序号 ("A.", "B." 等) 的样式 */
 .quiz-player-container .answer-prefix {
-    font-weight: 700;       /* 序号加粗 */
-    width: 2em;             /* 关键：给序号一个固定的宽度 */
-    flex-shrink: 0;         /* 防止在空间不足时序号被压缩 */
-    text-align: right;      /* 序号在自己的小空间内右对齐，使小数点对齐 */
+  display: inline-block;
+  width: 2em;       /* 保证所有前缀占同样的空间 */
+  text-align: right; 
+  font-weight: 700;
+  flex-shrink: 0;
 }
 
-/* 答案文本内容的样式 */
 .quiz-player-container .answer-content {
-    /* 确保答案文本自身是左对齐的 */
-    text-align: left;       
+  text-align: left;
 }
