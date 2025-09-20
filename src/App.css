@@ -1117,6 +1117,7 @@ p {
     align-items: center;    /* 垂直居中 */
     justify-content: center;/* 水平居中 */
     gap: 0.5em;             /* 序号和文本之间的间距 */
+    padding: 1em 2em;       /* 增加一些内边距，让按钮更好看 */
 }
 
 /* 序号样式 */
@@ -1129,6 +1130,6 @@ p {
 
 /* 答案内容样式 */
 .quiz-player-container .answer-content {
-    flex-grow: 1;           /* 让内容部分占据剩余空间 */
+    /* flex-grow: 1; */    /* [关键] 移除或注释掉这一行 */
     text-align: left;       /* 内容文本左对齐 */
 }
