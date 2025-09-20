@@ -1,26 +1,31 @@
-// 引入所需的npm包
 const express = require('express');
 const admin = require('firebase-admin');
 const cors = require('cors');
 
 // --- 1. 初始化 ---
-// 初始化 Firebase Admin SDK 和 Express 应用
-// 这种写法可以防止在某些环境下重复初始化
+let db;
 try {
+  // 尝试初始化 Firebase Admin SDK
   admin.initializeApp();
+  db = admin.firestore();
+  console.log("Firebase Admin SDK initialized successfully.");
 } catch (e) {
-  console.log('Firebase Admin SDK a经初始化。');
+  // 如果初始化失败，打印详细错误，但这不会让整个程序崩溃
+  console.error("Firebase Admin SDK initialization failed:", e);
 }
-const db = admin.firestore();
+
 const app = express();
 
-
 // --- 2. 中间件设置 ---
-// 允许所有来源的跨域请求 (CORS)
 app.use(cors({ origin: true }));
-// 允许 Express 解析 JSON 格式的请求体
 app.use(express.json());
 
+
+// --- 3. 健康检查路由 (重要) ---
+// 添加一个简单的根路由，用于Cloud Run的健康检查
+app.get('/', (req, res) => {
+  res.status(200).send("Service is running.");
+});
 
 // --- 3. 路由定义 ---
 
@@ -143,8 +148,9 @@ app.get('/getUserRole', async (req, res) => {
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
-  console.log('Registered routes:');
-  console.log('  - POST /grantAdminRole');
-  console.log('  - POST /trackClick');
-  console.log('  - GET  /getUserRole');
+  if (!db) {
+    console.warn("Warning: Server is running, but Firestore connection failed. API calls will not work.");
+  } else {
+    console.log("Firestore connection is active.");
+  }
 });
