@@ -1,10 +1,9 @@
 {
-  "name": "funnel-editor-functions",
+  "name": "funnel-editor-cloud-run",
   "version": "1.0.0",
   "main": "index.js",
   "dependencies": {
     "firebase-admin": "^12.0.0",
-    "firebase-functions": "^5.0.1",
     "express": "^4.18.2",
     "cors": "^2.8.5"
   },
