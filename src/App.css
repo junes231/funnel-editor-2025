@@ -1110,31 +1110,23 @@ p {
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
 }
 
-/* File: src/App.css */
-
-/* --- Replace the old quiz button CSS with this entire block --- */
-
 .quiz-player-container .quiz-answer-button {
     display: flex;
-    width: 100%; /* Ensure all buttons have the same width */
-    
-    /* --- This is the key change --- */
-    justify-content: flex-start; /* Align content to the left edge */
-
-    align-items: center;    /* Vertically center the text */
-    text-align: left;       /* Keep text inside spans left-aligned */
-    gap: 0.5em;             /* Space between prefix and content */
-
-    /* Use padding to create the visual centering effect */
-    padding-left: 30px; 
-    padding-right: 30px;
-    box-sizing: border-box; /* Important: include padding in the width calculation */
+    align-items: center;    /* 垂直居中 */
+    justify-content: center;/* 水平居中 */
+    gap: 0.5em;             /* 序号和文本之间的间距 */
 }
 
+/* 序号样式 */
 .quiz-player-container .answer-prefix {
     font-weight: 700;
+    width: 2em;             /* 给序号一个固定的宽度 */
+    flex-shrink: 0;         /* 防止序号被压缩 */
+    text-align: right;      /* 序号文本本身右对齐，看起来更整齐 */
 }
 
+/* 答案内容样式 */
 .quiz-player-container .answer-content {
-    /* No styles needed here for now */
+    flex-grow: 1;           /* 让内容部分占据剩余空间 */
+    text-align: left;       /* 内容文本左对齐 */
 }
