@@ -991,17 +991,25 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ db }) => {
       {/* --- 安全性增强：在访问 title 之前也检查 currentQuestion --- */}
       <h3 style={{ color: 'var(--text-color)' }}>{currentQuestion?.title || 'Loading question...'}</h3>
       <div className="quiz-answers-container">
-        {sortedAnswers.map((answer, index) => (
-          <button
-            key={answer.id}
-            className={`quiz-answer-button ${clickedAnswerIndex === index ? 'selected-answer animating' : ''}`}
-            onClick={() => handleAnswerClick(index, answer.id)}
-            disabled={isAnimating}
-            style={{ backgroundColor: 'var(--button-color)', color: 'var(--text-color)', borderColor: 'var(--primary-color)' }}
-          >
-            {answer.text}
-          </button>
-        ))}
+     {sortedAnswers.map((answer, index) => {
+          // 将 "A. Text" 拆分为 "A." 和 "Text"
+          const prefix = answer.text.substring(0, 2); // 获取前两个字符 (例如 "A.")
+          const content = answer.text.substring(2).trim(); // 获取剩余部分并去除前导空格
+
+          return (
+            <button
+              key={answer.id}
+              className={`quiz-answer-button ${clickedAnswerIndex === index ? 'selected-answer animating' : ''}`}
+              onClick={() => handleAnswerClick(index, answer.id)}
+              disabled={isAnimating}
+              style={{ backgroundColor: 'var(--button-color)', color: 'var(--text-color)', borderColor: 'var(--primary-color)' }}
+            >
+              {/* 将序号和内容放入独立的 span 元素中 */}
+              <span className="answer-prefix">{prefix}</span>
+              <span className="answer-content">{content}</span>
+            </button>
+          );
+        })}
       </div>
     </div>
   );
