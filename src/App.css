@@ -1111,25 +1111,30 @@ p {
 }
 
 
+
 /* 答案按钮总样式 */
 .quiz-player-container .quiz-answer-button {
-    display: flex;
+    display: flex;          /* 启用 Flexbox 布局，这是对齐的基础 */
     align-items: center;    /* 垂直居中 */
     justify-content: center;/* 水平居中 */
     gap: 0.5em;             /* 序号和文本之间的间距 */
-    padding: 1em 2em;       /* 增加一些内边距，让按钮更好看 */
+    width: 100%;            /* 确保所有按钮宽度一致 */
+    padding: 1em 2em;       /* 设置舒适的内边距 */
+    box-sizing: border-box; /* 让内边距包含在宽度内 */
+    /* 确保没有旧的 text-align: center; 规则干扰 */
+    text-align: left;       
 }
 
-/* 序号样式 */
+/* 序号 ("A.", "B." 等) 的样式 */
 .quiz-player-container .answer-prefix {
-    font-weight: 700;
-    width: 2em;             /* 给序号一个固定的宽度 */
-    flex-shrink: 0;         /* 防止序号被压缩 */
-    text-align: right;      /* 序号文本本身右对齐，看起来更整齐 */
+    font-weight: 700;       /* 序号加粗 */
+    width: 2em;             /* 关键：给序号一个固定的宽度 */
+    flex-shrink: 0;         /* 防止在空间不足时序号被压缩 */
+    text-align: right;      /* 序号在自己的小空间内右对齐，使小数点对齐 */
 }
 
-/* 答案内容样式 */
+/* 答案文本内容的样式 */
 .quiz-player-container .answer-content {
-    /* flex-grow: 1; */    /* [关键] 移除或注释掉这一行 */
-    text-align: left;       /* 内容文本左对齐 */
+    /* 确保答案文本自身是左对齐的 */
+    text-align: left;       
 }
