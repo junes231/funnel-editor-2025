@@ -1116,7 +1116,7 @@ p {
 .quiz-player-container .quiz-answer-button {
     display: flex;          /* 启用 Flexbox 布局，这是对齐的基础 */
     align-items: center;    /* 垂直居中 */
-    justify-content: center;/* 水平居中 */
+    justify-content: flex-start;/* 水平居中 */
     gap: 0.5em;             /* 序号和文本之间的间距 */
     width: 100%;            /* 确保所有按钮宽度一致 */
     padding: 1em 2em;       /* 设置舒适的内边距 */
