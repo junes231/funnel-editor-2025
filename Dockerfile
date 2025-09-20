@@ -2,16 +2,18 @@ FROM node:20
 
 WORKDIR /app
 
-# 只复制必要文件
+# 安装依赖
 COPY package*.json ./
 RUN npm install --legacy-peer-deps
 
+# 复制项目文件
 COPY . .
+
+# 构建前端
 RUN npm run build
 
-RUN npm install -g serve
-
+# 暴露 Cloud Run 默认端口
 EXPOSE 8080
 
-# 使用 Cloud Run 提供的 $PORT，而不是写死 8080
-CMD ["sh", "-c", "serve -s build -l $PORT"]
+# 启动 Express 后端，后端中会处理 /trackClick、/grantAdminRole，并可提供 build 静态文件
+CMD ["node", "index.js"]
