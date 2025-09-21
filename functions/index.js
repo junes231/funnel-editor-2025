@@ -3,6 +3,7 @@ const admin = require("firebase-admin");
 const cors = require("cors");
 const path = require("path");
 
+console.log("⚡ index.js is running...");
 // --- 1. 初始化 Firebase ---
 if (!admin.apps.length) {
   try {
