@@ -991,8 +991,7 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ db }) => {
     );
   }
 
-  const currentQuestion = funnelData.questions[currentQuestionIndex];
-  const sortedAnswers = (currentQuestion && currentQuestion.answers 
+   const sortedAnswers = (currentQuestion && currentQuestion.answers 
     ? Object.values(currentQuestion.answers) 
     : []
   ).sort((a, b) => a.text.localeCompare(b.text));
