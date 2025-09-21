@@ -42,22 +42,8 @@ const GRANT_ADMIN_URL = process.env.GRANT_ADMIN_URL; // 管理员服务 URL
 console.log(`🌐 Track click service URL: ${TRACK_CLICK_URL}`);
 console.log(`🌐 Admin service URL: ${GRANT_ADMIN_URL}`);
 
-// --- 4. Admin 验证中间件 ---
-async function verifyAdmin(req, res, next) {
-  const authHeader = req.headers.authorization;
-  if (!authHeader?.startsWith("Bearer ")) return res.status(403).send("Unauthorized");
-  try {
-    const idToken = authHeader.split("Bearer ")[1];
-    const decodedToken = await admin.auth().verifyIdToken(idToken);
-    if (decodedToken.role !== "admin") return res.status(403).send("Unauthorized");
-    next();
-  } catch (err) {
-    console.error("❌ Admin verification failed:", err);
-    res.status(403).send("Unauthorized");
-  }
-}
 
-// --- 5. Route Handlers ---
+// --- 4. Route Handlers ---
 async function trackClickHandler(req, res) {
   const { funnelId, questionId, answerId } = req.body.data || {};
   if (!funnelId || !questionId || !answerId) {
@@ -87,6 +73,21 @@ async function trackClickHandler(req, res) {
   }
 }
 
+
+// --- 5. Admin 验证中间件 ---
+async function verifyAdmin(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith("Bearer ")) return res.status(403).send("Unauthorized");
+  try {
+    const idToken = authHeader.split("Bearer ")[1];
+    const decodedToken = await admin.auth().verifyIdToken(idToken);
+    if (decodedToken.role !== "admin") return res.status(403).send("Unauthorized");
+    next();
+  } catch (err) {
+    console.error("❌ Admin verification failed:", err);
+    res.status(403).send("Unauthorized");
+  }
+}
 async function grantAdminRoleHandler(req, res) {
   const email = req.body.data?.email;
   if (!email) return res.status(400).send({ error: "Missing data.email" });
