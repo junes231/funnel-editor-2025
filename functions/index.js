@@ -11,6 +11,7 @@ console.log("✅ CORS required");
 
 const path = require("path");
 console.log("✅ Path required");
+
 // --- 1. 初始化 Firebase ---
 if (!admin.apps.length) {
   try {
@@ -32,6 +33,14 @@ console.log("✅ Express app created");
 app.use(cors({ origin: "*" }));
 app.use(express.json());
 console.log("✅ Middleware registered");
+
+// --- 3. 环境变量读取 ---
+const PORT = process.env.PORT || 8080;
+const TRACK_CLICK_URL = process.env.TRACK_CLICK_URL; // 点击统计服务 URL
+const GRANT_ADMIN_URL = process.env.GRANT_ADMIN_URL; // 管理员服务 URL
+
+console.log(`🌐 Track click service URL: ${TRACK_CLICK_URL}`);
+console.log(`🌐 Admin service URL: ${GRANT_ADMIN_URL}`);
 
 // --- 4. Admin 验证中间件 ---
 async function verifyAdmin(req, res, next) {
@@ -105,27 +114,20 @@ async function getUserRoleHandler(req, res) {
   }
 }
 
-// --- 6. 路由定义（顺序非常重要） ---
-
-// 公开路由
+// --- 6. 路由定义 ---
 app.post("/trackClick", trackClickHandler);
-
-// 需要管理员验证的路由
 app.post("/grantAdminRole", verifyAdmin, grantAdminRoleHandler);
-
-// 获取角色，可以公开
 app.get("/getUserRole", getUserRoleHandler);
 
-// 静态文件放最后
+// 静态文件
 app.use(express.static(path.join(__dirname, "../build")));
 app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "../build", "index.html"));
 });
 
 // --- 7. 启动服务器 ---
-const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
-console.log(`Server is running on http://localhost:${PORT}`);
+  console.log(`Server is running on http://localhost:${PORT}`);
   console.log(`🚀 Server listening on port ${PORT}`);
   console.log("✅ Firestore connection is active.");
 });
