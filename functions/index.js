@@ -23,12 +23,7 @@ const app = express();
 app.use(cors({ origin: "*" })); // 允许任意前端域访问
 app.use(express.json());        // 解析 JSON 请求体
 
-// --- 4. 健康检查路由 ---
-app.get("/", (req, res) => {
-  res.status(200).send("Service is running.");
-});
-
-// --- 5. Admin 验证中间件 ---
+// --- 4. Admin 验证中间件 ---
 async function verifyAdmin(req, res, next) {
   const authHeader = req.headers.authorization;
   if (!authHeader?.startsWith("Bearer ")) return res.status(403).send("Unauthorized");
@@ -43,24 +38,8 @@ async function verifyAdmin(req, res, next) {
   }
 }
 
-// --- 6. API 路由（必须在静态文件前面） ---
-
-// /grantAdminRole
-app.post("/grantAdminRole", verifyAdmin, async (req, res) => {
-  const email = req.body.data?.email;
-  if (!email) return res.status(400).send({ error: "Missing data.email" });
-  try {
-    const user = await admin.auth().getUserByEmail(email);
-    await admin.auth().setCustomUserClaims(user.uid, { role: "admin" });
-    res.status(200).send({ data: { message: `${email} is now admin` } });
-  } catch (err) {
-    console.error("❌ Error granting admin role:", err);
-    res.status(500).send({ error: "Internal server error" });
-  }
-});
-
-// /trackClick
-app.post("/trackClick", async (req, res) => {
+// --- 5. Route Handlers ---
+async function trackClickHandler(req, res) {
   const { funnelId, questionId, answerId } = req.body.data || {};
   if (!funnelId || !questionId || !answerId) {
     return res.status(400).send({ error: "Missing required fields" });
@@ -87,10 +66,22 @@ app.post("/trackClick", async (req, res) => {
     console.error("❌ Error tracking click:", err);
     res.status(500).send({ error: "Internal server error" });
   }
-});
+}
 
-// /getUserRole
-app.get("/getUserRole", async (req, res) => {
+async function grantAdminRoleHandler(req, res) {
+  const email = req.body.data?.email;
+  if (!email) return res.status(400).send({ error: "Missing data.email" });
+  try {
+    const user = await admin.auth().getUserByEmail(email);
+    await admin.auth().setCustomUserClaims(user.uid, { role: "admin" });
+    res.status(200).send({ data: { message: `${email} is now admin` } });
+  } catch (err) {
+    console.error("❌ Error granting admin role:", err);
+    res.status(500).send({ error: "Internal server error" });
+  }
+}
+
+async function getUserRoleHandler(req, res) {
   const authHeader = req.headers.authorization;
   if (!authHeader?.startsWith("Bearer ")) return res.status(403).send("Unauthorized");
   try {
@@ -102,15 +93,26 @@ app.get("/getUserRole", async (req, res) => {
     console.error("❌ Error getting user role:", err);
     res.status(500).send({ error: "Internal server error" });
   }
-});
+}
 
-// --- 7. React 前端静态文件（放在 API 路由之后） ---
+// --- 6. 路由定义（顺序非常重要） ---
+
+// 公开路由
+app.post("/trackClick", trackClickHandler);
+
+// 需要管理员验证的路由
+app.post("/grantAdminRole", verifyAdmin, grantAdminRoleHandler);
+
+// 获取角色，可以公开
+app.get("/getUserRole", getUserRoleHandler);
+
+// 静态文件放最后
 app.use(express.static(path.join(__dirname, "../build")));
 app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "../build", "index.html"));
 });
 
-// --- 8. 启动服务器 ---
+// --- 7. 启动服务器 ---
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
   console.log(`🚀 Server listening on port ${PORT}`);
