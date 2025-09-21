@@ -125,6 +125,7 @@ app.get("*", (req, res) => {
 // --- 7. 启动服务器 ---
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
+console.log(`Server is running on http://localhost:${PORT}`);
   console.log(`🚀 Server listening on port ${PORT}`);
   console.log("✅ Firestore connection is active.");
 });
