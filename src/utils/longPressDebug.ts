@@ -1,6 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
-import SmartAnalysisReport, { AnalysisReport, ReportFinding } from '../components/SmartAnalysisReport';
+import DebugReport, { AnalysisReport, ReportFinding } from '../components/DebugReport';
 
 export function installLongPressDebug(options: { enable?: boolean } = {}) {
   const { enable = (typeof window !== 'undefined' && window.location.search.includes('debug=1')) } = options;
@@ -146,15 +146,13 @@ export function installLongPressDebug(options: { enable?: boolean } = {}) {
   analysisPanel.append(runAnalysisBtn, reportContainer);
 
   runAnalysisBtn.onclick = async () => {
-    ReactDOM.render(React.createElement(SmartAnalysisReport, { report: null }), reportContainer);
+    ReactDOM.render(React.createElement(DebugReport, { report: null }), reportContainer);
     runAnalysisBtn.textContent = '正在分析...';
     runAnalysisBtn.disabled = true;
 
-    // Run all analyzers
     const report = await analyzeCurrentState();
     
-    // Render the final report
-    ReactDOM.render(React.createElement(SmartAnalysisReport, { report }), reportContainer);
+    ReactDOM.render(React.createElement(DebugReport, { report }), reportContainer);
     runAnalysisBtn.textContent = '重新诊断';
     runAnalysisBtn.disabled = false;
   };
@@ -184,10 +182,6 @@ export function installLongPressDebug(options: { enable?: boolean } = {}) {
               findings.push({ status: 'warning', description: 'URL 包含 "/play/" 但未能提取 Funnel ID。' });
               potentialCauses.push('路由解析或 URL 格式可能存在问题。');
           }
-      } else if (currentPath.includes('copy link')) { // Simplified check
-          findings.push({ status: 'info', description: '当前页面可能是 "Copy Link" 页面。'});
-          potentialCauses.push('如果此页面空白，可能是因为它依赖的数据没有正确传递或获取。');
-          suggestedActions.push('检查传递到此页面的 props 或 state 是否正确。');
       }
   
       // Analyzer 3: Click Tracking Check
@@ -209,7 +203,7 @@ export function installLongPressDebug(options: { enable?: boolean } = {}) {
       return {
           title: '综合诊断报告',
           findings,
-          potentialCauses: [...new Set(potentialCauses)], // Remove duplicates
+          potentialCauses: [...new Set(potentialCauses)],
           suggestedActions: [...new Set(suggestedActions)],
       };
   }
