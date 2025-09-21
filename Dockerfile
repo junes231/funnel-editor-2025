@@ -16,4 +16,4 @@ RUN npm run build
 EXPOSE 8080
 
 # 启动 Express 后端，后端中会处理 /trackClick、/grantAdminRole，并可提供 build 静态文件
-CMD ["node", "index.js"]
+CMD ["node", "functions/index.js"]
