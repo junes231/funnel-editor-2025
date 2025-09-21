@@ -1,282 +1,218 @@
-// longPressDebug with input console
-// Usage: import { installLongPressDebug } from './utils/longPressDebug';
-// Enable via options or ?debug=1 in URL.
+import React from 'react';
+import ReactDOM from 'react-dom';
+import SmartAnalysisReport, { AnalysisReport, ReportFinding } from '../components/SmartAnalysisReport';
 
-export interface LongPressDebugOptions {
-  enable?: boolean;
-  longPressMs?: number;
-  maxMovePx?: number;
-  maxMultiTouch?: number;
-  maxLines?: number;
-}
+export function installLongPressDebug(options: { enable?: boolean } = {}) {
+  const { enable = (typeof window !== 'undefined' && window.location.search.includes('debug=1')) } = options;
 
-export function installLongPressDebug(options: LongPressDebugOptions = {}) {
-  const {
-    enable = (typeof window !== 'undefined' && window.location.search.indexOf('debug=1') !== -1) || false,
-    longPressMs = 2000,
-    maxMovePx = 20,
-    maxMultiTouch = 1,
-    maxLines = 400,
-  } = options as any;
-
-  if (!enable) return;
-  if (typeof window === 'undefined') return;
-  if ((window as any).__lp_debug_installed) return;
+  if (!enable || typeof window === 'undefined' || (window as any).__lp_debug_installed) return;
   (window as any).__lp_debug_installed = true;
 
-  // Create container
+  // --- STYLES ---
+  const styles = `
+    #__lp_debug_container {
+      position: fixed; left: 10px; bottom: 10px; width: calc(100% - 20px); max-width: 800px; height: 50vh;
+      background: #1e1e1e; color: #d4d4d4; font-family: Menlo, Monaco, 'Courier New', monospace;
+      font-size: 13px; z-index: 99999; display: none; flex-direction: column;
+      border: 1px solid #3c3c3c; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      resize: both; overflow: auto; min-width: 350px; min-height: 200px;
+    }
+    #__lp_debug_header { background: #333; padding: 8px; cursor: move; user-select: none; border-bottom: 1px solid #3c3c3c; text-align: center; color: #ccc; }
+    #__lp_debug_tabs { display: flex; gap: 5px; border-bottom: 1px solid #3c3c3c; background: #252526; padding: 5px 8px; flex-shrink: 0;}
+    #__lp_debug_tabs button { background: none; border: 1px solid transparent; color: #ccc; padding: 5px 10px; cursor: pointer; border-radius: 4px; }
+    #__lp_debug_tabs button.active { background: #007acc; color: #fff; }
+    #__lp_debug_panel { flex-grow: 1; overflow: hidden; }
+    .lp-panel-content { display: none; height: 100%; overflow: auto; }
+    .lp-panel-content.active { display: block; }
+    .lp-log-line { padding: 4px 8px; border-bottom: 1px solid #2a2a2a; white-space: pre-wrap; word-break: break-all; }
+    .lp-log-line.error { color: #f48771; } .lp-log-line.warn { color: #cca700; }
+    .lp-table { width: 100%; border-collapse: collapse; } .lp-table th, .lp-table td { padding: 4px 8px; border: 1px solid #3c3c3c; text-align: left; }
+    #__lp_debug_toggle {
+      position: fixed; right: 10px; bottom: 10px; z-index: 100000; background: #007acc; color: white;
+      border: none; border-radius: 50%; width: 50px; height: 50px; font-size: 12px;
+      cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center;
+    }
+  `;
+  document.head.appendChild(document.createElement('style')).innerHTML = styles;
+
+  // --- HTML STRUCTURE ---
   const container = document.createElement('div');
   container.id = '__lp_debug_container';
-  Object.assign(container.style, {
-    position: 'fixed',
-    left: '0',
-    right: '0',
-    bottom: '0',
-    maxHeight: '50vh',
-    background: 'rgba(0,0,0,0.9)',
-    color: '#0f0',
-    fontFamily: 'monospace',
-    fontSize: '12px',
-    zIndex: '99999',
-    overflow: 'hidden',
-    display: 'none',
-    boxSizing: 'border-box',
-  } as CSSStyleDeclaration);
+  container.innerHTML = `
+    <div id="__lp_debug_header">Drag Panel</div>
+    <div id="__lp_debug_tabs">
+      <button data-panel="analysis" class="active">Smart Analysis</button>
+      <button data-panel="console">Console</button>
+      <button data-panel="network">Network</button>
+      <button data-panel="storage">Storage</button>
+    </div>
+    <div id="__lp_debug_panel">
+      <div id="panel-analysis" class="lp-panel-content active"></div>
+      <div id="panel-console" class="lp-panel-content"></div>
+      <div id="panel-network" class="lp-panel-content"></div>
+      <div id="panel-storage" class="lp-panel-content"></div>
+    </div>
+  `;
   document.body.appendChild(container);
 
-  // Controls (input area + buttons)
-  const controls = document.createElement('div');
-  Object.assign(controls.style, {
-    display: 'flex',
-    gap: '8px',
-    padding: '6px',
-    alignItems: 'center',
-    background: 'rgba(0,0,0,0.95)',
-  } as CSSStyleDeclaration);
-  container.appendChild(controls);
-
-  const textarea = document.createElement('textarea');
-  textarea.placeholder = '在这里粘贴或编写要执行的 JS（支持 async/await）。按 Ctrl/Cmd+Enter 执行。';
-  Object.assign(textarea.style, {
-    flex: '1 1 auto',
-    minHeight: '56px',
-    maxHeight: '120px',
-    resize: 'vertical',
-    background: '#071316',
-    color: '#b7f59a',
-    border: '1px solid rgba(255,255,255,0.06)',
-    padding: '6px',
-    fontFamily: 'monospace',
-    fontSize: '12px',
-    borderRadius: '6px',
-  } as CSSStyleDeclaration);
-  controls.appendChild(textarea);
-
-  const btnRun = document.createElement('button');
-  btnRun.textContent = 'Run';
-  Object.assign(btnRun.style, {
-    padding: '6px 10px',
-    background: '#1e90ff',
-    color: '#fff',
-    border: 'none',
-    borderRadius: '6px',
-    cursor: 'pointer',
-  } as CSSStyleDeclaration);
-  controls.appendChild(btnRun);
-
-  const btnClear = document.createElement('button');
-  btnClear.textContent = 'Clear';
-  Object.assign(btnClear.style, {
-    padding: '6px 10px',
-    background: '#666',
-    color: '#fff',
-    border: 'none',
-    borderRadius: '6px',
-    cursor: 'pointer',
-  } as CSSStyleDeclaration);
-  controls.appendChild(btnClear);
-
-  const btnExport = document.createElement('button');
-  btnExport.textContent = 'Export';
-  Object.assign(btnExport.style, {
-    padding: '6px 10px',
-    background: '#0b0',
-    color: '#000',
-    border: 'none',
-    borderRadius: '6px',
-    cursor: 'pointer',
-  } as CSSStyleDeclaration);
-  controls.appendChild(btnExport);
-
-  const logsPanel = document.createElement('div');
-  Object.assign(logsPanel.style, {
-    padding: '8px',
-    height: 'calc(50vh - 120px)',
-    overflow: 'auto',
-    whiteSpace: 'pre-wrap',
-    background: 'rgba(0,0,0,0.85)',
-    color: '#8ff28f',
-  } as CSSStyleDeclaration);
-  container.appendChild(logsPanel);
-
-  // Visible small toggle button
   const toggleBtn = document.createElement('button');
-  toggleBtn.textContent = '日志';
-  Object.assign(toggleBtn.style, {
-    position: 'fixed',
-    right: '8px',
-    bottom: '8px',
-    zIndex: '100000',
-    background: '#0b0',
-    color: '#000',
-    border: 'none',
-    padding: '6px 8px',
-    borderRadius: '6px',
-    fontWeight: '700',
-    cursor: 'pointer',
-  } as CSSStyleDeclaration);
+  toggleBtn.id = '__lp_debug_toggle';
+  toggleBtn.textContent = 'Debug';
   document.body.appendChild(toggleBtn);
 
-  toggleBtn.onclick = () => {
-    container.style.display = container.style.display === 'none' ? 'block' : 'none';
-    if (container.style.display === 'block') {
-      textarea.focus();
-    }
-  };
+  // --- CORE LOGIC ---
+  toggleBtn.onclick = () => container.style.display = container.style.display === 'none' ? 'flex' : 'none';
+  const header = container.querySelector('#__lp_debug_header') as HTMLElement;
+  let isDragging = false, offsetX = 0, offsetY = 0;
+  header.addEventListener('mousedown', (e) => { isDragging = true; offsetX = e.clientX - container.offsetLeft; offsetY = e.clientY - container.offsetTop; });
+  document.addEventListener('mousemove', (e) => { if (isDragging) { container.style.left = `${e.clientX - offsetX}px`; container.style.top = `${e.clientY - offsetY}px`; } });
+  document.addEventListener('mouseup', () => isDragging = false);
 
-  // Log handling
-  const logs: string[] = [];
-  function pushLog(line: string) {
-    logs.push(line);
-    if (logs.length > maxLines) logs.shift();
-    logsPanel.textContent = logs.join('\n');
-    logsPanel.scrollTop = logsPanel.scrollHeight;
-  }
-
-  // Hook console
-  const origLog = console.log.bind(console);
-  console.log = (...args: any[]) => {
-    origLog(...args);
-    try { pushLog('[LOG] ' + args.map(stringify).join(' ')); } catch {}
-  };
-  const origWarn = console.warn.bind(console);
-  console.warn = (...args: any[]) => {
-    origWarn(...args);
-    try { pushLog('[WARN] ' + args.map(stringify).join(' ')); } catch {}
-  };
-  const origError = console.error.bind(console);
-  console.error = (...args: any[]) => {
-    origError(...args);
-    try { pushLog('[ERR] ' + args.map(stringify).join(' ')); } catch {}
-  };
-
-  function stringify(v: any) {
-    try {
-      if (typeof v === 'string') return v;
-      return typeof v === 'object' ? JSON.stringify(v, getCircularReplacer(), 2) : String(v);
-    } catch {
-      return String(v);
-    }
-  }
-  function getCircularReplacer() {
-    const seen = new WeakSet();
-    return (_: any, val: any) => {
-      if (val !== null && typeof val === 'object') {
-        if (seen.has(val)) return '[Circular]';
-        seen.add(val);
-      }
-      return val;
-    };
-  }
-
-  // Exec history
-  const history: string[] = [];
-  let historyIndex = -1;
-
-  textarea.addEventListener('keydown', (e) => {
-    const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-    if ((isMac ? e.metaKey : e.ctrlKey) && e.key === 'Enter') {
-      e.preventDefault();
-      runCode(textarea.value);
-    } else if (e.key === 'ArrowUp' && (e.ctrlKey || e.metaKey)) {
-      // recall history
-      if (history.length > 0) {
-        historyIndex = Math.max(0, (historyIndex === -1 ? history.length : historyIndex) - 1);
-        textarea.value = history[historyIndex] || '';
-      }
-    } else if (e.key === 'ArrowDown' && (e.ctrlKey || e.metaKey)) {
-      if (history.length > 0) {
-        if (historyIndex === -1) historyIndex = history.length;
-        historyIndex = Math.min(history.length - 1, historyIndex + 1);
-        textarea.value = history[historyIndex] || '';
-      }
+  const tabs = container.querySelector('#__lp_debug_tabs')!;
+  const panels = container.querySelectorAll('.lp-panel-content');
+  tabs.addEventListener('click', (e) => {
+    if (e.target instanceof HTMLButtonElement) {
+      const targetPanelId = `panel-${e.target.dataset.panel}`;
+      tabs.querySelector('.active')?.classList.remove('active');
+      e.target.classList.add('active');
+      panels.forEach(p => p.classList.toggle('active', p.id === targetPanelId));
+      if (e.target.dataset.panel === 'storage') renderStorage();
     }
   });
 
-  btnRun.onclick = () => runCode(textarea.value);
-  btnClear.onclick = () => { logs.length = 0; logsPanel.textContent = ''; };
-  btnExport.onclick = () => {
-    const blob = new Blob([logs.join('\n')], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'lp-debug-log.txt';
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  // --- MODULES ---
+  const consolePanel = container.querySelector('#panel-console')!;
+  const networkPanel = container.querySelector('#panel-network')!;
+  const storagePanel = container.querySelector('#panel-storage')!;
+  const analysisPanel = container.querySelector('#panel-analysis')!;
+  
+  // Console Module
+  ['log', 'warn', 'error', 'info'].forEach((level) => {
+    const original = (console as any)[level];
+    (console as any)[level] = (...args: any[]) => { original(...args); logToPanel(level, args); };
+  });
+  function logToPanel(type: string, args: any[]) {
+    const line = document.createElement('div');
+    line.className = `lp-log-line ${type}`;
+    line.textContent = args.map(arg => { try { return typeof arg === 'object' ? JSON.stringify(arg) : String(arg); } catch { return '[Object]'; } }).join(' ');
+    consolePanel.appendChild(line);
+  }
+
+  // Network Module
+  const capturedRequests: any[] = [];
+  const originalFetch = window.fetch;
+  window.fetch = function(...args) {
+      const request = { url: args[0].toString(), method: (args[1]?.method || 'GET'), status: 0, startTime: Date.now(), duration: 0, response: '' };
+      capturedRequests.unshift(request);
+      renderNetwork();
+      const promise = originalFetch(...args);
+      promise.then(async res => {
+          request.status = res.status;
+          request.duration = Date.now() - request.startTime;
+          const resClone = res.clone();
+          request.response = await resClone.text();
+      }).catch(err => {
+          request.status = -1; // Indicate error
+          request.response = err.message;
+      }).finally(renderNetwork);
+      return promise;
   };
+  function renderNetwork() {
+      networkPanel.innerHTML = capturedRequests.map(r => 
+          `<div class="lp-log-line ${r.status === -1 ? 'error' : ''}">
+              [${r.status || '...'} | ${r.method}] ${r.url} (${r.duration}ms)
+          </div>`
+      ).join('');
+  }
 
-  // Run user code in global scope, support async
-  async function runCode(code: string) {
-    if (!code || !code.trim()) {
-      pushLog('[EXEC] empty code');
-      return;
+  // Storage Module
+  function renderStorage() {
+    storagePanel.innerHTML = '<h3>LocalStorage</h3>' + createStorageTable(localStorage) + '<h3>SessionStorage</h3>' + createStorageTable(sessionStorage);
+  }
+  function createStorageTable(storage: Storage) {
+    let html = '<table class="lp-table"><tr><th>Key</th><th>Value</th></tr>';
+    for(let i = 0; i < storage.length; i++) {
+      const key = storage.key(i)!;
+      html += `<tr><td>${key}</td><td>${storage.getItem(key)}</td></tr>`;
     }
-    history.push(code);
-    historyIndex = -1;
-    pushLog('[EXEC] ' + (code.split('\n')[0] || '').slice(0, 300));
-    try {
-      // Run inside an async IIFE in global scope
-      const fn = new Function('return (async function(){' + code + '})()');
-      const res = await fn();
-      pushLog('[EXEC-RES] ' + stringify(res));
-    } catch (err) {
-      pushLog('[EXEC-ERR] ' + stringify(err));
-    }
+    return html + '</table>';
   }
 
-  // long press detection to toggle panel
-  let timer: number | null = null;
-  let startX = 0, startY = 0;
-  const maxMove = maxMovePx;
-  function onPressStart(e: TouchEvent | MouseEvent) {
-    const pt = ('touches' in e && (e as TouchEvent).touches.length) ? (e as TouchEvent).touches[0] : (e as MouseEvent);
-    startX = (pt as any).clientX || 0;
-    startY = (pt as any).clientY || 0;
-    timer = window.setTimeout(() => {
-      container.style.display = container.style.display === 'none' ? 'block' : 'none';
-      if (container.style.display === 'block') textarea.focus();
-      pushLog(`[DEBUG] longPress toggled panel (${new Date().toISOString()})`);
-    }, longPressMs);
-  }
-  function onPressMove(e: TouchEvent | MouseEvent) {
-    const pt = ('touches' in e && (e as TouchEvent).touches.length) ? (e as TouchEvent).touches[0] : (e as MouseEvent);
-    const dx = Math.abs((pt as any).clientX - startX);
-    const dy = Math.abs((pt as any).clientY - startY);
-    if (dx > maxMove || dy > maxMove) {
-      if (timer) { clearTimeout(timer); timer = null; }
-    }
-  }
-  function onPressEnd() {
-    if (timer) { clearTimeout(timer); timer = null; }
+  // --- SMART ANALYSIS MODULE ---
+  const runAnalysisBtn = document.createElement('button');
+  runAnalysisBtn.textContent = '开始诊断当前页面问题';
+  runAnalysisBtn.style.cssText = 'width: 100%; padding: 10px; background: #007acc; color: white; border: none; font-size: 16px; cursor: pointer;';
+  const reportContainer = document.createElement('div');
+  analysisPanel.append(runAnalysisBtn, reportContainer);
+
+  runAnalysisBtn.onclick = async () => {
+    ReactDOM.render(React.createElement(SmartAnalysisReport, { report: null }), reportContainer);
+    runAnalysisBtn.textContent = '正在分析...';
+    runAnalysisBtn.disabled = true;
+
+    // Run all analyzers
+    const report = await analyzeCurrentState();
+    
+    // Render the final report
+    ReactDOM.render(React.createElement(SmartAnalysisReport, { report }), reportContainer);
+    runAnalysisBtn.textContent = '重新诊断';
+    runAnalysisBtn.disabled = false;
+  };
+  
+  async function analyzeCurrentState(): Promise<AnalysisReport> {
+      let findings: ReportFinding[] = [];
+      let potentialCauses: string[] = [];
+      let suggestedActions: string[] = [];
+  
+      // Analyzer 1: Blank Page Check
+      const rootEl = document.getElementById('root');
+      if (rootEl && rootEl.innerHTML.trim() !== '') {
+          findings.push({ status: 'ok', description: 'React 应用已成功挂载到 #root 节点。' });
+      } else {
+          findings.push({ status: 'error', description: 'React 应用未能渲染到 #root 节点，这是白屏的直接原因。' });
+          potentialCauses.push('在应用初始化时发生了 JavaScript 致命错误。', '主 JavaScript 文件未能成功加载。');
+          suggestedActions.push('打开浏览器原生开发者工具(F12)，查看控制台是否有红色错误。', '检查 Network 面板，确认 JS 文件是否404。');
+      }
+  
+      // Analyzer 2: URL & Route Check
+      const currentPath = window.location.hash || window.location.pathname;
+      if (currentPath.includes('/play/')) {
+          const funnelId = currentPath.split('/play/')[1];
+          if (funnelId) {
+              findings.push({ status: 'ok', description: `当前为 Play 页面，Funnel ID 为 "${funnelId}"。` });
+          } else {
+              findings.push({ status: 'warning', description: 'URL 包含 "/play/" 但未能提取 Funnel ID。' });
+              potentialCauses.push('路由解析或 URL 格式可能存在问题。');
+          }
+      } else if (currentPath.includes('copy link')) { // Simplified check
+          findings.push({ status: 'info', description: '当前页面可能是 "Copy Link" 页面。'});
+          potentialCauses.push('如果此页面空白，可能是因为它依赖的数据没有正确传递或获取。');
+          suggestedActions.push('检查传递到此页面的 props 或 state 是否正确。');
+      }
+  
+      // Analyzer 3: Click Tracking Check
+      const trackClickReq = capturedRequests.find(r => r.url.includes('trackClick'));
+      if (trackClickReq) {
+          if (trackClickReq.status >= 200 && trackClickReq.status < 300) {
+              findings.push({ status: 'ok', description: '已成功发送 "trackClick" 请求并收到成功响应。', details: `Status: ${trackClickReq.status}` });
+          } else {
+              findings.push({ status: 'error', description: '发送了 "trackClick" 请求，但服务器返回了错误。', details: `Status: ${trackClickReq.status}, Response: ${trackClickReq.response}`});
+              potentialCauses.push('后端云函数出现 bug。', '发送的数据格式不正确。');
+              suggestedActions.push('检查云函数的日志以获取详细错误。', '对比前端发送的数据和后端期望的数据格式。');
+          }
+      } else {
+          findings.push({ status: 'warning', description: '在本次会话中，未检测到发送 "trackClick" 的网络请求。' });
+          potentialCauses.push('点击事件处理函数 (handleAnswerClick) 未被触发。', '请求在发送前被代码逻辑中断。');
+          suggestedActions.push('在 `handleAnswerClick` 函数入口处添加 `console.log` 以确认其是否执行。');
+      }
+  
+      return {
+          title: '综合诊断报告',
+          findings,
+          potentialCauses: [...new Set(potentialCauses)], // Remove duplicates
+          suggestedActions: [...new Set(suggestedActions)],
+      };
   }
 
-  document.addEventListener('touchstart', onPressStart, { passive: true });
-  document.addEventListener('touchmove', onPressMove, { passive: true });
-  document.addEventListener('touchend', onPressEnd, { passive: true });
-  document.addEventListener('mousedown', onPressStart);
-  document.addEventListener('mousemove', onPressMove);
-  document.addEventListener('mouseup', onPressEnd);
-
-  // initial log
-  pushLog(`[DEBUG] longPressDebug installed — longPressMs=${longPressMs}`);
+  console.log('[longPressDebug] Ultimate debugger with Smart Analysis installed.');
 }
