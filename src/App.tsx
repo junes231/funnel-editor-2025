@@ -925,9 +925,10 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ db }) => {
           funnelId: funnelId,
           questionId: currentQuestion.id,
           answerId: answerId,
-        }
-      })
-    })
+         },
+      }),
+    });
+  }
     .then(response => {
       // 检查响应是否成功
       if (!response.ok) {
