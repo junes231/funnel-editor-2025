@@ -66,6 +66,7 @@ app.post("/grantAdminRole", verifyAdmin, async (req, res) => {
   }
 });
 
+
 // --- 7. 路由: /trackClick ---
 app.post("/trackClick", async (req, res) => {
   const { funnelId, questionId, answerId } = req.body.data || {};
@@ -90,18 +91,13 @@ app.post("/trackClick", async (req, res) => {
     }
 
     const answers = questions[questionIndex].answers;
-    let path;
-    if (Array.isArray(answers)) {
-      const answerIndex = answers.findIndex((a) => a.id === answerId);
-      if (answerIndex === -1) {
-        return res.status(404).send({ error: "Answer not found" });
-      }
-      path = `data.questions.${questionIndex}.answers.${answerIndex}.clickCount`;
-    } else if (typeof answers === "object" && answers[answerId]) {
-      path = `data.questions.${questionIndex}.answers.${answerId}.clickCount`;
-    } else {
+    
+    // ✅ 关键修改: 检查 answers 对象中是否存在 answerId
+    if (!answers || !answers[answerId]) {
       return res.status(404).send({ error: "Answer not found" });
     }
+
+    const path = `data.questions.${questionIndex}.answers.${answerId}.clickCount`;
 
     // Firestore 原子计数
     await funnelRef.update({
