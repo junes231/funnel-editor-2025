@@ -1,9 +1,16 @@
-const express = require("express");
-const admin = require("firebase-admin");
-const cors = require("cors");
-const path = require("path");
+console.log("⚡ index.js starting...");
 
-console.log("⚡ index.js is running...");
+const express = require("express");
+console.log("✅ Express required");
+
+const admin = require("firebase-admin");
+console.log("✅ Firebase Admin required");
+
+const cors = require("cors");
+console.log("✅ CORS required");
+
+const path = require("path");
+console.log("✅ Path required");
 // --- 1. 初始化 Firebase ---
 if (!admin.apps.length) {
   try {
@@ -19,10 +26,12 @@ const db = admin.firestore();
 
 // --- 2. 创建 Express ---
 const app = express();
+console.log("✅ Express app created");
 
-// --- 3. 中间件 ---
-app.use(cors({ origin: "*" })); // 允许任意前端域访问
-app.use(express.json());        // 解析 JSON 请求体
+// 中间件
+app.use(cors({ origin: "*" }));
+app.use(express.json());
+console.log("✅ Middleware registered");
 
 // --- 4. Admin 验证中间件 ---
 async function verifyAdmin(req, res, next) {
