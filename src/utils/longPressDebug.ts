@@ -1,6 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
-import DebugReport, { AnalysisReport, ReportFinding } from '../components/DebugReport';
+import DebugReport, { AnalysisReport, ReportFinding } from '../components/DebugReport.tsx';
 
 export function installLongPressDebug(options: { enable?: boolean } = {}) {
   const { enable = (typeof window !== 'undefined' && window.location.search.includes('debug=1')) } = options;
