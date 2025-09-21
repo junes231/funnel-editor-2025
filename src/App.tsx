@@ -903,74 +903,80 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ db }) => {
 
   // [中文注释] 关键升级：这是新的 handleAnswerClick 函数
   const handleAnswerClick = (answerIndex: number, answerId: string) => {
-    if (isAnimating || !funnelData) return;
+  if (isAnimating || !funnelData) return;
 
-    setIsAnimating(true);
-    setClickedAnswerIndex(answerIndex);
-    const currentQuestion = funnelData.questions[currentQuestionIndex];
-    const affiliateLink = currentQuestion?.data?.affiliateLinks?.[answerIndex];
+  setIsAnimating(true);
+  setClickedAnswerIndex(answerIndex);
 
-    // --- ↓↓↓ 这是新增的点击追踪逻辑 ↓↓↓ ---
-    if (funnelId && currentQuestion?.id && answerId) {
-        const trackClickEndpoint = 'https://track-click-498506838505.us-central1.run.app/trackClick'; // [中文注释] 关键：请将这里替换为您部署 trackClick 函数后得到的真实 URL
-        
-        fetch(trackClickEndpoint, {
-      method: 'POST',
-      mode: 'cors', // 关键：明确指定为跨域请求
+  const currentQuestion = funnelData.questions[currentQuestionIndex];
+  const affiliateLink = currentQuestion?.data?.affiliateLinks?.[answerIndex];
+
+  // --- ↓↓↓ 点击追踪逻辑 ↓↓↓ ---
+  if (funnelId && currentQuestion?.id && answerId) {
+    const trackClickEndpoint =
+      "https://track-click-498506838505.us-central1.run.app/trackClick";
+
+    fetch(trackClickEndpoint, {
+      method: "POST",
+      mode: "cors",
       headers: {
-        'Content-Type': 'application/json'
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
         data: {
           funnelId: funnelId,
           questionId: currentQuestion.id,
           answerId: answerId,
-         },
+        },
       }),
-    });
+    })
+      .then((response) => {
+        if (!response.ok) {
+          return response.text().then((text) => {
+            throw new Error(
+              `Network response was not ok: ${response.statusText}, Body: ${text}`
+            );
+          });
+        }
+        return response.json();
+      })
+      .then((data) => {
+        console.log("Click tracked successfully:", data);
+      })
+      .catch((err) => {
+        console.error("Failed to track click:", err);
+      });
   }
-    .then(response => {
-      // 检查响应是否成功
-      if (!response.ok) {
-        // 如果不成功，将错误信息作为文本读出并打印
-        return response.text().then(text => {
-          throw new Error(`Network response was not ok: ${response.statusText}, Body: ${text}`);
-        });
-      }
-      return response.json(); // 如果成功，解析JSON
-    })
-    .then(data => {
-      console.log('Click tracked successfully:', data);
-    })
-    .catch(err => {
-      // 现在可以打印出更详细的错误信息
-      console.error('Failed to track click:', err);
-    });
-    // --- ↑↑↑ 点击追踪逻辑结束 ↑↑↑ ---
+  // --- ↑↑↑ 点击追踪逻辑结束 ↑↑↑ ---
 
-    // [中文注释] 在新标签页中打开独立的推广链接
-    if (affiliateLink && affiliateLink.trim() !== '') {
-        window.open(affiliateLink, '_blank');
+  // [中文注释] 在新标签页中打开推广链接
+  if (affiliateLink && affiliateLink.trim() !== "") {
+    window.open(affiliateLink, "_blank");
+  }
+
+  // 动画和跳题逻辑
+  setTimeout(() => {
+    setIsAnimating(false);
+    setClickedAnswerIndex(null);
+    if (!funnelData) return;
+
+    const isLastQuestion =
+      currentQuestionIndex >= funnelData.questions.length - 1;
+
+    if (isLastQuestion) {
+      const redirectLink = funnelData.finalRedirectLink;
+      if (redirectLink && redirectLink.trim() !== "") {
+        window.location.href = redirectLink;
+      } else {
+        console.log("Quiz complete! No final redirect link set.");
+      }
+      return;
     }
 
-    setTimeout(() => {
-        setIsAnimating(false);
-        setClickedAnswerIndex(null);
-        if (!funnelData) return;
-
-        const isLastQuestion = currentQuestionIndex >= funnelData.questions.length - 1;
-        if (isLastQuestion) {
-            const redirectLink = funnelData.finalRedirectLink;
-            if (redirectLink && redirectLink.trim() !== '') {
-                window.location.href = redirectLink;
-            } else {
-                console.log('Quiz complete! No final redirect link set.');
-            }
-            return;
-        }
-        setCurrentQuestionIndex(currentQuestionIndex + 1);
-    }, 500);
-  };
+    // 进入下一题
+    setCurrentQuestionIndex(currentQuestionIndex + 1);
+  }, 500);
+};
   
   // [中文注释] 组件的 JSX 渲染部分保持不变...
   if (isLoading) {
