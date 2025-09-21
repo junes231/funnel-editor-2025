@@ -902,7 +902,7 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ db }) => {
   }, [funnelId, db]);
 
   // [中文注释] 关键升级：这是新的 handleAnswerClick 函数
-  const handleAnswerClick = (answerIndex: number, answerId: string) => {
+  const handleAnswerClick = async (answerIndex: number, answerId: string) => {
   if (isAnimating || !funnelData) return;
 
   setIsAnimating(true);
@@ -911,41 +911,39 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ db }) => {
   const currentQuestion = funnelData.questions[currentQuestionIndex];
   const affiliateLink = currentQuestion?.data?.affiliateLinks?.[answerIndex];
 
-  // --- ↓↓↓ 点击追踪逻辑 ↓↓↓ ---
+  // --- ↓↓↓ 健壮的点击追踪逻辑 ↓↓↓ ---
   if (funnelId && currentQuestion?.id && answerId) {
-    const trackClickEndpoint =
-      "https://track-click-498506838505.us-central1.run.app/trackClick";
-
-    fetch(trackClickEndpoint, {
-      method: "POST",
-      mode: "cors",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        data: {
-          funnelId: funnelId,
-          questionId: currentQuestion.id,
-          answerId: answerId,
+    try {
+      const trackClickEndpoint = "https://track-click-498506838505.us-central1.run.app/trackClick";
+      
+      const response = await fetch(trackClickEndpoint, {
+        method: "POST",
+        mode: "cors",
+        headers: {
+          "Content-Type": "application/json",
         },
-      }),
-    })
-      .then((response) => {
-        if (!response.ok) {
-          return response.text().then((text) => {
-            throw new Error(
-              `Network response was not ok: ${response.statusText}, Body: ${text}`
-            );
-          });
-        }
-        return response.json();
-      })
-      .then((data) => {
-        console.log("Click tracked successfully:", data);
-      })
-      .catch((err) => {
-        console.error("Failed to track click:", err);
+        body: JSON.stringify({
+          data: {
+            funnelId: funnelId,
+            questionId: currentQuestion.id,
+            answerId: answerId,
+          },
+        }),
       });
+
+      if (!response.ok) {
+        // 即使追踪失败，也只是记录错误，不影响用户体验
+        const errorText = await response.text();
+        console.error("Failed to track click (API Error):", response.statusText, errorText);
+      } else {
+        const data = await response.json();
+        console.log("Click tracked successfully:", data);
+      }
+    } catch (err) {
+      // 捕获所有可能的错误 (网络错误, CORS 错误等)
+      // 同样，只在控制台记录错误，不中断应用
+      console.error("Failed to track click (Network or other error):", err);
+    }
   }
   // --- ↑↑↑ 点击追踪逻辑结束 ↑↑↑ ---
 
@@ -954,14 +952,13 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ db }) => {
     window.open(affiliateLink, "_blank");
   }
 
-  // 动画和跳题逻辑
+  // 动画和跳题逻辑 (保持不变)
   setTimeout(() => {
     setIsAnimating(false);
     setClickedAnswerIndex(null);
     if (!funnelData) return;
 
-    const isLastQuestion =
-      currentQuestionIndex >= funnelData.questions.length - 1;
+    const isLastQuestion = currentQuestionIndex >= funnelData.questions.length - 1;
 
     if (isLastQuestion) {
       const redirectLink = funnelData.finalRedirectLink;
@@ -973,7 +970,6 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ db }) => {
       return;
     }
 
-    // 进入下一题
     setCurrentQuestionIndex(currentQuestionIndex + 1);
   }, 500);
 };
