@@ -137,11 +137,7 @@ app.get("/test-cors", (req, res) => {
   console.log("✅ /test-cors endpoint hit.");
   res.status(200).send({ status: 'success', message: 'CORS test successful!' });
 });
-// 静态文件
-app.use(express.static(path.join(__dirname, "../build")));
-app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "../build", "index.html"));
-});
+
 
 // --- 7. 启动服务器 ---
 
