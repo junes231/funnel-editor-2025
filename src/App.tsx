@@ -908,8 +908,7 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ db }) => {
   setIsAnimating(true);
   setClickedAnswerIndex(answerIndex);
 
-  const currentQuestion = funnelData.questions[currentQuestionIndex];
-  const affiliateLink = currentQuestion?.data?.affiliateLinks?.[answerIndex];
+   const affiliateLink = currentQuestion?.data?.affiliateLinks?.[answerIndex];
 
   // --- ↓↓↓ 健壮的点击追踪逻辑 ↓↓↓ ---
   if (funnelId && currentQuestion?.id && answerId) {
@@ -994,17 +993,29 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ db }) => {
     );
   }
 
-   const sortedAnswers = (currentQuestion && currentQuestion.answers 
+   const currentQuestion = funnelData.questions[currentQuestionIndex];
+
+  // 2. 增加一个防御性检查：如果 currentQuestion 因为某种原因不存在，就显示加载状态
+  if (!currentQuestion) {
+    return (
+      <div className="quiz-player-container">
+        <p>Loading next question...</p>
+      </div>
+    );
+  }
+
+  // 3. 现在可以安全地使用 currentQuestion 了
+  const sortedAnswers = (currentQuestion.answers 
     ? Object.values(currentQuestion.answers) 
     : []
   ).sort((a, b) => a.text.localeCompare(b.text));
+
   const quizPlayerContainerStyle = {
     '--primary-color': funnelData.primaryColor,
     '--button-color': funnelData.buttonColor,
     '--background-color': funnelData.backgroundColor,
     '--text-color': funnelData.textColor,
   } as React.CSSProperties;
-   
     
   return (
     <div className="quiz-player-container" style={quizPlayerContainerStyle}>
