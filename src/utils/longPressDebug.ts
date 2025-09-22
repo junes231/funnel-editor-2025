@@ -2,6 +2,22 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import DebugReport, { AnalysisReport } from '../components/DebugReport.tsx';
 
+let capturedFatalError: ReportFinding | null = null;
+window.onerror = function(message, source, lineno, colno, error) {
+  // 忽略一些不重要的、由浏览器插件等引起的错误
+  if (typeof message === 'string' && message.includes('ResizeObserver loop')) {
+    return;
+  }
+  
+  capturedFatalError = {
+    status: 'error',
+    description: '捕获到导致应用崩溃的致命错误 (Fatal Error)！',
+    details: `Message: ${message}\nSource: ${source}\nLine: ${lineno}, Column: ${colno}`
+  };
+  // 可以在这里也打印到原生 console，以防万一
+  console.log('>>> FATAL ERROR CAPTURED:', capturedFatalError);
+  return true; // 返回 true 可以阻止浏览器默认的错误处理
+};
 function initializeDebugger() {
   if ((window as any).__lp_debug_installed) return;
   (window as any).__lp_debug_installed = true;
@@ -133,7 +149,7 @@ function initializeDebugger() {
     (console as any)[level] = (...args: any[]) => { original(...args); logToPanel(level, args); };
   });
 
-  const analysisPanel = container.querySelector('#panel-analysis')!;
+   const analysisPanel = container.querySelector('#panel-analysis')!;
   const runAnalysisBtn = document.createElement('button');
   runAnalysisBtn.textContent = '开始诊断当前页面问题';
   runAnalysisBtn.style.cssText = 'width: 100%; padding: 10px; background: #007acc; color: white; border: none; font-size: 16px; cursor: pointer;';
@@ -144,30 +160,49 @@ function initializeDebugger() {
     ReactDOM.render(React.createElement(DebugReport, { report: null }), reportContainer);
     runAnalysisBtn.textContent = '正在分析...'; runAnalysisBtn.disabled = true;
     await new Promise(resolve => setTimeout(resolve, 50));
-    const report = await analyzeCurrentState();
+    
+    // --- 核心升级：调用新的分析函数 ---
+    const report = await analyzeCurrentStateWithFatalErrorCheck();
+    
     ReactDOM.render(React.createElement(DebugReport, { report }), reportContainer);
     runAnalysisBtn.textContent = '重新诊断'; runAnalysisBtn.disabled = false;
   };
 
-  async function analyzeCurrentState(): Promise<AnalysisReport> {
-    let findings: any[] = [];
-    const rootEl = document.getElementById('root');
-    if (rootEl && rootEl.innerHTML.trim() !== '') {
-      findings.push({ status: 'ok', description: 'React 应用已成功挂载到 #root 节点。' });
+  async function analyzeCurrentStateWithFatalErrorCheck(): Promise<AnalysisReport> {
+    let findings: ReportFinding[] = [];
+    let potentialCauses: string[] = [];
+    let suggestedActions: string[] = [];
+
+    // --- 核心升级：优先检查捕获到的致命错误 ---
+    if (capturedFatalError) {
+      findings.push(capturedFatalError);
+      potentialCauses.push('代码中存在一个未被处理的 bug，导致了整个应用的崩溃。');
+      suggestedActions.push('请仔细检查上述错误信息中提到的文件和行号，定位并修复该 bug。', '如果出错文件是 `bundle.js` 或 `main.chunk.js` 等打包后的文件，请检查您的项目构建过程是否正常。');
     } else {
-      findings.push({ status: 'error', description: 'React 应用未能渲染到 #root 节点，这是白屏的直接原因。' });
+      // 如果没有致命错误，再执行常规检查
+      findings.push({ status: 'info', description: '未捕获到任何导致应用崩溃的致命错误。' });
+      const rootEl = document.getElementById('root');
+      if (rootEl && rootEl.innerHTML.trim() !== '') {
+        findings.push({ status: 'ok', description: 'React 应用已成功挂载到 #root 节点。' });
+        potentialCauses.push('页面看起来是空白的，但 React 已成功渲染。问题可能出在 CSS 样式、数据未加载或组件逻辑上。');
+        suggestedActions.push('请检查相关组件的 CSS，确保元素没有被隐藏（如 `display: none` 或 `opacity: 0`）。', '在相关组件的 `useEffect` 中添加 `console.log`，检查数据是否成功获取。');
+      } else {
+        findings.push({ status: 'warning', description: 'React 应用未能渲染到 #root 节点，但没有捕获到致命错误。' });
+        potentialCauses.push('可能存在异步加载问题或 React 初始化逻辑错误。');
+        suggestedActions.push('请检查您的 `src/index.tsx` 文件，确保 `ReactDOM.render` 或 `root.render` 被正确调用。');
+      }
     }
+
     return {
-      title: '综合诊断报告',
+      title: '综合诊断报告 (含错误捕获)',
       findings,
-      potentialCauses: ['在应用初始化时发生了 JavaScript 致命错误。', '主 JavaScript 文件未能成功加载。'],
-      suggestedActions: ['打开浏览器原生开发者工具(F12)，查看控制台是否有红色错误。', '检查 Network 面板，确认 JS 文件是否404。'],
+      potentialCauses: [...new Set(potentialCauses)],
+      suggestedActions: [...new Set(suggestedActions)],
     };
   }
-
-  logToPanel('info', ['Debugger Ready.']);
 }
 
+// 导出函数，确保在 DOMContentLoaded 后执行
 export function installLongPressDebug(options: { enable?: boolean } = {}) {
   const { enable = (typeof window !== 'undefined' && window.location.search.includes('debug=1')) } = options;
   if (!enable) return;
