@@ -1,7 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
-// 确保 DebugReport 组件存在于正确的路径
-import DebugReport, { AnalysisReport, ReportFinding } from '../components/DebugReport.tsx';
+import DebugReport, { AnalysisReport } from '../components/DebugReport.tsx';
 
 function initializeDebugger() {
   if ((window as any).__lp_debug_installed) return;
@@ -24,21 +23,34 @@ function initializeDebugger() {
     .lp-panel-content.active { display: block; }
     #panel-console.active { display: flex; flex-direction: column; }
     #panel-console-output { flex-grow: 1; overflow-y: auto; padding: 8px; }
-    #panel-console-controls { display: flex; gap: 8px; padding: 8px; border-top: 1px solid #3c3c3c; background: #252526; flex-shrink: 0; }
-    #panel-console-input { flex-grow: 1; background: #2a2a2e; color: #d4d4d4; border: 1px solid #3c3c3c; border-radius: 4px; padding: 8px; font-family: inherit; font-size: inherit; resize: none; }
-    #panel-console-buttons { display: flex; flex-direction: column; gap: 5px; }
-    #panel-console-buttons button { background: #37373d; color: #fff; border: 1px solid #3c3c3c; border-radius: 4px; padding: 8px; cursor: pointer; font-size: 12px; }
-    #panel-console-buttons button:active { background: #4a4a52; }
     .lp-log-line { padding: 4px 0; border-bottom: 1px solid #2a2a2a; white-space: pre-wrap; word-break: break-all; }
     .lp-log-line.error { color: #f48771; } .lp-log-line.warn { color: #cca700; }
     #__lp_debug_toggle {
-      position: fixed;
-      right: 10px;
-      bottom: 65px; /* --- 按钮位置已修复 --- */
-      z-index: 100000; background: #007acc; color: white;
-      border: none; border-radius: 50%; width: 50px; height: 50px; font-size: 12px;
+      position: fixed; right: 10px; bottom: 65px;
+      z-index: 100000; background: #007acc; color: white; border: none;
+      border-radius: 50%; width: 50px; height: 50px; font-size: 12px;
       cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center;
     }
+    #panel-console-controls {
+      display: flex; flex-direction: column; gap: 8px;
+      padding: 8px; border-top: 1px solid #3c3c3c;
+      background: #252526; flex-shrink: 0;
+    }
+    #panel-console-input {
+      background: #2a2a2e; color: #d4d4d4; border: 1px solid #3c3c3c;
+      border-radius: 4px; padding: 8px; font-family: inherit; font-size: inherit; resize: vertical;
+      min-height: 40px; box-sizing: border-box; width: 100%;
+    }
+    #panel-console-buttons {
+      display: flex; flex-direction: row; gap: 8px;
+      justify-content: flex-end;
+    }
+    #panel-console-buttons button {
+      background: #37373d; color: #fff; border: 1px solid #3c3c3c; border-radius: 4px;
+      padding: 8px 12px; cursor: pointer; font-size: 12px;
+    }
+    #panel-console-buttons button:active { background: #4a4a52; }
+    #console-run-btn { background-color: #007acc; }
   `;
   document.head.appendChild(document.createElement('style')).innerHTML = styles;
 
@@ -55,11 +67,11 @@ function initializeDebugger() {
       <div id="panel-console" class="lp-panel-content">
         <div id="panel-console-output"></div>
         <div id="panel-console-controls">
-          <textarea id="panel-console-input" rows="3" placeholder="Enter JS..."></textarea>
+          <textarea id="panel-console-input" rows="3" placeholder="Enter JS... (Ctrl+Enter)"></textarea>
           <div id="panel-console-buttons">
-            <button id="console-run-btn">Run</button>
-            <button id="console-clear-btn">Clear</button>
             <button id="console-copy-btn">Copy</button>
+            <button id="console-clear-btn">Clear</button>
+            <button id="console-run-btn">Run</button>
           </div>
         </div>
       </div>
@@ -67,7 +79,6 @@ function initializeDebugger() {
   `;
   document.body.appendChild(container);
 
-  // --- CORE LOGIC ---
   const toggleBtn = document.createElement('button');
   toggleBtn.id = '__lp_debug_toggle';
   toggleBtn.textContent = 'Debug';
@@ -85,7 +96,6 @@ function initializeDebugger() {
     }
   });
 
-  // --- CONSOLE MODULE ---
   const consoleOutput = container.querySelector('#panel-console-output')!;
   const consoleInput = container.querySelector('#panel-console-input') as HTMLTextAreaElement;
   const runBtn = container.querySelector('#console-run-btn')!;
@@ -108,6 +118,7 @@ function initializeDebugger() {
   runBtn.addEventListener('click', executeCode);
   clearBtn.addEventListener('click', () => { consoleOutput.innerHTML = ''; });
   copyBtn.addEventListener('click', () => { navigator.clipboard.writeText(consoleOutput.textContent || ''); });
+  consoleInput.addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { executeCode(); e.preventDefault(); } });
 
   function logToPanel(type: string, args: any[]) {
     const line = document.createElement('div');
@@ -122,7 +133,6 @@ function initializeDebugger() {
     (console as any)[level] = (...args: any[]) => { original(...args); logToPanel(level, args); };
   });
 
-  // --- SMART ANALYSIS MODULE ---
   const analysisPanel = container.querySelector('#panel-analysis')!;
   const runAnalysisBtn = document.createElement('button');
   runAnalysisBtn.textContent = '开始诊断当前页面问题';
@@ -132,21 +142,15 @@ function initializeDebugger() {
 
   runAnalysisBtn.onclick = async () => {
     ReactDOM.render(React.createElement(DebugReport, { report: null }), reportContainer);
-    runAnalysisBtn.textContent = '正在分析...';
-    runAnalysisBtn.disabled = true;
-
-    // A tiny delay to allow UI to update
+    runAnalysisBtn.textContent = '正在分析...'; runAnalysisBtn.disabled = true;
     await new Promise(resolve => setTimeout(resolve, 50));
-
     const report = await analyzeCurrentState();
-    
     ReactDOM.render(React.createElement(DebugReport, { report }), reportContainer);
-    runAnalysisBtn.textContent = '重新诊断';
-    runAnalysisBtn.disabled = false;
+    runAnalysisBtn.textContent = '重新诊断'; runAnalysisBtn.disabled = false;
   };
 
   async function analyzeCurrentState(): Promise<AnalysisReport> {
-    let findings: ReportFinding[] = [];
+    let findings: any[] = [];
     const rootEl = document.getElementById('root');
     if (rootEl && rootEl.innerHTML.trim() !== '') {
       findings.push({ status: 'ok', description: 'React 应用已成功挂载到 #root 节点。' });
@@ -161,7 +165,7 @@ function initializeDebugger() {
     };
   }
 
-  logToPanel('info', ['Ultimate Debugger Ready.']);
+  logToPanel('info', ['Debugger Ready.']);
 }
 
 export function installLongPressDebug(options: { enable?: boolean } = {}) {
