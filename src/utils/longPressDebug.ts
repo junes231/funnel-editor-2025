@@ -7,7 +7,6 @@ function initializeDebugger() {
   if ((window as any).__lp_debug_installed) return;
   (window as any).__lp_debug_installed = true;
 
-  // --- STYLES ---
   const styles = `
     #__lp_debug_container {
       position: fixed; left: 0; bottom: 0; width: 100%; height: 50vh;
@@ -33,14 +32,16 @@ function initializeDebugger() {
     .lp-log-line { padding: 4px 0; border-bottom: 1px solid #2a2a2a; white-space: pre-wrap; word-break: break-all; }
     .lp-log-line.error { color: #f48771; } .lp-log-line.warn { color: #cca700; }
     #__lp_debug_toggle {
-      position: fixed; right: 10px; bottom: 10px; z-index: 100000; background: #007acc; color: white;
+      position: fixed;
+      right: 10px;
+      bottom: 65px; /* --- 按钮位置已修复 --- */
+      z-index: 100000; background: #007acc; color: white;
       border: none; border-radius: 50%; width: 50px; height: 50px; font-size: 12px;
       cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center;
     }
   `;
   document.head.appendChild(document.createElement('style')).innerHTML = styles;
 
-  // --- HTML STRUCTURE ---
   const container = document.createElement('div');
   container.id = '__lp_debug_container';
   container.innerHTML = `
