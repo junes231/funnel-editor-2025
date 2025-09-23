@@ -652,7 +652,7 @@ const handleSelectTemplate = async (templateName: string) => {
 };
  const handleCancel = () => {
     setSelectedQuestionIndex(null);
-    setCurrentSubView('funnelEditor'); // 返回漏斗编辑页
+    setCurrentSubView('mainEditorDashboard');// 返回漏斗编辑页
   };
 const handleImportQuestions = (importedQuestions: Question[]) => {
   try {
