@@ -14,8 +14,22 @@ const db = admin.firestore();
 const app = express();
 
 // --- CORS 中间件 ---
+// 允许 Netlify 和 GitHub Pages 两个特定来源的请求
+const allowedOrigins = [
+  'https://funnel-editor2025.netlify.app',
+  'https://junes231.github.io/funnel-editor-2025/'
+];
+
 const corsOptions = {
-  origin: "*",
+  origin: function (origin, callback) {
+    // 允许没有来源的请求 (例如服务器到服务器的请求)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) === -1) {
+      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+      return callback(new Error(msg), false);
+    }
+    return callback(null, true);
+  },
   methods: "GET,POST,OPTIONS",
   allowedHeaders: "Content-Type,Authorization",
 };
@@ -30,23 +44,16 @@ app.post("/trackClick", async (req, res) => {
     if (!funnelId || !questionId || !answerId) {
       return res.status(400).send({ error: "Missing required fields" });
     }
-    const funnelRef = db.collection("funnels").doc(funnelId);
     
-    // 注意：这里的数据库路径需要和您的 Firestore 结构完全匹配
-    const updatePath = `data.questions.find(q=>q.id==='${questionId}').answers.${answerId}.clickCount`;
-    // 为了简化，我们使用更直接的更新方式，但这依赖于您的数据结构
-    // 假设您的 answers 是一个 map
-    const questionRef = funnelRef.collection('questions').doc(questionId);
-     await db.runTransaction(async (transaction) => {
-        const questionDoc = await transaction.get(questionRef);
-        if (!questionDoc.exists) {
-            throw "Question document not found!";
+    // 您的点击追踪逻辑...
+    const answerRef = db.collection('funnels').doc(funnelId).collection('questions').doc(questionId);
+    await answerRef.set({
+      answers: {
+        [answerId]: {
+          clickCount: admin.firestore.FieldValue.increment(1)
         }
-        const answers = questionDoc.data().answers || {};
-        const currentCount = answers[answerId]?.clickCount || 0;
-        answers[answerId] = { ...answers[answerId], clickCount: currentCount + 1 };
-        transaction.update(questionRef, { answers });
-    });
+      }
+    }, { merge: true });
 
     res.status(200).send({ data: { success: true } });
   } catch (err) {
@@ -55,9 +62,14 @@ app.post("/trackClick", async (req, res) => {
   }
 });
 
+// --- ↓↓↓ 核心修改在这里 ↓↓↓ ---
+// 新增：一个专门用于测试 CORS 是否配置成功的路由
 app.get("/test-cors", (req, res) => {
+  console.log("✅ /test-cors endpoint hit.");
   res.status(200).send({ status: 'success', message: 'track-click CORS test successful!' });
 });
+// --- ↑↑↑ 修改结束 ↑↑↑ ---
+
 
 // --- 启动服务器 ---
 const PORT = process.env.PORT || 8080;

@@ -913,7 +913,7 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ db }) => {
   // --- ↓↓↓ 健壮的点击追踪逻辑 ↓↓↓ ---
   if (funnelId && currentQuestion?.id && answerId) {
     try {
-      const trackClickEndpoint = "https://track-click-498506838505.us-central1.run.app/trackClick";
+      const trackClickEndpoint = "https://api-track-click-4985068505.us-central1.run.app/trackClick";
       
       const response = await fetch(trackClickEndpoint, {
         method: "POST",
