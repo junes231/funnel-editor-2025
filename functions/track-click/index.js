@@ -14,8 +14,22 @@ const db = admin.firestore();
 const app = express();
 
 // --- CORS 中间件 ---
+// 允许 Netlify 和 GitHub Pages 两个特定来源的请求
+const allowedOrigins = [
+  'https://funnel-editor2025.netlify.app',
+  'https://junes231.github.io/funnel-editor-2025/'
+];
+
 const corsOptions = {
-  origin: "*",
+  origin: function (origin, callback) {
+    // 允许没有来源的请求 (例如服务器到服务器的请求)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) === -1) {
+      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+      return callback(new Error(msg), false);
+    }
+    return callback(null, true);
+  },
   methods: "GET,POST,OPTIONS",
   allowedHeaders: "Content-Type,Authorization",
 };
