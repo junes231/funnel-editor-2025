@@ -1,7 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 // 确保 DebugReport.tsx 和其 CSS 文件存在于 src/components/ 目录下
-import DebugReport, { AnalysisReport, ReportFinding } from '../components/DebugReport';
+import DebugReport, { AnalysisReport, ReportFinding } from '../components/DebugReport.tsx';
 
 // --- 模块 1: 全局致命错误捕获 ---
 // 这个模块会捕获导致整个应用崩溃的错误，是智能分析的核心数据来源。
