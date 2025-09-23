@@ -102,7 +102,7 @@ export default function App({ db }: AppProps) {
     setNotification({ message, type, visible: true });
     setTimeout(() => {
       setNotification(prev => ({ ...prev, visible: false }));
-    }, 3000);
+    }, 1000);
   };
 
   useEffect(() => {
@@ -147,10 +147,10 @@ export default function App({ db }: AppProps) {
         data: defaultFunnelData,
         ownerId: user.uid,
       });
-      showNotification(`Funnel "${name}" created!`, 'success');
+      setNotification(`Funnel "${name}" created!`, 'success');
       navigate(`/edit/${newFunnelRef.id}`);
     } catch (error: any) {
-      showNotification(`Failed to create funnel: ${error.message}`, 'error');
+      setNotification(`Failed to create funnel: ${error.message}`, 'error');
     }
   };
 
@@ -159,10 +159,10 @@ export default function App({ db }: AppProps) {
     try {
       const funnelDoc = doc(db, 'funnels', funnelId);
       await deleteDoc(funnelDoc);
-      showNotification('Funnel deleted.', 'success');
+      setNotification('Funnel deleted.', 'success');
       setFunnels(funnels => funnels.filter(f => f.id !== funnelId));
     } catch (error: any) {
-      showNotification(`Failed to delete funnel: ${error.message}`, 'error');
+      setNotification(`Failed to delete funnel: ${error.message}`, 'error');
     }
   };
 
@@ -219,7 +219,7 @@ export default function App({ db }: AppProps) {
               : (
                 <>
                   <UserHeader user={user} isAdmin={isAdmin} />
-                  <FunnelEditor db={db} updateFunnelData={updateFunnelData} showNotification={showNotification} />
+                  <FunnelEditor db={db} updateFunnelData={updateFunnelData} />
                 </>
               )
           }
@@ -247,10 +247,9 @@ interface FunnelDashboardProps {
   setFunnels: React.Dispatch<React.SetStateAction<Funnel[]>>;
   createFunnel: (name: string) => Promise<void>;
   deleteFunnel: (funnelId: string) => Promise<void>;
-  showNotification: (message: string, type?: 'success' | 'error') => void;
-}
+  }
 
-const FunnelDashboard: React.FC<FunnelDashboardProps> = ({ db, user, isAdmin, funnels, setFunnels, createFunnel, deleteFunnel, showNotification }) => {
+const FunnelDashboard: React.FC<FunnelDashboardProps> = ({ db, user, isAdmin, funnels, setFunnels, createFunnel, deleteFunnel }) => {
   const [newFunnelName, setNewFunnelName] = useState('');
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
@@ -281,7 +280,7 @@ const FunnelDashboard: React.FC<FunnelDashboardProps> = ({ db, user, isAdmin, fu
 
   const handleCreateFunnel = async () => {
     if (!newFunnelName.trim()) {
-      showNotification('Please enter a funnel name.', 'error');
+      setNotification('Please enter a funnel name.', 'error');
       return;
     }
     setIsCreating(true);
@@ -348,8 +347,7 @@ const FunnelDashboard: React.FC<FunnelDashboardProps> = ({ db, user, isAdmin, fu
 interface FunnelEditorProps {
   db: Firestore;
   updateFunnelData: (funnelId: string, newData: FunnelData) => Promise<void>;
-  showNotification: (message: string, type?: 'success' | 'error') => void;
-}
+  }
 
 const useFunnelEditorContext = () => {
   return useOutletContext<{
@@ -357,12 +355,12 @@ const useFunnelEditorContext = () => {
     funnelData: FunnelData;
     funnelName: string;
     setFunnelData: (updater: (prev: FunnelData) => FunnelData) => void;
-    showNotification: FunnelEditorProps['showNotification'];
+    
     debugLinkValue: string;
   }>();
 };
 
-const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData, showNotification }) => {
+const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData }) => {
   const { funnelId } = useParams<{ funnelId: string }>();
   const navigate = useNavigate();
 
@@ -498,7 +496,7 @@ const QuizEditorComponent: React.FC = () => {
   
     const handleAddQuestion = () => {
         if (questions.length >= 6) {
-          showNotification('You can only have up to 6 questions for this quiz.', 'error');
+          setNotification('You can only have up to 6 questions for this quiz.', 'error');
           return;
         }
         const newQuestion: Question = {
@@ -519,7 +517,7 @@ const QuizEditorComponent: React.FC = () => {
     
     const handleSelectTemplate = async (templateName: string) => {
         if (questions.length >= 6) {
-            showNotification('Cannot add from template, the 6-question limit has been reached.', 'error');
+            setNotification('Cannot add from template, the 6-question limit has been reached.', 'error');
             return;
         }
         try {
@@ -541,14 +539,14 @@ const QuizEditorComponent: React.FC = () => {
                 return { ...q, id: questionId, type: 'single-choice', answers: answersObj, data: { affiliateLinks: Array(4).fill('') } };
             });
             if (questions.length + newQuestionsWithIds.length > 6) {
-                showNotification(`Cannot add all questions, it would exceed the 6-question limit.`, 'error');
+                setNotification(`Cannot add all questions, it would exceed the 6-question limit.`, 'error');
                 return;
             }
             setQuestions(prev => [...prev, ...newQuestionsWithIds]);
-            showNotification(`Template "${templateName}" loaded successfully!`, 'success');
+            setNotification(`Template "${templateName}" loaded successfully!`, 'success');
         } catch (error) {
             console.error('Error loading template:', error);
-            showNotification((error as Error).message || 'Failed to load the template.', 'error');
+            setNotification((error as Error).message || 'Failed to load the template.', 'error');
         }
     };
 
@@ -623,7 +621,7 @@ const QuestionFormComponent: React.FC = () => {
 
     const handleSave = () => {
         if (!title.trim()) {
-            showNotification('Question title cannot be empty!', 'error');
+            setNotification('Question title cannot be empty!', 'error');
             return;
         }
         const answersObj: { [answerId: string]: Answer } = {};
@@ -632,7 +630,7 @@ const QuestionFormComponent: React.FC = () => {
         });
 
         if (Object.keys(answersObj).length === 0) {
-            showNotification('Please provide at least one answer option.', 'error');
+            setNotification('Please provide at least one answer option.', 'error');
             return;
         }
 
@@ -648,7 +646,7 @@ const QuestionFormComponent: React.FC = () => {
             newQuestions[questionIndex] = updatedQuestion;
             return {...prev, questions: newQuestions};
         });
-        showNotification('Question saved!', 'success');
+        setNotification('Question saved!', 'success');
         navigate(`/edit/${funnelId}/questions`);
     };
 
@@ -657,7 +655,7 @@ const QuestionFormComponent: React.FC = () => {
             ...prev,
             questions: prev.questions.filter((_, i) => i !== questionIndex)
         }));
-        showNotification('Question deleted.', 'success');
+        setNotification('Question deleted.', 'success');
         navigate(`/edit/${funnelId}/questions`);
     };
 
@@ -761,7 +759,7 @@ const LinkSettingsComponent: React.FC = () => {
             </select>
           </div>
           <div className="form-actions">
-          <button className="save-button" onClick={() => showNotification('Settings applied! (Auto-saved)')}>
+          <button className="save-button" onClick={() => setNotification('Settings applied! (Auto-saved)')}>
           <span role="img" aria-label="save">💾</span> Applied
            </button>
             <BackButton onClick={() => navigate(`/edit/${funnelId}`)}>
@@ -797,7 +795,7 @@ const ColorCustomizerComponent: React.FC = () => {
             <input type="color" value={funnelData.textColor} onChange={(e) => setFunnelData(prev => ({...prev, textColor: e.target.value}))} />
           </div>
           <div className="form-actions">
-            <button className="save-button" onClick={() => showNotification('Color settings applied! (Auto-saved)')}>
+            <button className="save-button" onClick={() => setNotification('Color settings applied! (Auto-saved)')}>
             <span role="img" aria-label="save">💾</span> Applied
             </button>
             <BackButton onClick={() => navigate(`/edit/${funnelId}`)}>
