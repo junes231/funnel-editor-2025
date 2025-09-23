@@ -79,7 +79,7 @@ const SmartAnalysisReport: React.FC<SmartAnalysisReportProps> = ({ questions, fi
       clarityScore -= 10;
       report.clarity.suggestions.push(`Question ${index + 1}'s title is very long. Consider simplifying it.`);
     }
-    if (q.answers.some(a => a.text.split(' ').length > 7)) {
+     if (Object.values(q.answers).some(a => a.text.split(' ').length > 7)) {
       clarityScore -= 5;
       report.clarity.suggestions.push(`Some answers in Question ${index + 1} are a bit wordy. Shorter answers are easier to read.`);
     }
