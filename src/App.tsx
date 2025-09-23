@@ -554,7 +554,7 @@ const handleSelectTemplate = async (templateName: string) => {
   }
 
   try {
-    const response = await fetch(`/templates/${templateName}.json`);
+    const response = await fetch(`${process.env.PUBLIC_URL}/templates/${templateName}.json`);
     if (!response.ok) {
         throw new Error(`Network response was not ok: ${response.statusText}`);
     }
