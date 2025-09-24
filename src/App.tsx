@@ -105,7 +105,7 @@ export default function App({ db }: AppProps) {
       } else {
         setUser(null);
       }
-      
+      setIsAuthLoading(false);
     });
     return () => unsubscribe();
   }, []);
@@ -374,7 +374,7 @@ const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData }) => 
         
         data.questions = compatibleQuestions;
         setFunnelData(data);
-        setAppIsLoading(false);
+        setIsDataLoaded(true);
       } else {
         navigate('/');
       }
