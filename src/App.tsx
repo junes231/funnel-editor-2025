@@ -105,7 +105,7 @@ export default function App({ db }: AppProps) {
       } else {
         setUser(null);
       }
-      setIsAuthLoading(false);
+      setIsLoading(false);
     });
     return () => unsubscribe();
   }, []);
