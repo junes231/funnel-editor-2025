@@ -642,35 +642,33 @@ const QuestionFormComponent: React.FC = () => {
         navigate(`/edit/${funnelId}/questions`);
     };
 
-    // --- 恢复您设计的 Delete 按钮动画和跳转逻辑 ---
+   const onCancel = () => {
+        const button = document.querySelector('.cancel-button');
+    if (button) {
+      button.classList.add('animate-out');
+      setTimeout(() => {
+        navigate('/');
+      }, 1000);
+    }
+  };
+  // --- 恢复您设计的 Delete 按钮动画和跳转逻辑 ---
       const onDelete = () => {
     // 元素开始淡出
-    setIsHidden(true);
-
-    setTimeout(() => {
-      // 删除问题
-      setFunnelData(prev => ({
-        ...prev,
-        questions: prev.questions.filter((_, i) => i !== questionIndex)
-      }));
-
-      // 删除完成后返回上一页
-      navigate(-1);
-    }, 1000); // 0.5 秒淡出动画
+   setIsDeleting(true);
+    const button = document.querySelector('.delete-button');
+    if (button) {
+      button.classList.add('animate-out');
+      setTimeout(() => {
+        onDelete();
+        navigate(-1, { replace: true });
+      }, 1000);
+    } else {
+      console.error("Question ID is missing!");
+    }
   };
 
     // --- 恢复您设计的 Back to List 按钮动画和跳转逻辑 ---
-    const onCancel = () => {
-        setIsHidden(true); // 启动动画
-        setTimeout(() => {
-            navigate(`/edit/${funnelId}/questions`);
-        }, 1000); // 1秒后执行跳转
-    };
-
-    if (!question) {
-        useEffect(() => { navigate(`/edit/${funnelId}/questions`, { replace: true }); }, [funnelId, navigate]);
-        return null;
-    }
+    
 
     const handleAnswerTextChange = (id: string, newText: string) => {
         setAnswers(currentAnswers => currentAnswers.map(ans => ans.id === id ? { ...ans, text: newText } : ans));
