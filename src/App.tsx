@@ -105,7 +105,7 @@ export default function App({ db }: AppProps) {
       } else {
         setUser(null);
       }
-      setIsLoading(false);
+      
     });
     return () => unsubscribe();
   }, []);
@@ -120,7 +120,7 @@ export default function App({ db }: AppProps) {
     }).catch(() => setIsAdmin(false));
   }, [user]);
 
-  useEffect(() => {
+   useEffect(() => {
     if (user) {
       const currentPath = window.location.hash.split('?')[0].replace('#', '');
       const authPages = ['/login', '/finish-email-verification', '/register', '/reset', '/verify'];
@@ -128,53 +128,44 @@ export default function App({ db }: AppProps) {
         navigate('/');
       }
     }
-  }, [user, navigate]);
-
-  const createFunnel = async (name: string) => {
+    // 当 user 状态确定后，如果不是编辑器页面，就完成加载
+    if (user !== null && !location.pathname.startsWith('/edit/')) {
+        setIsLoading(false);
+    }
+  }, [user, navigate, location.pathname]);
+   const createFunnel = async (name: string) => {
     if (!db || !user) return;
     const funnelsCollectionRef = collection(db, 'funnels');
     try {
-      const newFunnelRef = await addDoc(funnelsCollectionRef, {
-        name: name,
-        data: defaultFunnelData,
-        ownerId: user.uid,
-      });
-      // showNotification Removed
+      const newFunnelRef = await addDoc(funnelsCollectionRef, { name, data: defaultFunnelData, ownerId: user.uid });
       navigate(`/edit/${newFunnelRef.id}`);
     } catch (error: any) {
       console.error('Error creating funnel:', error);
-      // showNotification Removed
     }
   };
 
   const deleteFunnel = async (funnelId: string) => {
     if (!db || !user) return;
     try {
-      const funnelDoc = doc(db, 'funnels', funnelId);
-      await deleteDoc(funnelDoc);
-      // showNotification Removed
+      await deleteDoc(doc(db, 'funnels', funnelId));
       setFunnels(funnels => funnels.filter(f => f.id !== funnelId));
     } catch (error: any) {
       console.error('Failed to delete funnel:', error);
-      // showNotification Removed
     }
   };
 
   const updateFunnelData = async (funnelId: string, newData: FunnelData) => {
     if (!db || !user) return;
     try {
-      const funnelDoc = doc(db, 'funnels', funnelId);
-      await updateDoc(funnelDoc, { data: newData });
+      await updateDoc(doc(db, 'funnels', funnelId), { data: newData });
       console.log('✅ Funnel updated:', funnelId);
     } catch (error) {
       console.error('Error updating funnel:', error);
     }
   };
 
-  const isPublicPlayPath = location.pathname.startsWith('/play/');
-
-  if (isLoading && !isPublicPlayPath) {
-    return <div style={{ textAlign: 'center', marginTop: '50px' }}>Verifying user status...</div>;
+  if (isLoading) {
+    return <div style={{ textAlign: 'center', marginTop: '50px' }}>Loading...</div>;
   }
   
   return (
@@ -212,18 +203,16 @@ export default function App({ db }: AppProps) {
               : (
                 <>
                   <UserHeader user={user} isAdmin={isAdmin} />
-                  <FunnelEditor db={db} updateFunnelData={updateFunnelData} />
+                  <FunnelEditor db={db} updateFunnelData={updateFunnelData} setAppIsLoading={setIsLoading} />
                 </>
               )
           }
         />
         <Route path="*" element={<h2>404 Not Found</h2>} />
       </Routes>
-      {/* --- 修改: 移除 notification 的 JSX --- */}
     </div>
   );
 }
-
 // ===================================================================
 // vvvvvvvvvv         All Components Go Here         vvvvvvvvvv
 // ===================================================================
@@ -385,7 +374,7 @@ const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData }) => 
         
         data.questions = compatibleQuestions;
         setFunnelData(data);
-        setIsDataLoaded(true);
+        setAppIsLoading(false);
       } else {
         navigate('/');
       }
