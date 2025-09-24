@@ -112,12 +112,58 @@ export const LongPressDebug: React.FC = () => {
 
   // 智能分析报告
   const runAnalysis = async () => {
-    addLog({ id: "analysis", type: "info", message: "正在运行智能分析..." });
-    const report: AnalysisReport = await analyzeCurrentState();
-    const reportContainer = document.createElement("div");
-    document.body.appendChild(reportContainer);
-    ReactDOM.render(<DebugReport report={report} />, reportContainer);
-  };
+  addLog({ id: "analysis", type: "info", message: "正在运行智能分析..." });
+  const report: AnalysisReport = await analyzeCurrentState();
+
+  const container = document.createElement("div");
+  container.style.position = "fixed";
+  container.style.top = "0";
+  container.style.left = "0";
+  container.style.width = "100%";
+  container.style.height = "100%";
+  container.style.background = "rgba(0,0,0,0.7)";
+  container.style.zIndex = "100001";
+  document.body.appendChild(container);
+
+  const close = () => container.remove();
+
+  ReactDOM.createRoot(container).render(
+    <div
+      style={{
+        position: "absolute",
+        top: "50%",
+        left: "50%",
+        transform: "translate(-50%, -50%)",
+        background: "#222",
+        padding: 20,
+        borderRadius: 8,
+        width: "90%",
+        maxWidth: 600,
+        maxHeight: "80%",
+        overflowY: "auto",
+        color: "#fff",
+      }}
+    >
+      <button
+        style={{
+          position: "absolute",
+          top: 10,
+          right: 10,
+          background: "red",
+          color: "white",
+          border: "none",
+          borderRadius: 4,
+          padding: "4px 8px",
+          cursor: "pointer",
+        }}
+        onClick={close}
+      >
+        关闭
+      </button>
+      <DebugReport report={report} />
+    </div>
+  );
+};
 
   async function analyzeCurrentState(): Promise<AnalysisReport> {
     let findings: ReportFinding[] = [];
