@@ -589,6 +589,9 @@ const QuestionFormComponent: React.FC = () => {
     const { questionIndex: questionIndexStr } = useParams<{ questionIndex: string }>();
     const navigate = useNavigate();
     
+     const [isCancelling, setIsCancelling] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+
     const questionIndex = parseInt(questionIndexStr!, 10);
     const question = funnelData.questions[questionIndex];
 
@@ -634,16 +637,29 @@ const QuestionFormComponent: React.FC = () => {
         navigate(`/edit/${funnelId}/questions`);
     };
 
-    const onDelete = () => {
-        setFunnelData(prev => ({
-            ...prev,
-            questions: prev.questions.filter((_, i) => i !== questionIndex)
-        }));
-        navigate(`/edit/${funnelId}/questions`);
-    };
+    // --- 恢复您设计的 Delete 按钮动画和跳转逻辑 ---
+      const onDelete = () => {
+    // 元素开始淡出
+    setIsHidden(true);
 
+    setTimeout(() => {
+      // 删除问题
+      setFunnelData(prev => ({
+        ...prev,
+        questions: prev.questions.filter((_, i) => i !== questionIndex)
+      }));
+
+      // 删除完成后返回上一页
+      navigate(-1);
+    }, 1000); // 0.5 秒淡出动画
+  };
+
+    // --- 恢复您设计的 Back to List 按钮动画和跳转逻辑 ---
     const onCancel = () => {
-        navigate(`/edit/${funnelId}/questions`);
+        setIsHidden(true); // 启动动画
+        setTimeout(() => {
+            navigate(`/edit/${funnelId}/questions`);
+        }, 1000); // 1秒后执行跳转
     };
 
     if (!question) {
@@ -699,14 +715,27 @@ const QuestionFormComponent: React.FC = () => {
                 ))}
             </div>
             <div className="form-actions">
-                <button className="save-button" onClick={handleSave}><span role="img" aria-label="save">💾</span> Save Question</button>
-                <button className="cancel-button" onClick={onCancel}><span role="img" aria-label="cancel">←</span> Back to List</button>
-                <button className="delete-button" onClick={onDelete}><span role="img" aria-label="delete">🗑️</span> Delete Question</button>
+                <button className="save-button" onClick={handleSave} disabled={isCancelling || isDeleting}>
+                    <span role="img" aria-label="save">💾</span> Save Question
+                </button>
+                <button 
+                    className={`cancel-button ${isCancelling ? 'animate-out' : ''}`} 
+                    onClick={onCancel}
+                    disabled={isCancelling || isDeleting}
+                >
+                    <span role="img" aria-label="cancel">←</span> Back to List
+                </button>
+                <button 
+                    className={`delete-button ${isDeleting ? 'animate-out' : ''}`} 
+                    onClick={onDelete}
+                    disabled={isCancelling || isDeleting}
+                >
+                    <span role="img" aria-label="delete">🗑️</span> Delete Question
+                </button>
             </div>
         </div>
     );
 };
-
 const LinkSettingsComponent: React.FC = () => {
     const { funnelId, funnelData, setFunnelData } = useFunnelEditorContext();
     const navigate = useNavigate();
@@ -860,7 +889,7 @@ const QuizPlayer: React.FC<{ db: Firestore }> = ({ db }) => {
 
     if (funnelId && currentQuestion?.id && answerId) {
         try {
-          const trackClickEndpoint = "https://api-track-click-4985068505.us-central1.run.app/trackClick";
+          const trackClickEndpoint = "https://api-track-click-jgett3ucqq-uc.a.run.app/trackClick";
           await fetch(trackClickEndpoint, {
             method: "POST",
             mode: "cors",
