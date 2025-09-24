@@ -642,19 +642,25 @@ const QuestionFormComponent: React.FC = () => {
   };
   // --- 恢复您设计的 Delete 按钮动画和跳转逻辑 ---
       const onDelete = () => {
-    // 元素开始淡出
-   setIsDeleting(true);
-    const button = document.querySelector('.delete-button');
-    if (button) {
-      button.classList.add('animate-out');
-      setTimeout(() => {
-        onDelete();
-        navigate(-1, { replace: true });
-      }, 1000);
-    } else {
-      console.error("Question ID is missing!");
-    }
-  };
+  setIsDeleting(true); // 启动动画状态
+
+  const button = document.querySelector('.delete-button');
+  if (button) {
+    button.classList.add('animate-out'); // 给按钮加上淡出动画
+  }
+
+  // ⏳ 等待1秒（动画时间），再执行删除 + 跳转
+  setTimeout(() => {
+    // 删除数据
+    setFunnelData(prev => ({
+      ...prev,
+      questions: prev.questions.filter((_, i) => i !== questionIndex),
+    }));
+
+    // 跳转上一页
+    navigate(-1, { replace: true });
+  }, 1000); // 这里的 1000ms 要和 CSS 动画时长保持一致
+};
 
     // --- 恢复您设计的 Back to List 按钮动画和跳转逻辑 ---
     
