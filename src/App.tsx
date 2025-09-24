@@ -600,7 +600,7 @@ const QuizEditorComponent: React.FC = () => {
 };
 
 const QuestionFormComponent: React.FC = () => {
-    const { funnelId, funnelData, setFunnelData, showNotification } = useFunnelEditorContext();
+    const { funnelId, funnelData, setFunnelData } = useFunnelEditorContext();
     const { questionIndex: questionIndexStr } = useParams<{ questionIndex: string }>();
     const navigate = useNavigate();
     
@@ -621,7 +621,7 @@ const QuestionFormComponent: React.FC = () => {
 
     const handleSave = () => {
         if (!title.trim()) {
-            setNotification('Question title cannot be empty!', 'error');
+            
             return;
         }
         const answersObj: { [answerId: string]: Answer } = {};
@@ -630,7 +630,7 @@ const QuestionFormComponent: React.FC = () => {
         });
 
         if (Object.keys(answersObj).length === 0) {
-            setNotification('Please provide at least one answer option.', 'error');
+            
             return;
         }
 
@@ -646,7 +646,7 @@ const QuestionFormComponent: React.FC = () => {
             newQuestions[questionIndex] = updatedQuestion;
             return {...prev, questions: newQuestions};
         });
-        setNotification('Question saved!', 'success');
+        
         navigate(`/edit/${funnelId}/questions`);
     };
 
@@ -655,7 +655,7 @@ const QuestionFormComponent: React.FC = () => {
             ...prev,
             questions: prev.questions.filter((_, i) => i !== questionIndex)
         }));
-        setNotification('Question deleted.', 'success');
+        
         navigate(`/edit/${funnelId}/questions`);
     };
 
@@ -725,7 +725,7 @@ const QuestionFormComponent: React.FC = () => {
 };
 
 const LinkSettingsComponent: React.FC = () => {
-    const { funnelId, funnelData, setFunnelData, showNotification } = useFunnelEditorContext();
+    const { funnelId, funnelData, setFunnelData } = useFunnelEditorContext();
     const navigate = useNavigate();
     
     return (
@@ -759,7 +759,7 @@ const LinkSettingsComponent: React.FC = () => {
             </select>
           </div>
           <div className="form-actions">
-          <button className="save-button" onClick={() => setNotification('Settings applied! (Auto-saved)')}>
+          <button className="save-button" onClick={handleSave}>
           <span role="img" aria-label="save">💾</span> Applied
            </button>
             <BackButton onClick={() => navigate(`/edit/${funnelId}`)}>
@@ -795,7 +795,7 @@ const ColorCustomizerComponent: React.FC = () => {
             <input type="color" value={funnelData.textColor} onChange={(e) => setFunnelData(prev => ({...prev, textColor: e.target.value}))} />
           </div>
           <div className="form-actions">
-            <button className="save-button" onClick={() => setNotification('Color settings applied! (Auto-saved)')}>
+            <button className="save-button" onClick={handleSave}>
             <span role="img" aria-label="save">💾</span> Applied
             </button>
             <BackButton onClick={() => navigate(`/edit/${funnelId}`)}>
@@ -876,7 +876,7 @@ const QuizPlayer: React.FC<{ db: Firestore }> = ({ db }) => {
 
     if (funnelId && currentQuestion?.id && answerId) {
         try {
-          const trackClickEndpoint = "https://api-track-click-498506838505.us-central1.run.app/trackClick";
+          const trackClickEndpoint = "https://api-track-click-jgett3ucqq-uc.a.run.app//trackClick";
           await fetch(trackClickEndpoint, {
             method: "POST",
             mode: "cors",
