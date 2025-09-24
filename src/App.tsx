@@ -930,8 +930,10 @@ const QuizPlayer: React.FC<{ db: Firestore }> = ({ db }) => {
   } as React.CSSProperties;
     
   return (
-    <div className="quiz-player-container" style={quizPlayerContainerStyle}>
-      <h3 style={{ color: 'var(--text-color)' }}>{currentQuestion.title}</h3>
+    <div className="quiz-player-container" style={{ textAlign: 'center', marginTop: '80px' }}>
+        <h2 style={{ fontSize: '32px', fontWeight: 'bold', color: '#ff4f81', animation: 'pulse 1.5s infinite' }}>
+          Ready to unlock your secret match? 🔥
+        </h2>
       <div className="quiz-answers-container">
         {sortedAnswers.map((answer, index) => {
           const match = answer.text.match(/^([A-Z]\.)\s*(.*)$/);
