@@ -184,8 +184,8 @@ const showNotification = (message: string, type: 'success' | 'error' = 'success'
     }
   };
 
-  if (isLoading) {
-    return <div style={{ textAlign: 'center', marginTop: '50px' }}>Loading...</div>;
+ if (isAuthLoading) {
+    return <div style={{ textAlign: 'center', marginTop: '50px' }}>Verifying user status...</div>;
   }
   
   return (
@@ -223,7 +223,7 @@ const showNotification = (message: string, type: 'success' | 'error' = 'success'
               : (
                 <>
                   <UserHeader user={user} isAdmin={isAdmin} />
-                  <FunnelEditor db={db} updateFunnelData={updateFunnelData} setAppIsLoading={setIsLoading} />
+                  <FunnelEditor db={db} updateFunnelData={updateFunnelData} />
                 </>
               )
           }
