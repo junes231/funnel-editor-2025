@@ -1391,7 +1391,7 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
   };
   
   // --- UNCHANGED: Cancel and Delete logic remains the same ---
-  const onCancel = () => {
+  const handleCancel = () => {
         const button = document.querySelector('.cancel-button');
     if (button) {
       button.classList.add('animate-out');
@@ -1401,7 +1401,7 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
     }
   };
   // --- 恢复您设计的 Delete 按钮动画和跳转逻辑 ---
-   const onDelete = () => {
+   const handleDelete = () => {
   setIsDeleting(true); // 启动动画状态
 
   const button = document.querySelector('.delete-button');
