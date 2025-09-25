@@ -12,49 +12,45 @@ interface DebugLog {
   message: string;
   stack?: string;
   collapsed?: boolean;
-  meta?: any; // method/url/options 等
+  meta?: any;
 }
 
 const DEFAULT_MAX_LINES = 500;
 
 export const LongPressDebug: React.FC<{ maxLines?: number }> = ({ maxLines = DEFAULT_MAX_LINES }) => {
   const [logs, setLogs] = useState<DebugLog[]>([]);
+  const logsRef = useRef<DebugLog[]>([]);
   const [filter, setFilter] = useState("");
   const [visible, setVisible] = useState(false);
   const consoleInputRef = useRef<HTMLTextAreaElement | null>(null);
 
-  // 面板高度拖拽（手机触摸）
+  // 高度拖拽（pointer 兼容鼠标与触摸）
   const [height, setHeight] = useState(300);
   const startYRef = useRef(0);
   const startHeightRef = useRef(0);
   const draggingRef = useRef(false);
-  const onTouchStart = (e: React.TouchEvent) => {
-    draggingRef.current = true;
-    startYRef.current = e.touches[0].clientY;
-    startHeightRef.current = height;
-  };
-  const onTouchMove = (e: TouchEvent) => {
-    if (!draggingRef.current) return;
-    const delta = startYRef.current - e.touches[0].clientY;
-    setHeight(Math.max(120, startHeightRef.current + delta));
-  };
-  const onTouchEnd = () => (draggingRef.current = false);
-  useEffect(() => {
-    window.addEventListener("touchmove", onTouchMove);
-    window.addEventListener("touchend", onTouchEnd);
-    return () => {
-      window.removeEventListener("touchmove", onTouchMove);
-      window.removeEventListener("touchend", onTouchEnd);
-    };
+
+  // 防止按钮重复触发
+  const lastToggleRef = useRef(0);
+  const handleToggleVisible = useCallback((e?: React.SyntheticEvent | any) => {
+    const now = Date.now();
+    if (now - lastToggleRef.current < 300) return;
+    lastToggleRef.current = now;
+    setVisible(v => !v);
+    e?.preventDefault?.();
   }, []);
 
-  // addLog 使用 useCallback（稳定引用）
-  const addLog = useCallback((log: DebugLog) => {
-    setLogs((prev) => [log, ...prev].slice(0, maxLines));
-  }, [maxLines]);
+  // 保证 logsRef 与 state 同步
+  const updateLogsState = useCallback((next: DebugLog[]) => {
+    logsRef.current = next;
+    setLogs(next);
+  }, []);
 
-  // 序列化 body 的辅助（重试时能重建 body）
-  function serializeBody(body: any) {
+  const addLog = useCallback((log: DebugLog) => {
+    updateLogsState([log, ...logsRef.current].slice(0, maxLines));
+  }, [maxLines, updateLogsState]);
+
+  const serializeBody = (body: any) => {
     try {
       if (!body) return body;
       if (typeof body === "string") return body;
@@ -67,47 +63,113 @@ export const LongPressDebug: React.FC<{ maxLines?: number }> = ({ maxLines = DEF
     } catch {
       return "[unserializable body]";
     }
-  }
+  };
 
-  // Fatal Error 捕获 + source map 还原
+  // ---- SourceMap + 全局错误捕获 ----
   useEffect(() => {
-    window.onerror = async (msg: any, src: any, line: any, col: any, err: any) => {
-      let stack = err?.stack || `${msg} at ${src}:${line}:${col}`;
+    const handleErrorEvent = async (evtOrMsg: any, src?: any, line?: any, col?: any, err?: any) => {
+      // 支持 window.onerror 旧签名与 addEventListener('error', ev)
+      let message = "";
+      let stack = "";
+      let scriptUrl: string | null = null;
+      if (evtOrMsg && evtOrMsg instanceof ErrorEvent) {
+        message = String(evtOrMsg.message || "ErrorEvent");
+        scriptUrl = evtOrMsg.filename || null;
+        stack = (evtOrMsg.error && evtOrMsg.error.stack) || `${message} at ${scriptUrl}:${evtOrMsg.lineno}:${evtOrMsg.colno}`;
+      } else {
+        message = String(evtOrMsg);
+        stack = err?.stack || `${message} at ${src}:${line}:${col}`;
+        scriptUrl = typeof src === "string" ? src : null;
+      }
+
       let mapped = stack;
       try {
-        if (typeof src === "string") {
-          const res = await fetch(src + ".map");
-          if (res.ok) {
-            const smap = await res.json();
+        if (scriptUrl) {
+          // 先尝试直接取 map
+          const tryFetchMap = async (mapUrl: string) => {
+            const r = await fetch(mapUrl);
+            if (!r.ok) throw new Error("no map");
+            return await r.json();
+          };
+
+          let smap: any = null;
+          try {
+            smap = await tryFetchMap(scriptUrl + ".map");
+          } catch {
+            // 失败则尝试解析脚本里的 sourceMappingURL
+            try {
+              const scriptText = await fetch(scriptUrl).then(r => r.text());
+              const m = scriptText.match(/\/\/[#@]\s*sourceMappingURL\s*=\s*(\S+)/);
+              if (m && m[1]) {
+                const mapUrl = new URL(m[1].trim(), scriptUrl).toString();
+                smap = await tryFetchMap(mapUrl);
+              }
+            } catch {
+              // 忽略
+            }
+          }
+
+          if (smap) {
             const consumer = await new SourceMapConsumer(smap);
             mapped = stack
               .split("\n")
               .map((l: string) => {
-                const m = l.match(/:(\d+):(\d+)/);
+                const m = l.match(/(https?:\/\/[^:\s)]+):(\d+):(\d+)/) || l.match(/:(\d+):(\d+)/);
                 if (m) {
-                  const ln = parseInt(m[1], 10);
-                  const cn = parseInt(m[2], 10);
-                  const pos = consumer.originalPositionFor({ line: ln, column: cn });
-                  if (pos.source) return `${pos.source}:${pos.line}:${pos.column}`;
+                  const ln = parseInt(m[m.length - 2], 10);
+                  const cn = parseInt(m[m.length - 1], 10);
+                  // 尝试不同 column 偏移（有的工具列以0或1为起点）
+                  for (const c of [cn, Math.max(0, cn - 1), cn + 1]) {
+                    try {
+                      const pos = consumer.originalPositionFor({ line: ln, column: c });
+                      if (pos && pos.source) {
+                        const name = pos.name ? ` (${pos.name})` : "";
+                        return `${pos.source}:${pos.line}:${pos.column}${name}`;
+                      }
+                    } catch { /* ignore */ }
+                  }
                 }
                 return l;
               })
               .join("\n");
-            consumer.destroy();
+            try { consumer.destroy(); } catch {}
           }
         }
-      } catch {}
-      addLog({ id: Date.now() + "-error", type: "error", message: String(msg), stack: mapped, collapsed: true });
+      } catch (e) {
+        // 不影响主流程
+      }
+
+      addLog({ id: `${Date.now()}-error`, type: "error", message, stack: mapped, collapsed: true });
+    };
+
+    // 支持两种方式捕获（兼容）
+    const oldOnError = window.onerror;
+    window.onerror = (...args: any[]) => {
+      handleErrorEvent(...args);
+      if (typeof oldOnError === "function") oldOnError.apply(window, args);
+    };
+
+    const onUnhandledRejection = (ev: PromiseRejectionEvent) => {
+      const reason = ev.reason;
+      const msg = reason?.message || String(reason);
+      const stack = reason?.stack || msg;
+      addLog({ id: `${Date.now()}-urej`, type: "error", message: msg, stack, collapsed: true });
+    };
+    window.addEventListener("unhandledrejection", onUnhandledRejection);
+
+    return () => {
+      window.onerror = oldOnError as any;
+      window.removeEventListener("unhandledrejection", onUnhandledRejection);
     };
   }, [addLog]);
 
-  // fetch 拦截（增强保存 meta）
+  // ---- fetch 拦截 ----
   useEffect(() => {
     const originalFetch = window.fetch.bind(window);
-    window.fetch = async (input: any, init: any = {}) => {
+    const wrapped = async (input: any, init: any = {}) => {
       const method = ((init && init.method) || (typeof input === "string" ? "GET" : input?.method) || "GET").toUpperCase();
       const url = typeof input === "string" ? input : input?.url || String(input);
-      const options = { ...init };
+      const options: any = { ...init };
       if ("body" in options) options.body = serializeBody(options.body);
 
       const meta = { method, url, options };
@@ -116,7 +178,7 @@ export const LongPressDebug: React.FC<{ maxLines?: number }> = ({ maxLines = DEF
         let text = "";
         try { text = await res.clone().text(); } catch {}
         addLog({
-          id: Date.now() + "-net",
+          id: `${Date.now()}-net`,
           type: res.ok ? "network" : "error",
           message: `[${method}] ${url} → ${res.status}`,
           stack: text,
@@ -125,7 +187,7 @@ export const LongPressDebug: React.FC<{ maxLines?: number }> = ({ maxLines = DEF
         return res;
       } catch (err: any) {
         addLog({
-          id: Date.now() + "-neterr",
+          id: `${Date.now()}-neterr`,
           type: "error",
           message: `[${method}] ${url} → 请求失败`,
           stack: String(err?.message || err),
@@ -134,49 +196,56 @@ export const LongPressDebug: React.FC<{ maxLines?: number }> = ({ maxLines = DEF
         throw err;
       }
     };
+    // 覆盖
+    (window as any).fetch = wrapped;
     return () => {
-      window.fetch = originalFetch;
+      (window as any).fetch = originalFetch;
     };
   }, [addLog]);
 
-  // 控制台运行 JS（支持 Ctrl/Cmd+Enter）
+  // 控制台运行 JS
   const runConsoleCode = useCallback(() => {
     const code = consoleInputRef.current?.value;
     if (!code || !code.trim()) return;
-    addLog({ id: Date.now() + "-eval-in", type: "info", message: `> ${code}` });
+    addLog({ id: `${Date.now()}-eval-in`, type: "info", message: `> ${code}` });
     try {
       // eslint-disable-next-line no-eval
       const result = eval(code);
-      addLog({ id: Date.now() + "-eval-out", type: "info", message: `<- ${String(result)}` });
+      addLog({ id: `${Date.now()}-eval-out`, type: "info", message: `<- ${String(result)}` });
     } catch (e: any) {
-      addLog({ id: Date.now() + "-eval-err", type: "error", message: String(e) });
+      addLog({ id: `${Date.now()}-eval-err`, type: "error", message: String(e) });
     }
     if (consoleInputRef.current) consoleInputRef.current.value = "";
   }, [addLog]);
 
-  // 复制日志到剪贴板
+  // 复制日志到剪贴板（使用 logsRef 保证最新）
   const copyLogs = useCallback(async () => {
-    const text = logs.map(l => `[${l.type.toUpperCase()}] ${l.message}${l.stack ? "\n" + l.stack : ""}`).join("\n\n");
+    const text = logsRef.current.map(l => `[${l.type.toUpperCase()}] ${l.message}${l.stack ? `\n${l.stack}` : ""}`).join("\n\n");
     try {
       await navigator.clipboard.writeText(text);
-      addLog({ id: Date.now() + "-copy", type: "info", message: "已复制日志到剪贴板" });
+      addLog({ id: `${Date.now()}-copy`, type: "info", message: "已复制日志到剪贴板" });
     } catch {
-      addLog({ id: Date.now() + "-copy-err", type: "error", message: "复制失败" });
+      addLog({ id: `${Date.now()}-copy-err`, type: "error", message: "复制失败" });
     }
-  }, [logs, addLog]);
+  }, [addLog]);
 
-  const clearLogs = useCallback(() => setLogs([]), []);
-  const toggleCollapse = useCallback((id: string) => setLogs(prev => prev.map(l => l.id === id ? { ...l, collapsed: !l.collapsed } : l)), []);
+  const clearLogs = useCallback(() => {
+    updateLogsState([]);
+    addLog({ id: `${Date.now()}-info-clear`, type: "info", message: "已清除日志" });
+  }, [updateLogsState, addLog]);
+
+  const toggleCollapse = useCallback((id: string) => {
+    updateLogsState(logsRef.current.map(l => (l.id === id ? { ...l, collapsed: !l.collapsed } : l)));
+  }, [updateLogsState]);
 
   const filteredLogs = logs.filter(l => l.message.toLowerCase().includes(filter.toLowerCase()));
-  const getColor = (type: LogType) => type === "error" ? "#f48771" : type === "network" ? "#cca700" : type === "cyan" ? "cyan" : (type === "lint" ? "cyan" : "#d4d4d4");
 
-  // 智能分析 + 重试弹窗（createRoot modal）
+  // ---- 智能分析 & 重试 弹窗 ----
   const runAnalysis = useCallback(async () => {
-    addLog({ id: "analysis", type: "info", message: "正在运行智能分析..." });
-    // 快照 logs，避免异步时被改变
-    const logsSnapshot = [...logs];
-    // 简单分析函数（可替换/扩展）
+    addLog({ id: `${Date.now()}-analysis-start`, type: "info", message: "正在运行智能分析..." });
+
+    const logsSnapshot = [...logsRef.current];
+
     const analyzeCurrentState = async (): Promise<AnalysisReport> => {
       const findings: ReportFinding[] = [];
       const fatal = logsSnapshot.find(l => l.type === "error");
@@ -188,16 +257,18 @@ export const LongPressDebug: React.FC<{ maxLines?: number }> = ({ maxLines = DEF
       });
 
       logsSnapshot.filter(l => l.type === "lint").forEach(l => findings.push({ status: "info", description: l.message }));
-
-      return { title: "综合诊断报告", findings, potentialCauses: ["请根据上面红/黄/蓝提示定位问题"], suggestedActions: ["查看错误详情", "重试请求", "检查后端日志"] };
+      return {
+        title: "综合诊断报告",
+        findings,
+        potentialCauses: ["请根据上面红/黄/蓝提示定位问题", "检查后端 / 检查网络 / 检查 source map 是否可访问"],
+        suggestedActions: ["查看错误详情", "重试请求", "检查后端日志"],
+      };
     };
 
     const report = await analyzeCurrentState();
 
-    // 找出最近一次失败请求（优先使用 meta）
     const lastErr = logsSnapshot.slice().reverse().find(l => l.type === "error" && l.meta?.url) ?? logsSnapshot.slice().reverse().find(l => l.type === "error" && /\b(GET|POST|PUT|DELETE)\b/.test(l.message));
     let retryMeta = lastErr?.meta ?? null;
-    // 若没有 meta，尝试从 message 解析 method/url
     if (!retryMeta && lastErr?.message) {
       const m = lastErr.message.match(/(GET|POST|PUT|DELETE)\s+(\S+)/);
       if (m) retryMeta = { method: m[1], url: m[2], options: {} };
@@ -223,7 +294,6 @@ export const LongPressDebug: React.FC<{ maxLines?: number }> = ({ maxLines = DEF
           setStatus(`重试 ${meta.method || "GET"} ${meta.url} ...`);
           abortRef.current = new AbortController();
           const options = { ...(meta.options || {}), signal: abortRef.current.signal };
-          // 如果 options.body 是对象而不是 FormData, 且 Content-Type 是 JSON，序列化
           if (options.body && typeof options.body === "object" && !(options.body instanceof FormData)) {
             const contentType = options.headers?.["Content-Type"] || options.headers?.["content-type"] || "";
             if (contentType.includes("application/json") || !contentType) {
@@ -250,7 +320,7 @@ export const LongPressDebug: React.FC<{ maxLines?: number }> = ({ maxLines = DEF
           setAttempt(i);
           const ok = await doSingleRetry(retryMeta);
           if (ok) return;
-          const backoff = Math.min(10000, 500 * Math.pow(2, i)); // 指数退避，最大 10s
+          const backoff = Math.min(10000, 500 * Math.pow(2, i));
           setStatus(`第 ${i} 次失败，${backoff}ms 后重试...`);
           await new Promise(r => setTimeout(r, backoff));
         }
@@ -289,9 +359,31 @@ export const LongPressDebug: React.FC<{ maxLines?: number }> = ({ maxLines = DEF
     };
 
     root.render(<AnalysisModal onClose={() => { root.unmount(); modalRoot.remove(); }} />);
-  }, [addLog, logs]);
+  }, [addLog]);
 
-  // UI 渲染
+  // ---- Resize handler using pointer events ----
+  const onResizePointerDown = useCallback((e: React.PointerEvent) => {
+    draggingRef.current = true;
+    startYRef.current = e.clientY;
+    startHeightRef.current = height;
+    const target = e.currentTarget as Element;
+    try { (target as any).setPointerCapture?.(e.pointerId); } catch {}
+    const moveHandler = (ev: PointerEvent) => {
+      if (!draggingRef.current) return;
+      const delta = startYRef.current - ev.clientY;
+      setHeight(Math.max(120, startHeightRef.current + delta));
+    };
+    const upHandler = (ev: PointerEvent) => {
+      draggingRef.current = false;
+      try { (target as any).releasePointerCapture?.(e.pointerId); } catch {}
+      window.removeEventListener("pointermove", moveHandler);
+      window.removeEventListener("pointerup", upHandler);
+    };
+    window.addEventListener("pointermove", moveHandler);
+    window.addEventListener("pointerup", upHandler);
+  }, [height]);
+
+  // ---- UI ----
   return (
     <>
       <button
@@ -309,16 +401,17 @@ export const LongPressDebug: React.FC<{ maxLines?: number }> = ({ maxLines = DEF
           border: "none",
           boxShadow: "0 4px 12px rgba(0,0,0,0.3)"
         }}
-        onClick={() => setVisible(v => !v)}
+        onClick={handleToggleVisible}
+        onPointerUp={handleToggleVisible}
+        onTouchEnd={handleToggleVisible}
       >
         Debug
       </button>
 
       {visible && (
         <div style={{ position: "fixed", bottom: 0, left: 0, width: "100%", height, maxHeight: "90%", background: "#111", color: "#fff", fontFamily: "monospace", fontSize: 12, zIndex: 119999, display: "flex", flexDirection: "column" }}>
-          <div style={{ height: 10, background: "#333", cursor: "ns-resize" }} onTouchStart={onTouchStart}></div>
+          <div style={{ height: 10, background: "#333", cursor: "ns-resize" }} onPointerDown={onResizePointerDown}></div>
 
-          {/* 工具栏 */}
           <div style={{ display: "flex", gap: 8, padding: 8, alignItems: "center", borderBottom: "1px solid #333" }}>
             <input placeholder="搜索日志" value={filter} onChange={e => setFilter(e.target.value)} style={{ flexGrow: 1, minWidth: 120, padding: 6, background: "#222", color: "#fff", border: "1px solid #333", borderRadius: 4 }} />
             <button onClick={runAnalysis}>诊断</button>
@@ -326,12 +419,11 @@ export const LongPressDebug: React.FC<{ maxLines?: number }> = ({ maxLines = DEF
             <button onClick={copyLogs}>复制</button>
           </div>
 
-          {/* 日志列表 */}
           <div style={{ flexGrow: 1, overflowY: "auto", padding: 8 }}>
             {filteredLogs.map(l => (
               <div key={l.id} style={{ borderBottom: "1px solid #222", padding: "6px 4px", color: l.type === "error" ? "#f48771" : l.type === "network" ? "#cca700" : "#d4d4d4" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
-                  <div style={{ flex: 1 }} onClick={() => l.stack && toggleCollapse(l.id)}>
+                  <div style={{ flex: 1, cursor: l.stack ? "pointer" : "default" }} onClick={() => l.stack && toggleCollapse(l.id)}>
                     <strong>[{l.type.toUpperCase()}]</strong> {l.message}
                   </div>
                   <div style={{ marginLeft: 8 }}>
@@ -343,7 +435,6 @@ export const LongPressDebug: React.FC<{ maxLines?: number }> = ({ maxLines = DEF
             ))}
           </div>
 
-          {/* 控制台 */}
           <div style={{ borderTop: "1px solid #333", padding: 8 }}>
             <textarea
               ref={consoleInputRef}
