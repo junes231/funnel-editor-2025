@@ -1,7 +1,7 @@
 // src/utils/longPressDebug.tsx
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { createRoot } from "react-dom/client";
-import DebugReport, { AnalysisReport, ReportFinding } from "../components/DebugReport";
+import DebugReport, { AnalysisReport, ReportFinding } from "../components/DebugReport.tsx";
 import { SourceMapConsumer } from "source-map-js";
 
 type LogType = "error" | "network" | "lint" | "info";
