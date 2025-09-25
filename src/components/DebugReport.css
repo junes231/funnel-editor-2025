@@ -1,9 +1,27 @@
+:root {
+  --bg-primary: #1e1e1e;
+  --text-primary: #e0e0e0; /* 提高对比度 */
+  --padding-base: 16px;
+  --padding-sm: 8px;
+  --border-radius-base: 6px;
+  --border-radius-sm: 4px;
+  --transition-speed: 0.2s;
+  --status-error: #f44336;
+  --status-warning: #ff9800;
+  --status-info: #2196f3;
+  --status-ok: #4caf50;
+  --hover-bg: #333;
+  --details-bg: #2d2d2d;
+  --link-color: #4fc3f7;
+  --link-hover: #81d4fa;
+}
+
 .debug-report {
-  background: #1e1e1e;
-  color: #ddd;
-  padding: 16px;
-  border-radius: 6px;
-  font-size: 14px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  padding: var(--padding-base);
+  border-radius: var(--border-radius-base);
+  font-size: 0.875rem; /* 14px 相对单位 */
 }
 
 .report-header {
@@ -13,48 +31,62 @@
 }
 
 .finding-card {
-  padding: 8px;
-  margin-bottom: 6px;
-  border-radius: 4px;
+  padding: var(--padding-sm);
+  margin-bottom: var(--padding-sm);
+  border-radius: var(--border-radius-sm);
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background var(--transition-speed);
 }
 .finding-card:hover {
-  background: #333;
+  background: var(--hover-bg);
 }
 .finding-header {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--padding-sm);
 }
 
-.status-error {
-  border-left: 4px solid #f44336;
-}
-.status-warning {
-  border-left: 4px solid #ff9800;
-}
-.status-info {
-  border-left: 4px solid #2196f3;
-}
-.status-ok {
-  border-left: 4px solid #4caf50;
-}
+.status-error { border-left: 4px solid var(--status-error); }
+.status-warning { border-left: 4px solid var(--status-warning); }
+.status-info { border-left: 4px solid var(--status-info); }
+.status-ok { border-left: 4px solid var(--status-ok); }
 
 .finding-details {
-  margin-top: 6px;
-  background: #2d2d2d;
-  padding: 8px;
-  border-radius: 4px;
+  margin-top: var(--padding-sm);
+  background: var(--details-bg);
+  padding: var(--padding-sm);
+  border-radius: var(--border-radius-sm);
   overflow-x: auto;
+  overflow-y: auto; /* 添加纵向滚动 */
+  max-height: 200px; /* 可调整的 max-height */
   white-space: pre-wrap;
-  font-size: 12px;
+  font-size: 0.75rem; /* 12px 相对单位 */
 }
+
 .clickable-stack {
   cursor: pointer;
-  color: #4fc3f7;
+  color: var(--link-color);
   text-decoration: underline;
 }
 .clickable-stack:hover {
-  color: #81d4fa;
+  color: var(--link-hover);
+}
+.clickable-stack:focus {
+  outline: 2px solid var(--link-hover);
+  outline-offset: 2px;
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .debug-report {
+    font-size: 0.75rem; /* 12px */
+    padding: calc(var(--padding-base) / 2);
+  }
+  .finding-details {
+    max-height: 150px; /* 调整移动端高度 */
+    font-size: 0.7rem; /* 10px */
+  }
+  .finding-card {
+    padding: calc(var(--padding-sm) / 2);
+  }
 }
