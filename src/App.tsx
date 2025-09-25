@@ -1,26 +1,29 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef, ChangeEvent } from 'react';
 import { getAuth, onAuthStateChanged, User, signOut } from 'firebase/auth';
 import PrivateRoute from './components/PrivateRoute.tsx';
 import ResetPage from './pages/reset.tsx';
-import LoginPage from './pages/Login.tsx';
+import LoginPage from "./pages/Login.tsx";
 import VerifyPage from './pages/VerifyPage.tsx';
 import FinishEmailVerification from './pages/FinishEmailVerification.tsx';
 import { checkPasswordStrength } from './utils/passwordStrength.ts';
-import BackButton from './components/BackButton.tsx';
+import BackButton from './components/BackButton.tsx'; 
 import SmartAnalysisReport from './components/SmartAnalysisReport.tsx';
 import './components/SmartAnalysisReport.css';
-import { useNavigate, useParams, Routes, Route, useLocation, BrowserRouter } from 'react-router-dom';
+import { useNavigate, useParams, Routes, Route, useLocation } from 'react-router-dom';
 import {
   collection,
   doc,
   addDoc,
+  getDocs,
   updateDoc,
   deleteDoc,
   Firestore,
   onSnapshot,
   query,
   where,
+  getDoc
 } from 'firebase/firestore';
+
 import Login from './components/Login.tsx';
 import './App.css';
 
@@ -35,8 +38,8 @@ interface Question {
   id: string;
   title: string;
   type: 'single-choice' | 'text-input';
-  answers: { [answerId: string]: Answer };
-  data?: {
+  answers: { [answerId: string]: Answer }; // Changed from Answer[] to object/Map
+ data?: { // <-- 添加这个可选的 'data' 字段
     affiliateLinks?: string[];
   };
 }
@@ -56,7 +59,6 @@ interface Funnel {
   id: string;
   name: string;
   data: FunnelData;
-  ownerId: string; // Added for clarity
 }
 
 interface AppProps {
@@ -73,36 +75,48 @@ const defaultFunnelData: FunnelData = {
   backgroundColor: '#f8f9fa',
   textColor: '#333333',
 };
-
+// REPLACE your old App function with this new one
 export default function App({ db }: AppProps) {
   const navigate = useNavigate();
   const location = useLocation();
-
-  // State management
+  // New state variables to manage authentication and user roles
   const [user, setUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [funnels, setFunnels] = useState<Funnel[]>([]);
-  const [notification, setNotification] = useState<{
-    message: string;
-    type: 'success' | 'error';
-    visible: boolean;
-  }>({
-    message: '',
-    type: 'success',
-    visible: false,
+  // 在现有的 state 声明附近添加
+const [notification, setNotification] = useState<{
+  message: string;
+  type: 'success' | 'error';
+  visible: boolean;
+}>({
+  message: '',
+  type: 'success',
+  visible: false
+});
+ 
+// 添加显示通知的函数
+const showNotification = (message: string, type: 'success' | 'error' = 'success') => {
+  setNotification({
+    message,
+    type,
+    visible: true
   });
+  
+  setTimeout(() => {
+    setNotification(prev => ({ ...prev, visible: false }));
+  }, 1000);
+};
+  // useEffect for Authentication and Role checking
+  // --- 请粘贴这两个新的 useEffect ---
 
-  // Notification utility
-  const showNotification = (message: string, type: 'success' | 'error' = 'success') => {
-    setNotification({ message, type, visible: true });
-    setTimeout(() => setNotification((prev) => ({ ...prev, visible: false })), 1000);
-  };
-
-  // Authentication and role checking
-  useEffect(() => {
+// 新的 useEffect 1: 只负责监听和设置用户登录状态
+useEffect(() => {
     const auth = getAuth();
+    // onAuthStateChanged 返回一个 unsubscribe 函数
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      // 只要这个函数被调用，就意味着 Firebase 的首次检查已完成
+      // 无论 currentUser 是否存在，我们都可以结束初始加载状态
       if (currentUser && currentUser.emailVerified) {
         setUser(currentUser);
       } else {
@@ -111,267 +125,256 @@ export default function App({ db }: AppProps) {
       setIsLoading(false);
     });
 
+    // 组件卸载时，取消监听以防止内存泄漏
     return () => unsubscribe();
-  }, []);
+  }, []); // 空依赖数组，确保只在组件首次加载时设置监听器
 
+  // (检查管理员权限的 useEffect 保持不变)
   useEffect(() => {
     if (!user) {
       setIsAdmin(false);
       return;
     }
-    user.getIdTokenResult()
-      .then((idTokenResult) => setIsAdmin(idTokenResult.claims.role === 'admin'))
-      .catch(() => setIsAdmin(false));
+    user.getIdTokenResult().then(idTokenResult => {
+        setIsAdmin(idTokenResult.claims.role === 'admin');
+    }).catch(() => setIsAdmin(false));
   }, [user]);
-
-  useEffect(() => {
+    useEffect(() => {
+    // 仅当用户成功登录后执行
     if (user) {
-      const currentPath = location.pathname.split('?')[0];
+      // 获取当前所在的页面路径
+      const currentPath = window.location.hash.split('?')[0].replace('#', '');
+      // 定义所有与认证相关的页面
       const authPages = ['/login', '/finish-email-verification', '/register', '/reset', '/verify'];
+      
+      // 如果用户当前在任何一个认证页面上，说明他刚刚完成了登录流程
       if (authPages.includes(currentPath)) {
+        // 则将他导航到应用的主页
         navigate('/');
       }
     }
-  }, [user, navigate, location.pathname]);
-
-  // Real-time funnel data sync
-  useEffect(() => {
-    if (!user || !db) {
-      setIsLoading(false);
-      return;
-    }
-
-    setIsLoading(true);
-    const funnelsCollectionRef = collection(db, 'funnels');
-    const q = query(funnelsCollectionRef, where('ownerId', '==', user.uid));
-    const unsubscribe = onSnapshot(
-      q,
-      (querySnapshot) => {
-        const loadedFunnels = querySnapshot.docs.map((doc) => ({
-          ...(doc.data() as Funnel),
-          id: doc.id,
-          data: { ...defaultFunnelData, ...doc.data().data },
-        }));
-        setFunnels(loadedFunnels);
-        setIsLoading(false);
-      },
-      (error) => {
-        console.error('Error fetching funnels:', error);
-        showNotification(`Failed to load funnels: ${error.message}`, 'error');
-        setIsLoading(false);
-      }
-    );
-
-    return () => unsubscribe();
-  }, [db, user]);
-
-  // CRUD Functions
+  }, [user, navigate]);
+  // --- CRUD Functions (These should be inside the App component) ---
   const createFunnel = async (name: string) => {
-    if (!db || !user) return;
+    if (!db || !user) return; 
     const funnelsCollectionRef = collection(db, 'funnels');
     try {
       const newFunnelRef = await addDoc(funnelsCollectionRef, {
-        name,
+        name: name,
         data: defaultFunnelData,
-        ownerId: user.uid,
+        ownerId: user.uid, 
       });
-      showNotification(`Funnel "${name}" created!`);
-      navigate(`/edit/${newFunnelRef.id}`);
-    } catch (error: any) {
-      console.error('Error creating funnel:', error);
-      showNotification(`Failed to create funnel: ${error.message}`, 'error');
+      setNotification({ message: `Funnel "${name}" created!`, type: 'success' });
+    navigate(`/edit/${newFunnelRef.id}`);
+  } catch (error: any) {
+    console.error('Error creating funnel:', error);
+    // ✅ Use the error notification
+    setNotification({ message: `Failed to create funnel: ${error.message}`, type: 'error' });
     }
   };
 
   const deleteFunnel = async (funnelId: string) => {
-    if (!db || !user) return;
-    try {
-      const funnelDoc = doc(db, 'funnels', funnelId);
-      await deleteDoc(funnelDoc);
-      showNotification('Funnel deleted.');
-      setFunnels((funnels) => funnels.filter((f) => f.id !== funnelId));
-    } catch (error: any) {
-      showNotification(`Failed to delete funnel: ${error.message}`, 'error');
-    }
-  };
+  if (!db || !user) return;
+  try {
+    const funnelDoc = doc(db, 'funnels', funnelId);
+    await deleteDoc(funnelDoc);
 
+    setNotification({ message: 'Funnel deleted.', type: 'success' });
+    // 更新本地state（假设你有setFunnels这个方法）
+    setFunnels(funnels => funnels.filter(f => f.id !== funnelId));
+    // 3秒后可选：跳转或其它操作
+    // setTimeout(() => navigate('/'), 3000);
+  } catch (error) {
+    setNotification({ message: `Failed to delete funnel: ${error.message}`, type: 'error' });
+  }
+};
   const updateFunnelData = async (funnelId: string, newData: FunnelData) => {
     if (!db || !user) return;
     try {
       const funnelDoc = doc(db, 'funnels', funnelId);
       await updateDoc(funnelDoc, { data: newData });
       console.log('✅ Funnel updated:', funnelId);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error updating funnel:', error);
     }
   };
 
-  // Render Logic
-  const isPublicPlayPath = location.pathname.startsWith('/play/');
+  // --- Render Logic ---
+   const isPublicPlayPath = location.pathname.startsWith('/play/');
 
+  // 只有当页面正在加载，并且访问的不是公开播放页时，才显示用户状态验证
   if (isLoading && !isPublicPlayPath) {
     return <div style={{ textAlign: 'center', marginTop: '50px' }}>Verifying user status...</div>;
   }
-
   return (
     <div style={{ padding: 24, fontFamily: 'Arial' }}>
       <Routes>
+        {/* 公开路由 */}
         <Route path="/play/:funnelId" element={<QuizPlayer db={db} />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/verify" element={<VerifyPage />} />
-        <Route path="/finish-email-verification" element={<FinishEmailVerification />} />
+       <Route path="/login" element={<LoginPage />} />
+       <Route path="/verify" element={<VerifyPage />} />
+       <Route path="/finish-email-verification" element={<FinishEmailVerification />} />
         <Route path="/reset" element={<ResetPage />} />
+        {/* 需要登录的路由 */}
         <Route
           path="/"
           element={
-            !user ? (
-              <LoginPage />
-            ) : (
-              <>
-                <div
-                  style={{
-                    marginBottom: 20,
-                    paddingBottom: 20,
-                    borderBottom: '1px solid #ccc',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                  }}
-                >
-                  <span>
-                    Welcome, <strong>{user.email}</strong>!
-                    {isAdmin && <span style={{ color: 'red', marginLeft: '10px', fontWeight: 'bold' }}>(Admin)</span>}
-                  </span>
-                  <button onClick={() => signOut(getAuth())} style={{ padding: '8px 15px' }}>
-                    Logout
-                  </button>
-                </div>
-                <FunnelDashboard
-                  db={db}
-                  user={user}
-                  isAdmin={isAdmin}
-                  funnels={funnels}
-                  setFunnels={setFunnels}
-                  createFunnel={createFunnel}
-                  deleteFunnel={deleteFunnel}
-                  showNotification={showNotification}
-                />
-              </>
-            )
+            !user
+              ? <LoginPage />
+              : <>
+                  <div style={{ marginBottom: 20, paddingBottom: 20, borderBottom: '1px solid #ccc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>
+                      Welcome, <strong>{user.email}</strong>!
+                      {isAdmin && <span style={{color: 'red', marginLeft: '10px', fontWeight: 'bold'}}>(Admin)</span>}
+                    </span>
+                    <button onClick={() => signOut(getAuth())} style={{ padding: '8px 15px' }}>Logout</button>
+                  </div>
+                  <FunnelDashboard
+                    db={db}
+                    user={user}
+                    isAdmin={isAdmin}
+                    funnels={funnels}
+                    setFunnels={setFunnels}
+                    createFunnel={createFunnel}
+                    deleteFunnel={deleteFunnel}
+                  />
+                </>
           }
         />
         <Route
           path="/edit/:funnelId"
           element={
-            !user ? (
-              <LoginPage />
-            ) : (
-              <>
-                <div
-                  style={{
-                    marginBottom: 20,
-                    paddingBottom: 20,
-                    borderBottom: '1px solid #ccc',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                  }}
-                >
-                  <span>
-                    Welcome, <strong>{user.email}</strong>!
-                    {isAdmin && <span style={{ color: 'red', marginLeft: '10px', fontWeight: 'bold' }}>(Admin)</span>}
-                  </span>
-                  <button onClick={() => signOut(getAuth())} style={{ padding: '8px 15px' }}>
-                    Logout
-                  </button>
-                </div>
-                <FunnelEditor
-                  db={db}
-                  updateFunnelData={updateFunnelData}
-                  showNotification={showNotification}
-                />
-              </>
-            )
+            !user
+              ? <LoginPage />
+              : <>
+                  <div style={{ marginBottom: 20, paddingBottom: 20, borderBottom: '1px solid #ccc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>
+                      Welcome, <strong>{user.email}</strong>!
+                      {isAdmin && <span style={{color: 'red', marginLeft: '10px', fontWeight: 'bold'}}>(Admin)</span>}
+                    </span>
+                    <button onClick={() => signOut(getAuth())} style={{ padding: '8px 15px' }}>Logout</button>
+                  </div>
+                  <FunnelEditor db={db} updateFunnelData={updateFunnelData} />
+                </>
           }
         />
+        
         <Route path="*" element={<h2>404 Not Found</h2>} />
       </Routes>
       {notification.visible && (
         <div className={`custom-notification ${notification.type}`}>
-          <div className="notification-content">{notification.message}</div>
+          <div className="notification-content">
+            {notification.message}
+          </div>
         </div>
       )}
     </div>
   );
 }
 
-// --- FunnelDashboard Component ---
+
 interface FunnelDashboardProps {
   db: Firestore;
-  user: User;
+  user: User; // <-- 添加这一行
   isAdmin: boolean;
   funnels: Funnel[];
   setFunnels: React.Dispatch<React.SetStateAction<Funnel[]>>;
   createFunnel: (name: string) => Promise<void>;
   deleteFunnel: (funnelId: string) => Promise<void>;
-  showNotification: (message: string, type?: 'success' | 'error') => void;
 }
 
-const FunnelDashboard: React.FC<FunnelDashboardProps> = ({
-  db,
-  user,
-  isAdmin,
-  funnels,
-  setFunnels,
-  createFunnel,
-  deleteFunnel,
-  showNotification,
-}) => {
+// REPLACE your old FunnelDashboard component with this new one
+const FunnelDashboard: React.FC<FunnelDashboardProps> = ({ db, user, isAdmin, funnels, setFunnels, createFunnel, deleteFunnel }) => {
+  
+  // const [funnels, setFunnels] = useState<Funnel[]>([]); 
+  
   const [newFunnelName, setNewFunnelName] = useState('');
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
 
+  useEffect(() => {
+    const fetchFunnels = async () => {
+      if (!user || !db) {
+        setIsLoading(false);
+        return;
+      }
+
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const funnelsCollectionRef = collection(db, 'funnels');
+        let q;
+        if (isAdmin) {
+          q = query(funnelsCollectionRef);
+        } else {
+          q = query(funnelsCollectionRef, where("ownerId", "==", user.uid));
+        }
+
+        const querySnapshot = await getDocs(q);
+        const loadedFunnels = querySnapshot.docs.map((doc) => ({
+          ...(doc.data() as Funnel),
+          id: doc.id,
+          data: { ...defaultFunnelData, ...doc.data().data },
+        }));
+        
+        // 正确地调用从 App 传来的 setFunnels 方法来更新父组件的状态
+        setFunnels(loadedFunnels); 
+
+      } catch (err: any) {
+        console.error('CRITICAL: Failed to fetch funnels:', err);
+        setError(`Failed to load funnels. Error: ${err.message}`);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchFunnels();
+  }, [db, user, isAdmin, setFunnels]); // 依赖项中包含 setFunnels
+
   const handleCreateFunnel = async () => {
     if (!newFunnelName.trim()) {
-      showNotification('Please enter a funnel name.', 'error');
+      alert('Please enter a funnel name.');
       return;
     }
     setIsCreating(true);
     try {
       await createFunnel(newFunnelName);
       setNewFunnelName('');
-    } catch (err: any) {
+    } catch (err) {
       setError('Failed to create funnel. Please try again.');
-      showNotification(`Failed to create funnel: ${err.message}`, 'error');
     } finally {
       setIsCreating(false);
     }
   };
-
+  
   const handleDeleteFunnel = async (funnelId: string) => {
     await deleteFunnel(funnelId);
-    setFunnels((prevFunnels) => prevFunnels.filter((funnel) => funnel.id !== funnelId));
+    setFunnels(prevFunnels => prevFunnels.filter(funnel => funnel.id !== funnelId));
   };
-
+  
   const handleCopyLink = (funnelId: string) => {
-    const baseUrl = window.location.origin + window.location.pathname.split('#')[0];
-    const url = `${baseUrl}/play/${funnelId}`;
-    navigator.clipboard
-      .writeText(url)
-      .then(() => showNotification('Funnel link copied to clipboard!'))
-      .catch((err) => {
-        console.error('Failed to copy:', err);
-        showNotification('Failed to copy link', 'error');
-      });
-  };
+  // 使用 window.location.href 获取完整的当前URL
+  const baseUrl = window.location.href.split('#')[0];
+  // 构建完整的funnel链接
+  const url = `${baseUrl}/#/play/${funnelId}`;
+  
+  // 使用clipboard API
+  navigator.clipboard.writeText(url).then(() => {
+    // 使用自定义通知而不是alert
+    showNotification('Funnel link copied to clipboard!');
+  }).catch(err => {
+    console.error('Failed to copy:', err);
+    showNotification('Failed to copy link', 'error');
+  });
+};
 
+  
   return (
     <div className="dashboard-container">
-      <h2>
-        <span role="img" aria-label="funnel">🥞</span> Your Funnels
-      </h2>
+      <h2><span role="img" aria-label="funnel">🥞</span> Your Funnels</h2>
       <div className="create-funnel-section">
         <input
           type="text"
@@ -391,23 +394,16 @@ const FunnelDashboard: React.FC<FunnelDashboardProps> = ({
       ) : funnels.length === 0 ? (
         <p className="no-funnels-message">No funnels created yet. Start by creating one!</p>
       ) : (
+        // 直接使用从 props 传来的 funnels 变量进行渲染
         <ul className="funnel-list">
           {funnels.map((funnel) => (
             <li key={funnel.id} className="funnel-item">
               <span>{funnel.name}</span>
-              <div className="funnel-actions">
-                <button className="funnel-action-btn" onClick={() => navigate(`/edit/${funnel.id}`)}>
-                  Edit
-                </button>
-                <button className="funnel-action-btn" onClick={() => navigate(`/play/${funnel.id}`)}>
-                  Play
-                </button>
-                <button className="funnel-action-btn" onClick={() => handleCopyLink(funnel.id)}>
-                  Copy Link
-                </button>
-                <button className="funnel-action-btn delete" onClick={() => handleDeleteFunnel(funnel.id)}>
-                  Delete
-                </button>
+               <div className="funnel-actions">
+                <button className="funnel-action-btn" onClick={() => navigate(`/edit/${funnel.id}`)}>Edit</button>
+                <button className="funnel-action-btn" onClick={() => navigate(`/play/${funnel.id}`)}>Play</button>
+                <button className="funnel-action-btn" onClick={() => handleCopyLink(funnel.id)}>Copy Link</button>
+                <button className="funnel-action-btn delete" onClick={() => handleDeleteFunnel(funnel.id)}>Delete</button>
               </div>
             </li>
           ))}
@@ -416,9 +412,6 @@ const FunnelDashboard: React.FC<FunnelDashboardProps> = ({
     </div>
   );
 };
-
-
-
 interface FunnelEditorProps {
   db: Firestore;
   updateFunnelData: (funnelId: string, newData: FunnelData) => Promise<void>;
