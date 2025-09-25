@@ -213,69 +213,112 @@ interface FunnelDashboardProps {
   createFunnel: (name: string) => Promise<void>;
   deleteFunnel: (funnelId: string) => Promise<void>;
 }
+// 文件路径: src/App.tsx
+
+// 请用这个新版本替换您文件中现有的 FunnelDashboard
 const FunnelDashboard: React.FC<FunnelDashboardProps> = ({ db, user, isAdmin, funnels, setFunnels, createFunnel, deleteFunnel }) => {
-    const [newFunnelName, setNewFunnelName] = useState('');
-    const navigate = useNavigate();
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const [isCreating, setIsCreating] = useState(false);
+  const [newFunnelName, setNewFunnelName] = useState('');
+  const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
 
-    useEffect(() => {
-        if (!user || !db) { setIsLoading(false); return; }
-        const funnelsCollectionRef = collection(db, 'funnels');
-        const q = isAdmin ? query(funnelsCollectionRef) : query(funnelsCollectionRef, where("ownerId", "==", user.uid));
-        const unsubscribe = onSnapshot(q, (querySnapshot) => {
-            const loadedFunnels = querySnapshot.docs.map((doc) => ({ ...(doc.data() as Funnel), id: doc.id, data: { ...defaultFunnelData, ...doc.data().data } }));
-            setFunnels(loadedFunnels);
-            setIsLoading(false);
-        }, (err) => {
-            setError(`Failed to load funnels. Error: ${err.message}`);
-            setIsLoading(false);
-        });
-        return () => unsubscribe();
-    }, [db, user, isAdmin, setFunnels]);
+  // --- 核心修复：使用 onSnapshot 来实时监听数据变化 ---
+  useEffect(() => {
+    // 如果用户信息或数据库连接不存在，则不执行任何操作
+    if (!user || !db) {
+      setIsLoading(false);
+      return;
+    }
 
-    const handleCreateFunnel = async () => {
-        if (!newFunnelName.trim()) { alert('Please enter a funnel name.'); return; }
-        setIsCreating(true);
-        await createFunnel(newFunnelName);
-        setNewFunnelName('');
-        setIsCreating(false);
-    };
-    
-    const handleCopyLink = (funnelId: string) => {
-        const url = `${window.location.href.split('#')[0]}#/play/${funnelId}`;
-        navigator.clipboard.writeText(url).then(() => alert('Funnel link copied!'), () => alert('Failed to copy link.'));
-    };
+    setIsLoading(true);
+    setError(null);
+
+    const funnelsCollectionRef = collection(db, 'funnels');
+    // 根据用户是否为管理员创建不同的查询
+    const q = isAdmin 
+      ? query(funnelsCollectionRef) 
+      : query(funnelsCollectionRef, where("ownerId", "==", user.uid));
+
+    // onSnapshot 会建立一个持续的监听连接
+    // 每当数据库中的数据发生变化时，它都会自动重新获取并更新界面
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+        const loadedFunnels = querySnapshot.docs.map((doc) => ({
+          ...(doc.data() as Funnel),
+          id: doc.id,
+          data: { ...defaultFunnelData, ...doc.data().data },
+        }));
+        setFunnels(loadedFunnels);
+        setIsLoading(false);
+    }, (err) => {
+        console.error('CRITICAL: Failed to fetch funnels:', err);
+        setError(`Failed to load funnels. Error: ${err.message}`);
+        setIsLoading(false);
+    });
+
+    // 当组件卸载时，返回的这个函数会被调用，以取消监听，防止内存泄漏
+    return () => unsubscribe();
+  }, [db, user, isAdmin, setFunnels]); // 依赖项确保在这些值变化时重新建立监听
+
+  const handleCreateFunnel = async () => {
+    if (!newFunnelName.trim()) {
+      alert('Please enter a funnel name.');
+      return;
+    }
+    setIsCreating(true);
+    await createFunnel(newFunnelName);
+    setNewFunnelName('');
+    setIsCreating(false);
+  };
   
-    return (
-        <div className="dashboard-container">
-            <h2><span role="img" aria-label="funnel">🥞</span> Your Funnels</h2>
-            <div className="create-funnel-section">
-                <input type="text" placeholder="New Funnel Name" value={newFunnelName} onChange={(e) => setNewFunnelName(e.target.value)} className="funnel-name-input" />
-                <button className="add-button" onClick={handleCreateFunnel} disabled={isCreating}>{isCreating ? 'Creating...' : 'Create New Funnel'}</button>
-            </div>
-            {isLoading ? <p className="loading-message"><div className="loading-spinner"></div>Loading funnels...</p> : 
-             error ? <p className="error-message">{error}</p> : 
-             funnels.length === 0 ? <p className="no-funnels-message">No funnels created yet. Start by creating one!</p> : (
-                <ul className="funnel-list">
-                    {funnels.map((funnel) => (
-                        <li key={funnel.id} className="funnel-item">
-                            <span>{funnel.name}</span>
-                            <div className="funnel-actions">
-                                <button className="funnel-action-btn" onClick={() => navigate(`/edit/${funnel.id}`)}>Edit</button>
-                                <button className="funnel-action-btn" onClick={() => navigate(`/play/${funnel.id}`)}>Play</button>
-                                <button className="funnel-action-btn" onClick={() => handleCopyLink(funnel.id)}>Copy Link</button>
-                                <button className="funnel-action-btn delete" onClick={() => deleteFunnel(funnel.id)}>Delete</button>
-                            </div>
-                        </li>
-                    ))}
-                </ul>
-            )}
-        </div>
-    );
+  const handleCopyLink = (funnelId: string) => {
+    const url = `${window.location.href.split('#')[0]}#/play/${funnelId}`;
+    navigator.clipboard.writeText(url).then(() => {
+      showNotification('Funnel link copied!');
+    }).catch(() => {
+      showNotification('Failed to copy link.');
+    });
+  };
+  
+  return (
+    <div className="dashboard-container">
+      <h2><span role="img" aria-label="funnel">🥞</span> Your Funnels</h2>
+      <div className="create-funnel-section">
+        <input
+          type="text"
+          placeholder="New Funnel Name"
+          value={newFunnelName}
+          onChange={(e) => setNewFunnelName(e.target.value)}
+          className="funnel-name-input"
+        />
+        <button className="add-button" onClick={handleCreateFunnel} disabled={isCreating}>
+          {isCreating ? 'Creating...' : 'Create New Funnel'}
+        </button>
+      </div>
+      {isLoading ? (
+        <p className="loading-message"><div className="loading-spinner"></div>Loading funnels...</p>
+      ) : error ? (
+        <p className="error-message">{error}</p>
+      ) : funnels.length === 0 ? (
+        <p className="no-funnels-message">No funnels created yet. Start by creating one!</p>
+      ) : (
+        <ul className="funnel-list">
+          {funnels.map((funnel) => (
+            <li key={funnel.id} className="funnel-item">
+              <span>{funnel.name}</span>
+               <div className="funnel-actions">
+                <button className="funnel-action-btn" onClick={() => navigate(`/edit/${funnel.id}`)}>Edit</button>
+                <button className="funnel-action-btn" onClick={() => navigate(`/play/${funnel.id}`)}>Play</button>
+                <button className="funnel-action-btn" onClick={() => handleCopyLink(funnel.id)}>Copy Link</button>
+                <button className="funnel-action-btn delete" onClick={() => deleteFunnel(funnel.id)}>Delete</button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
 };
-
 interface FunnelEditorProps {
   db: Firestore;
   updateFunnelData: (funnelId: string, newData: FunnelData) => Promise<void>;
