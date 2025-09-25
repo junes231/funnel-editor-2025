@@ -147,11 +147,21 @@ const showNotification = (message: string, type: 'success' | 'error' = 'success'
   }, [user, isAuthLoading, navigate]);
 
   const createFunnel = async (name: string) => {
-    if (!db || !user) return;
+    if (!db || !user) return; 
+    const funnelsCollectionRef = collection(db, 'funnels');
     try {
-      const newFunnelRef = await addDoc(collection(db, 'funnels'), { name, data: defaultFunnelData, ownerId: user.uid });
-      navigate(`/edit/${newFunnelRef.id}`);
-    } catch (error) { console.error('Error creating funnel:', error); }
+      const newFunnelRef = await addDoc(funnelsCollectionRef, {
+        name: name,
+        data: defaultFunnelData,
+        ownerId: user.uid, 
+      });
+      setNotification({ message: `Funnel "${name}" created!`, type: 'success' });
+    navigate(`/edit/${newFunnelRef.id}`);
+  } catch (error: any) {
+    console.error('Error creating funnel:', error);
+    // ✅ Use the error notification
+    setNotification({ message: `Failed to create funnel: ${error.message}`, type: 'error' });
+    }
   };
 
   const deleteFunnel = async (funnelId: string) => {
