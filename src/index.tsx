@@ -1,6 +1,6 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { BrowserRouter } from 'react-router-dom';
+import { HashRouter } from 'react-router-dom';
 import App from './App.tsx';
 import './index.css';
 
@@ -16,14 +16,12 @@ installLongPressDebug({
   maxLines: 300,
 });
 
-// 设置 basename 以适配 GitHub Pages
-const basename = process.env.PUBLIC_URL || '/';
 
 const rootEl = document.getElementById('root')!;
 createRoot(rootEl).render(
   <React.StrictMode>
-    <BrowserRouter basename={basename}>
-      <App db={db} auth={auth} />
-    </BrowserRouter>
+    <HashRouter>
+      <App db={db} auth={auth}/>
+    </HashRouter>
   </React.StrictMode>
 );
