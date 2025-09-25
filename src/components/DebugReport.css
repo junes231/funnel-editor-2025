@@ -50,3 +50,11 @@
   white-space: pre-wrap;
   font-size: 12px;
 }
+.clickable-stack {
+  cursor: pointer;
+  color: #4fc3f7;
+  text-decoration: underline;
+}
+.clickable-stack:hover {
+  color: #81d4fa;
+}
