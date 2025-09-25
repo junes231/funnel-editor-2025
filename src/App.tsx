@@ -913,7 +913,7 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ db }) => {
   // --- ↓↓↓ 健壮的点击追踪逻辑 ↓↓↓ ---
   if (funnelId && currentQuestion?.id && answerId) {
     try {
-      const trackClickEndpoint = "https://api-track-click-jgett3ucqq-uc.a.run.app/trackClick";
+      const trackClickEndpoint = trackClickUrl;
       
       const response = await fetch(trackClickEndpoint, {
         method: "POST",
@@ -1391,8 +1391,8 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
   };
   
   // --- UNCHANGED: Cancel and Delete logic remains the same ---
-  const handleCancel = () => {
-    const button = document.querySelector('.cancel-button');
+  const onCancel = () => {
+        const button = document.querySelector('.cancel-button');
     if (button) {
       button.classList.add('animate-out');
       setTimeout(() => {
@@ -1400,21 +1400,27 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
       }, 1000);
     }
   };
+  // --- 恢复您设计的 Delete 按钮动画和跳转逻辑 ---
+   const onDelete = () => {
+  setIsDeleting(true); // 启动动画状态
 
-  const handleDelete = () => {
-    setIsDeleting(true);
-    const button = document.querySelector('.delete-button');
-    if (button) {
-      button.classList.add('animate-out');
-      setTimeout(() => {
-        onDelete();
-        navigate(-1, { replace: true });
-      }, 1000);
-    } else {
-      console.error("Question ID is missing!");
-    }
-  };
-  
+  const button = document.querySelector('.delete-button');
+  if (button) {
+    button.classList.add('animate-out'); // 给按钮加上淡出动画
+  }
+
+  // ⏳ 等待1秒（动画时间），再执行删除 + 跳转
+  setTimeout(() => {
+    // 删除数据
+    setFunnelData(prev => ({
+      ...prev,
+      questions: prev.questions.filter((_, i) => i !== questionIndex),
+    }));
+
+    // 跳转上一页
+    navigate(-1, { replace: true });
+  }, 1000); // 这里的 1000ms 要和 CSS 动画时长保持一致
+};
   // Defensive check: If for some reason no question is provided, render nothing.
   if (!question) {
     return <div>Loading question...</div>;
