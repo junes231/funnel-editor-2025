@@ -113,6 +113,52 @@ export const LongPressDebug: React.FC<{ maxLines?: number }> = ({ maxLines = DEF
     try { await navigator.clipboard.writeText(text); addLog({ id: Date.now() + "-copy", type: "info", message: "已复制日志到剪贴板" }); } catch { addLog({ id: Date.now() + "-copy-err", type: "error", message: "复制失败" }); }
   }, [logs, addLog]);
 
+    const runAnalysis = useCallback(() => {
+    addLog({ id: "analysis", type: "info", message: "正在运行智能分析..." });
+
+    const logsSnapshot = [...logs];
+    const findings: ReportFinding[] = [];
+
+    logsSnapshot.filter(l => l.type === "error").forEach(l => {
+      findings.push({
+        status: "error",
+        description: l.message,
+        details: l.stack,
+      });
+    });
+
+    logsSnapshot.filter(l => l.type === "network" && l.meta?.url).forEach(l => {
+      findings.push({
+        status: l.message.includes("→") && !l.message.includes("200") ? "warning" : "info",
+        description: `[${l.meta.method}] ${l.meta.url} → ${l.message.split("→")[1] ?? ""}`,
+        details: JSON.stringify(l.meta, null, 2),
+      });
+    });
+
+    logsSnapshot.filter(l => l.type === "lint" || l.type === "info").forEach(l => {
+      findings.push({ status: "info", description: l.message });
+    });
+
+    const newReport: AnalysisReport = {
+      title: "智能分析报告",
+      findings,
+      potentialCauses: [
+        "变量未定义或拼写错误",
+        "函数调用顺序错误",
+        "API 返回数据结构不符合预期",
+        "网络异常或跨域问题",
+      ],
+      suggestedActions: [
+        "检查出错行附近的变量声明或函数调用",
+        "确认接口返回数据格式是否符合预期",
+        "重试请求或检查网络连接",
+        "查看堆栈信息定位具体出错文件和行号",
+      ],
+    };
+
+    setReport(newReport);
+  }, [logs, addLog]);
+
   const filteredLogs = logs.filter(l => l.message.toLowerCase().includes(filter.toLowerCase()));
 
   return (
