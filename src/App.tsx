@@ -1,7 +1,7 @@
 // 文件路径: src/App.tsx
 
 import React, { useState, useEffect, useCallback, useRef, ChangeEvent } from 'react';
-import { getAuth, onAuthStateChanged, User, signOut } from 'firebase/auth';
+import { auth, getAuth, onAuthStateChanged, User, signOut } from 'firebase/auth';
 import { useNavigate, useParams, Routes, Route, useLocation, Outlet, useOutletContext } from 'react-router-dom';
 import {
   collection,
