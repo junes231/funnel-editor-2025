@@ -23,8 +23,79 @@ export const LongPressDebug: React.FC<{ maxLines?: number }> = ({ maxLines = DEF
   const [filter, setFilter] = useState("");
   const [visible, setVisible] = useState(false);
   const consoleInputRef = useRef<HTMLTextAreaElement | null>(null);
-
+  const [report, setReport] = useState<AnalysisReport | null>(null);
   // 高度拖拽（pointer 兼容鼠标与触摸）
+  async function getSourceMapForStack() {
+  const scripts = Array.from(document.scripts).filter(s => s.src);
+
+  for (const script of scripts) {
+    try {
+      const res = await fetch(script.src);
+      const text = await res.text();
+      const match = text.match(/\/\/# sourceMappingURL=(.*)$/m);
+      if (match) {
+        const mapUrl = new URL(match[1], script.src).toString();
+        const mapRes = await fetch(mapUrl);
+        const rawSourceMap = await mapRes.json();
+        return rawSourceMap; // 找到第一个 source map 就返回
+      }
+    } catch (e) {
+      console.warn("获取 source map 失败:", e);
+    }
+  }
+
+  return null;
+}
+ const handleError = async (error: Error) => {
+    let mappedStack = error.stack;
+    try {
+      const rawSourceMap = await getSourceMapForStack();
+      if (rawSourceMap) {
+        const consumer = await new SourceMapConsumer(rawSourceMap);
+        mappedStack = error.stack
+          ?.split("\n")
+          .map(line => {
+            const match = line.match(/:(\d+):(\d+)/);
+            if (match) {
+              const [_, lineNumber, columnNumber] = match;
+              const pos = consumer.originalPositionFor({
+                line: Number(lineNumber),
+                column: Number(columnNumber),
+              });
+              if (pos.source) return `${line}  ⬅️ (${pos.source}:${pos.line}:${pos.column})`;
+            }
+            return line;
+          })
+          .join("\n");
+        consumer.destroy();
+      } else {
+        console.warn("没有找到 source map 文件");
+      }
+    } catch (e) {
+      console.warn("source map 解析失败", e);
+    }
+
+    const newReport: AnalysisReport = {
+    title: "JS Runtime Error",
+    findings: [
+      {
+        status: "error",
+        description: error.message,
+        details: mappedStack,
+      },
+    ],
+    potentialCauses: [
+      "变量未定义或拼写错误",
+      "API 返回的数据结构不符合预期",
+    ],
+    suggestedActions: [
+      "检查出错行附近的变量声明",
+      "确认后端接口返回的数据格式",
+    ],
+  };
+
+  setReport(newReport);
+};
   const [height, setHeight] = useState(300);
   const startYRef = useRef(0);
   const startHeightRef = useRef(0);
@@ -69,6 +140,7 @@ export const LongPressDebug: React.FC<{ maxLines?: number }> = ({ maxLines = DEF
   useEffect(() => {
     const handleErrorEvent = async (evtOrMsg: any, src?: any, line?: any, col?: any, err?: any) => {
       // 支持 window.onerror 旧签名与 addEventListener('error', ev)
+ 
       let message = "";
       let stack = "";
       let scriptUrl: string | null = null;
