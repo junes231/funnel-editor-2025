@@ -90,38 +90,37 @@ export const LongPressDebug: React.FC<{ maxLines?: number }> = ({ maxLines = DEF
   }, [addLog, getSourceMapForStack]);
 
   useEffect(() => {
-    const originalFetch = window.fetch.bind(window);
-    window.fetch = async (input: any, init: any = {}) => {
-      const method = ((init && init.method) || (typeof input === "string" ? "GET" : input?.method) || "GET").toUpperCase();
-      const url = typeof input === "string" ? input : input?.url || String(input);
-      const options = { ...init };
-      if ("body" in options) options.body = serializeBody(options.body);
-      const meta = { method, url, options };
-      try {
-        const res = await originalFetch(input, init);
-        let text = "";
-        try { text = await res.clone().text(); } catch {}
-        addLog({
-          id: Date.now() + "-net",
-          type: res.ok ? "network" : "error",
-          message: `[${method}] ${url} → ${res.status}`,
-          stack: text,
-          meta,
-        });
-        return res;
-      } catch (err: any) {
-        addLog({
-          id: Date.now() + "-neterr",
-          type: "error",
-          message: `[${method}] ${url} → 请求失败`,
-          stack: String(err?.message || err),
-          meta,
-        });
-        throw err;
-      }
-    };
-    return () => { window.fetch = originalFetch; };
-  }, [addLog]);
+  const originalFetch = window.fetch.bind(window);
+  window.fetch = async (input: any, init: any = {}) => {
+    const method = ((init && init.method) || (typeof input === "string" ? "GET" : input?.method) || "GET").toUpperCase();
+    const url = typeof input === "string" ? input : input?.url || String(input);
+    const options = { ...init };
+    if ("body" in options) options.body = serializeBody(options.body);
+    const meta = { method, url, options };
+    try {
+      const res = await originalFetch(input, init);
+      const text = await res.clone().text().catch(() => "");
+      addLog({
+        id: Date.now() + "-net",
+        type: res.ok ? "network" : "error",
+        message: `[${method}] ${url} → ${res.status} ${res.statusText}`,
+        stack: text,
+        meta,
+      });
+      return res;
+    } catch (err: any) {
+      addLog({
+        id: Date.now() + "-neterr",
+        type: "error",
+        message: `[${method}] ${url} → 请求失败: ${err.message}`,
+        stack: String(err?.stack || err),
+        meta,
+      });
+      throw err;
+    }
+  };
+  return () => { window.fetch = originalFetch; }; // 清理
+}, [addLog]);
 
   const runConsoleCode = useCallback(() => {
     const code = consoleInputRef.current?.value;
