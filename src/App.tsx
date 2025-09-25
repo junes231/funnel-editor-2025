@@ -175,11 +175,14 @@ const showNotification = (message: string, type: 'success' | 'error' = 'success'
   const updateFunnelData = async (funnelId: string, newData: FunnelData) => {
     if (!db || !user) return;
     try {
-      await updateDoc(doc(db, 'funnels', funnelId), { data: newData });
+      const funnelDoc = doc(db, 'funnels', funnelId);
+      await updateDoc(funnelDoc, { data: newData });
       console.log('✅ Funnel updated:', funnelId);
-    } catch (error) { console.error('Error updating funnel:', error); }
+    } catch (error) {
+      console.error('Error updating funnel:', error);
+    }
   };
-
+  const isPublicPlayPath = location.pathname.startsWith('/play/');
   if (isAuthLoading) {
     return <div style={{ textAlign: 'center', marginTop: '50px' }}>Loading...</div>;
   }
