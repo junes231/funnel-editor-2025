@@ -1,5 +1,3 @@
-// 文件路径: src/App.tsx
-
 import React, { useState, useEffect, useCallback, useRef, ChangeEvent } from 'react';
 import { getAuth, onAuthStateChanged, User, signOut } from 'firebase/auth';
 import PrivateRoute from './components/PrivateRoute.tsx';
@@ -62,6 +60,7 @@ interface Funnel {
 
 interface AppProps {
   db: Firestore;
+  auth: any; 
 }
 
 const defaultFunnelData: FunnelData = {
@@ -95,7 +94,28 @@ export default function App({ db }: AppProps) {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [funnels, setFunnels] = useState<Funnel[]>([]);
   
-  // --- 修改: 移除 notification 相关的 state 和 function ---
+  const [notification, setNotification] = useState<{
+  message: string;
+  type: 'success' | 'error';
+  visible: boolean;
+}>({
+  message: '',
+  type: 'success',
+  visible: false
+});
+ 
+// 添加显示通知的函数
+const showNotification = (message: string, type: 'success' | 'error' = 'success') => {
+  setNotification({
+    message,
+    type,
+    visible: true
+  });
+  
+  setTimeout(() => {
+    setNotification(prev => ({ ...prev, visible: false }));
+  }, 1000);
+};
 
   useEffect(() => {
     const auth = getAuth();
@@ -887,7 +907,7 @@ const QuizPlayer: React.FC<{ db: Firestore }> = ({ db }) => {
 
     if (funnelId && currentQuestion?.id && answerId) {
         try {
-          const trackClickEndpoint = "https://api-track-click-jgett3ucqq-uc.a.run.app/trackClick";
+          const trackClickEndpoint = trackClickUrl;
           await fetch(trackClickEndpoint, {
             method: "POST",
             mode: "cors",
