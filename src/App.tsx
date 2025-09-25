@@ -91,7 +91,28 @@ export default function App({ db }: AppProps) {
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [isAuthLoading, setIsAuthLoading] = useState<boolean>(true);
   const [funnels, setFunnels] = useState<Funnel[]>([]);
-
+  const [notification, setNotification] = useState<{
+  message: string;
+  type: 'success' | 'error';
+  visible: boolean;
+}>({
+  message: '',
+  type: 'success',
+  visible: false
+});
+ 
+// 添加显示通知的函数
+const showNotification = (message: string, type: 'success' | 'error' = 'success') => {
+  setNotification({
+    message,
+    type,
+    visible: true
+  });
+  
+  setTimeout(() => {
+    setNotification(prev => ({ ...prev, visible: false }));
+  }, 1000);
+};
   useEffect(() => {
     const auth = getAuth();
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -563,28 +584,36 @@ const QuestionFormComponent: React.FC = () => {
         navigate(`/edit/${funnelId}/questions`);
     };
 
-    const onDelete = () => {
-        setIsDeleting(true);
-        setTimeout(() => {
-            setFunnelData(prev => ({
-                ...prev,
-                questions: prev.questions.filter((_, i) => i !== questionIndex)
-            }));
-            navigate(`/edit/${funnelId}/questions`);
-        }, 1000);
-    };
-
     const onCancel = () => {
-        setIsCancelling(true);
-        setTimeout(() => {
-            navigate(`/edit/${funnelId}/questions`);
-        }, 1000);
-    };
-
-    if (!question) {
-        useEffect(() => { navigate(`/edit/${funnelId}/questions`, { replace: true }); }, [funnelId, navigate]);
-        return null;
+        const button = document.querySelector('.cancel-button');
+    if (button) {
+      button.classList.add('animate-out');
+      setTimeout(() => {
+        navigate('/');
+      }, 1000);
     }
+  };
+  // --- 恢复您设计的 Delete 按钮动画和跳转逻辑 ---
+      const onDelete = () => {
+  setIsDeleting(true); // 启动动画状态
+
+  const button = document.querySelector('.delete-button');
+  if (button) {
+    button.classList.add('animate-out'); // 给按钮加上淡出动画
+  }
+
+  // ⏳ 等待1秒（动画时间），再执行删除 + 跳转
+  setTimeout(() => {
+    // 删除数据
+    setFunnelData(prev => ({
+      ...prev,
+      questions: prev.questions.filter((_, i) => i !== questionIndex),
+    }));
+
+    // 跳转上一页
+    navigate(-1, { replace: true });
+  }, 1000); // 这里的 1000ms 要和 CSS 动画时长保持一致
+};
 
     const handleAnswerTextChange = (id: string, newText: string) => {
         setAnswers(currentAnswers => currentAnswers.map(ans => ans.id === id ? { ...ans, text: newText } : ans));
@@ -854,8 +883,10 @@ const trackClickEndpoint = trackClickUrl;
   } as React.CSSProperties;
     
   return (
-    <div className="quiz-player-container" style={quizPlayerContainerStyle}>
-      <h3 style={{ color: 'var(--text-color)' }}>{currentQuestion.title}</h3>
+     <div className="quiz-player-container" style={{ textAlign: 'center', marginTop: '80px' }}>
+        <h3 style={{ fontSize: '32px', fontWeight: 'bold', color: '#ff4f81', animation: 'pulse 1.5s infinite' }}>
+          Ready to unlock your secret match? 🔥
+        </h3>
       <div className="quiz-answers-container">
         {sortedAnswers.map((answer, index) => {
           const match = answer.text.match(/^([A-Z]\.)\s*(.*)$/);
