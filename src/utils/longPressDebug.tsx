@@ -15,7 +15,7 @@ interface DebugLog {
   meta?: any;
 }
 
-const DEFAULT_MAX_LINES = 500;
+const DEFAULT_MAX_LINES = 50;
 
 export const LongPressDebug: React.FC<{ maxLines?: number }> = ({ maxLines = DEFAULT_MAX_LINES }) => {
   const [logs, setLogs] = useState<DebugLog[]>([]);
