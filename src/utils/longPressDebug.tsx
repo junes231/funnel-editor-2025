@@ -168,57 +168,88 @@ export const LongPressDebug: React.FC<{ maxLines?: number }> = ({ maxLines = DEF
   const filteredLogs = logs.filter(l => l.message.toLowerCase().includes(filter.toLowerCase()));
 
   return (
-    <>
-      <button style={{ position:"fixed",right:10,bottom:65,width:56,height:56,borderRadius:28,background:"#007acc",color:"#fff",zIndex:120000,fontSize:12,border:"none",boxShadow:"0 4px 12px rgba(0,0,0,0.3)" }}
-        onClick={() => setVisible(v => !v)}>Debug</button>
+  <>
+    <button 
+      style={{ 
+        position: "fixed", 
+        right: 10, 
+        bottom: 65, 
+        width: 56, 
+        height: 56, 
+        borderRadius: 28, 
+        background: "#007acc", 
+        color: "#fff", 
+        zIndex: 120001, // 提高 z-index
+        fontSize: 12, 
+        border: "none", 
+        boxShadow: "0 4px 12px rgba(0,0,0,0.3)" 
+      }}
+      onClick={() => setVisible(v => !v)}
+    >
+      Debug
+    </button>
 
-      {visible && (
-        <div style={{position:"fixed",bottom:0,left:0,width:"100%",height:300,maxHeight:"90%",background:"#111",color:"#fff",fontFamily:"monospace",fontSize:12,zIndex:119999,display:"flex",flexDirection:"column"}}>
-          {/* 工具栏 */}
-          <div style={{display:"flex",gap:8,padding:8,alignItems:"center",borderBottom:"1px solid #333"}}>
-            <input placeholder="搜索日志" value={filter} onChange={e=>setFilter(e.target.value)} style={{flexGrow:1,minWidth:120,padding:6,background:"#222",color:"#fff",border:"1px solid #333",borderRadius:4}}/>
-            <button onClick={runAnalysis}>智能分析</button>
+    {visible && (
+      <div 
+        style={{ 
+          position: "fixed", 
+          bottom: 0, 
+          left: 0, 
+          width: "100%", 
+          height: "70vh", // 适配屏幕高度
+          maxHeight: "90vh", 
+          background: "#111", 
+          color: "#fff", 
+          fontFamily: "monospace", 
+          fontSize: 12, 
+          zIndex: 120000, 
+          display: "flex", 
+          flexDirection: "column" 
+        }}
+      >
+        {/* 工具栏 */}
+        <div style={{ display: "flex", gap: 8, padding: 8, alignItems: "center", borderBottom: "1px solid #333" }}>
+          <input 
+            placeholder="搜索日志" 
+            value={filter} 
+            onChange={e => setFilter(e.target.value)} 
+            style={{ flexGrow: 1, minWidth: 120, padding: 6, background: "#222", color: "#fff", border: "1px solid #333", borderRadius: 4 }} 
+          />
+          <button onClick={runAnalysis}>智能分析</button>
+          <button onClick={clearLogs}>清除</button>
+          <button onClick={copyLogs}>复制</button>
+        </div>
+
+        {/* 日志列表和报告容器 */}
+        <div style={{ flexGrow: 1, overflowY: "auto", padding: 8, display: "flex", flexDirection: "column" }}>
+          {filteredLogs.map((l, index) => (
+            <div key={l.id} style={{ borderBottom: "1px solid #222", padding: "6px 4px", color: l.type === "error" ? "#f48771" : l.type === "network" ? "#cca700" : "#d4d4d4" }}>
+              <div><strong>[{l.type.toUpperCase()}]</strong> {l.message}</div>
+              {l.stack && <pre style={{ whiteSpace: "pre-wrap", marginTop: 6, color: "#ccc" }}>{l.stack}</pre>}
+            </div>
+          ))}
+          {report && <DebugReport report={report} />} {/* 确保报告在可见区域 */}
+        </div>
+
+        {/* 控制台 */}
+        <div style={{ borderTop: "1px solid #333", padding: 8 }}>
+          <textarea 
+            ref={consoleInputRef} 
+            rows={3} 
+            placeholder="输入 JS 代码 (Ctrl/Cmd+Enter 执行)" 
+            style={{ width: "100%", background: "#222", color: "#fff", border: "1px solid #333", borderRadius: 4, padding: 8, fontFamily: "monospace" }} 
+            onKeyDown={e => { if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { e.preventDefault(); runConsoleCode(); } }} 
+          />
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 8 }}>
+            <button onClick={runConsoleCode}>运行</button>
             <button onClick={clearLogs}>清除</button>
             <button onClick={copyLogs}>复制</button>
           </div>
-
-          {/* 日志列表 */}
-          <div style={{flexGrow:1,overflowY:"auto",padding:8}}>
-            {filteredLogs.map((l,index)=>(
-              <div key={l.id} style={{borderBottom:"1px solid #222",padding:"6px 4px",color:l.type==="error"?"#f48771":l.type==="network"?"#cca700":"#d4d4d4"}}>
-                <div><strong>[{l.type.toUpperCase()}]</strong> {l.message}</div>
-                {l.stack && (
-                  <pre style={{whiteSpace:"pre-wrap",marginTop:6,color:"#ccc"}}>
-                    {l.stack.split("\n").map((line,i)=>{
-                      const match=line.match(/\((.*):(\d+):(\d+)\)/);
-                      if(match){
-                        const [_,file,lineNum,colNum]=match;
-                        return <div key={i} className="clickable-stack" onClick={()=>window.open(`vscode://file/${file}:${lineNum}:${colNum}`)}>{line}</div>;
-                      }
-                      return <div key={i}>{line}</div>;
-                    })}
-                  </pre>
-                )}
-              </div>
-            ))}
-          </div>
-
-          {/* 控制台 */}
-          <div style={{borderTop:"1px solid #333",padding:8}}>
-            <textarea ref={consoleInputRef} rows={3} placeholder="输入 JS 代码 (Ctrl/Cmd+Enter 执行)" style={{width:"100%",background:"#222",color:"#fff",border:"1px solid #333",borderRadius:4,padding:8,fontFamily:"monospace"}} onKeyDown={e=>{if((e.ctrlKey||e.metaKey)&&e.key==="Enter"){e.preventDefault();runConsoleCode();}}}/>
-            <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:8}}>
-              <button onClick={runConsoleCode}>运行</button>
-              <button onClick={clearLogs}>清除</button>
-              <button onClick={copyLogs}>复制</button>
-            </div>
-          </div>
-
-          {/* 智能分析报告 */}
-          {report && <DebugReport report={report}/>}
         </div>
-      )}
-    </>
-  );
+      </div>
+    )}
+  </>
+);
 };
 
 // 安装入口
