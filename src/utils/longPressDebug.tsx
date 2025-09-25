@@ -89,37 +89,32 @@ export const LongPressDebug: React.FC<{ maxLines?: number }> = ({ maxLines = DEF
     };
   }, [addLog, getSourceMapForStack]);
 
-  useEffect(() => {
+ useEffect(() => {
   const originalFetch = window.fetch.bind(window);
   window.fetch = async (input: any, init: any = {}) => {
-    const method = ((init && init.method) || (typeof input === "string" ? "GET" : input?.method) || "GET").toUpperCase();
     const url = typeof input === "string" ? input : input?.url || String(input);
-    const options = { ...init };
-    if ("body" in options) options.body = serializeBody(options.body);
-    const meta = { method, url, options };
+    addLog({ id: Date.now() + "-net-start", type: "info", message: `Loading started for ${url}` });
     try {
       const res = await originalFetch(input, init);
-      const text = await res.clone().text().catch(() => "");
+      const text = await res.text();
       addLog({
         id: Date.now() + "-net",
         type: res.ok ? "network" : "error",
         message: `[${method}] ${url} → ${res.status} ${res.statusText}`,
         stack: text,
-        meta,
+        meta: { method, url, options: init },
       });
+      // 假设加载完成条件
+      if (text.includes("noop") || text.includes("targetChange")) {
+        addLog({ id: Date.now() + "-net-end", type: "info", message: `Loading ended for ${url}` });
+      }
       return res;
-    } catch (err: any) {
-      addLog({
-        id: Date.now() + "-neterr",
-        type: "error",
-        message: `[${method}] ${url} → 请求失败: ${err.message}`,
-        stack: String(err?.stack || err),
-        meta,
-      });
+    } catch (err) {
+      addLog({ id: Date.now() + "-neterr", type: "error", message: `Failed: ${err.message}` });
       throw err;
     }
   };
-  return () => { window.fetch = originalFetch; }; // 清理
+  return () => { window.fetch = originalFetch; };
 }, [addLog]);
 
   const runConsoleCode = useCallback(() => {
