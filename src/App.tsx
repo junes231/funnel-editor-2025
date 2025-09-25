@@ -858,44 +858,47 @@ const QuizPlayer: React.FC<{ db: Firestore }> = ({ db }) => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const getFunnelForPlay = async () => {
-      if (!funnelId) {
-        setError('No funnel ID provided!');
-        setIsLoading(false);
-        return;
-      }
-      setIsLoading(true);
-      try {
-        const funnelDocRef = doc(db, 'funnels', funnelId);
-        const funnelDoc = await getDoc(funnelDocRef);
-        if (funnelDoc.exists()) {
-          const funnel = funnelDoc.data() as Funnel;
-          const data = { ...defaultFunnelData, ...funnel.data };
-          if (data.questions) {
-            data.questions = data.questions.map(q => {
-              if (Array.isArray(q.answers)) {
-                const answersObj: { [id: string]: Answer } = {};
-                q.answers.forEach((ans: any) => {
-                    const id = ans.id || `answer-${Date.now()}-${Math.random()}`;
-                    answersObj[id] = {...ans, id};
-                });
-                return { ...q, answers: answersObj };
-              }
-              return q;
-            });
-          }
-          setFunnelData(data);
-        } else {
-          setError('Funnel not found!');
+  const getFunnelForPlay = async () => {
+    console.log('funnelId:', funnelId, 'db:', db);
+    if (!funnelId) {
+      setError('No funnel ID provided!');
+      setIsLoading(false);
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const funnelDocRef = doc(db, 'funnels', funnelId);
+      const funnelDoc = await getDoc(funnelDocRef);
+      console.log('funnelDoc:', funnelDoc.exists(), funnelDoc.data());
+      if (funnelDoc.exists()) {
+        const funnel = funnelDoc.data() as Funnel;
+        const data = { ...defaultFunnelData, ...funnel.data };
+        if (data.questions) {
+          data.questions = data.questions.map(q => {
+            if (Array.isArray(q.answers)) {
+              const answersObj: { [id: string]: Answer } = {};
+              q.answers.forEach((ans: any) => {
+                const id = ans.id || `answer-${Date.now()}-${Math.random()}`;
+                answersObj[id] = { ...ans, id };
+              });
+              return { ...q, answers: answersObj };
+            }
+            return q;
+          });
         }
-      } catch (err) {
-        setError('Failed to load quiz.');
-      } finally {
-        setIsLoading(false);
+        setFunnelData(data);
+      } else {
+        setError('Funnel not found!');
       }
-    };
-    getFunnelForPlay();
-  }, [funnelId, db]);
+    } catch (err) {
+      console.error('Error:', err);
+      setError('Failed to load quiz.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  getFunnelForPlay();
+}, [funnelId, db]);
 
   const handleAnswerClick = async (answerIndex: number, answerId: string) => {
     if (isAnimating || !funnelData) return;
