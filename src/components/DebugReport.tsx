@@ -78,13 +78,32 @@ const DebugReport: React.FC<DebugReportProps> = ({ report }) => {
                   {finding.description}
                 </span>
               </div>
-              {finding.details && expandedIndex === index && (
-                <pre className="finding-details">{finding.details}</pre>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
+   {finding.details && expandedIndex === index && (
+  <pre className="finding-details">
+    {finding.details.split("\n").map((line, i) => {
+      const match = line.match(/\((.*):(\d+):(\d+)\)/);
+      if (match) {
+        const [_, file, lineNum, colNum] = match;
+        return (
+          <div
+            key={i}
+            className="clickable-stack"
+            onClick={() => {
+              window.open(`vscode://file/${file}:${lineNum}:${colNum}`);
+            }}
+          >
+            {line}
+          </div>
+        );
+      }
+      return <div key={i}>{line}</div>;
+    })}
+  </pre>
+)}
+ </div>
+  ))}
+  </div>
+   </div>
 
       {/* Potential Causes */}
       <div className="report-section">
