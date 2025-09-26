@@ -456,7 +456,7 @@ const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData }) => 
     const unsubscribe = onSnapshot(funnelDocRef, (funnelDoc) => {
       if (funnelDoc.exists()) {
         const funnel = funnelDoc.data() as Funnel;
-        
+        setFunnelName(funnel.name);
         let compatibleQuestions = funnel.data.questions || [];
         // ✅ 核心修复逻辑：仅在加载到的问题列表非空或本地状态为空时才更新
         if (compatibleQuestions.length > 0 || questions.length === 0) { 
@@ -475,7 +475,6 @@ const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData }) => 
 
             // 现在，'questions' state 将会自动包含最新的点击次数数据
             setQuestions(compatibleQuestions);
-            setFunnelName(funnel.name);
             setFinalRedirectLink(funnel.data.finalRedirectLink || '');
             setTracking(funnel.data.tracking || '');
             setConversionGoal(funnel.data.conversionGoal || 'Product Purchase');
