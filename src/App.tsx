@@ -459,29 +459,40 @@ const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData }) => 
         setFunnelName(funnel.name);
         
         // Add backward compatibility: convert answers from array to object if needed
-        let compatibleQuestions = funnel.data.questions || [];
-        compatibleQuestions = compatibleQuestions.map(question => {
-          if (Array.isArray(question.answers)) {
-            // Convert legacy array format to object format
-            const answersObj: { [answerId: string]: Answer } = {};
-            question.answers.forEach((answer: Answer) => {
-              answersObj[answer.id] = answer;
+          let compatibleQuestions = funnel.data.questions || [];
+        // 只有当加载到的问题列表不为空，或者本地状态也为空时，才更新状态。
+        // 如果本地状态有数据，但加载到的问题列表为空，我们先忽略这次“清除”操作，等待一个有效的快照。
+        if (compatibleQuestions.length > 0 || questions.length === 0) { 
+            compatibleQuestions = compatibleQuestions.map(question => {
+                // ... (保持原有的兼容性转换逻辑不变)
+                if (Array.isArray(question.answers)) {
+                    // Convert legacy array format to object format
+                    const answersObj: { [answerId: string]: Answer } = {};
+                    question.answers.forEach((answer: Answer) => {
+                      answersObj[answer.id] = answer;
+                    });
+                    return { ...question, answers: answersObj };
+                  }
+                  return question; // Already in object format
             });
-            return { ...question, answers: answersObj };
-          }
-          return question; // Already in object format
-        });
-        
-        // 现在，'questions' state 将会自动包含最新的点击次数数据
-        setQuestions(compatibleQuestions);
-        setFinalRedirectLink(funnel.data.finalRedirectLink || '');
-        setTracking(funnel.data.tracking || '');
-        setConversionGoal(funnel.data.conversionGoal || 'Product Purchase');
-        setPrimaryColor(funnel.data.primaryColor || defaultFunnelData.primaryColor);
-        setButtonColor(funnel.data.buttonColor || defaultFunnelData.buttonColor);
-        setBackgroundColor(funnel.data.backgroundColor || defaultFunnelData.backgroundColor);
-        setTextColor(funnel.data.textColor || defaultFunnelData.textColor);
-        setIsDataLoaded(true);
+
+            setFunnelName(funnel.name);
+            setQuestions(compatibleQuestions);
+            setFinalRedirectLink(funnel.data.finalRedirectLink || '');
+            setTracking(funnel.data.tracking || '');
+            setConversionGoal(funnel.data.conversionGoal || 'Product Purchase');
+            setPrimaryColor(funnel.data.primaryColor || defaultFunnelData.primaryColor);
+            setButtonColor(funnel.data.buttonColor || defaultFunnelData.buttonColor);
+            setBackgroundColor(funnel.data.backgroundColor || defaultFunnelData.backgroundColor);
+            setTextColor(funnel.data.textColor || defaultFunnelData.textColor);
+            setIsDataLoaded(true);
+            
+            // 记录日志，确认数据更新发生
+            console.log('✅ Firestore data loaded and state updated.');
+        } else {
+             // 记录警告，这次快照被跳过，以防止自我清除
+             console.warn('⚠️ Skipped loading empty snapshot to prevent accidental data loss.');
+        }
       } else {
         console.log('未找到该漏斗!');
         navigate('/');
