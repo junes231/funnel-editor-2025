@@ -45,13 +45,14 @@ const DebugReport: React.FC<DebugReportProps> = ({ report }) => {
   };
 
   const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(JSON.stringify(report, null, 2));
-      alert("✅ 报告已复制到剪贴板");
-    } catch {
-      alert("❌ 复制失败");
-    }
-  };
+  try {
+    await navigator.clipboard.writeText(JSON.stringify(report, null, 2));
+    // ✅ 改成非阻塞提示
+    console.log("✅ 报告已复制到剪贴板");
+  } catch {
+    console.warn("❌ 复制失败");
+  }
+};
 
   return (
     <div className="debug-report">
@@ -78,9 +79,9 @@ const DebugReport: React.FC<DebugReportProps> = ({ report }) => {
                   {finding.description}
                 </span>
               </div>
-   {finding.details && expandedIndex === index && (
+{finding.details && expandedIndex === index && (
   <pre className="finding-details">
-    {finding.details.split("\n").map((line, i) => {
+    {String(finding.details).split("\n").map((line, i) => {
       const match = line.match(/\((.*):(\d+):(\d+)\)/);
       if (match) {
         const [_, file, lineNum, colNum] = match;
@@ -89,7 +90,11 @@ const DebugReport: React.FC<DebugReportProps> = ({ report }) => {
             key={i}
             className="clickable-stack"
             onClick={() => {
-              window.open(`vscode://file/${file}:${lineNum}:${colNum}`);
+              try {
+                window.open(`vscode://file/${file}:${lineNum}:${colNum}`);
+              } catch (e) {
+                console.warn("无法打开 vscode 链接", e);
+              }
             }}
           >
             {line}
