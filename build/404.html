@@ -1,22 +1,12 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh">
   <head>
-    <meta charset="utf-8">
-    <title>Redirecting...</title>
-    <script type="text/javascript">
-      // 保存当前试图访问的完整路径
-      var segmentCount = 1; // 因为仓库名是 junes231.github.io/funnel-editor-2025，路径段是 1
-      var l = window.location;
-      var newPath = l.pathname.split('/').slice(0, 1 + segmentCount).join('/') + '/?/' +
-                    l.pathname.slice(1).split('/').slice(segmentCount).join('/') +
-                    l.search +
-                    l.hash;
-
-      // 重定向到主页，并将旧路径信息放在 hash 中
-      l.replace(newPath);
-    </script>
+    <meta charset="utf-8" />
+    <title>营销漏斗编辑器</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
   </head>
   <body>
-    <p>If you are not redirected automatically, follow this <a href="https://junes231.github.io/funnel-editor-2025/">link to the home page</a>.</p>
+    <noscript>你需要启用 JavaScript 才能查看此页面。</noscript>
+    <div id="root"></div>
   </body>
 </html>
