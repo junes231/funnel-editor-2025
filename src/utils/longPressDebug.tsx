@@ -93,10 +93,12 @@ export const LongPressDebug: React.FC<{ maxLines?: number }> = ({ maxLines = DEF
   const originalFetch = window.fetch.bind(window);
   window.fetch = async (input: any, init: any = {}) => {
     const url = typeof input === "string" ? input : input?.url || String(input);
+    const method = (init?.method || "GET").toUpperCase(); // ✅ 补上 method
     addLog({ id: Date.now() + "-net-start", type: "info", message: `Loading started for ${url}` });
     try {
       const res = await originalFetch(input, init);
-      const text = await res.text();
+      const clone = res.clone(); // ✅ 克隆一份，保证调用方还能用
+      const text = await res.text(); // 只给日志用
       addLog({
         id: Date.now() + "-net",
         type: res.ok ? "network" : "error",
@@ -108,8 +110,8 @@ export const LongPressDebug: React.FC<{ maxLines?: number }> = ({ maxLines = DEF
       if (text.includes("noop") || text.includes("targetChange")) {
         addLog({ id: Date.now() + "-net-end", type: "info", message: `Loading ended for ${url}` });
       }
-      return res;
-    } catch (err) {
+      return clone; // ✅ 返回 clone，而不是已消耗的 res
+    } catch (err: any) {
       addLog({ id: Date.now() + "-neterr", type: "error", message: `Failed: ${err.message}` });
       throw err;
     }
