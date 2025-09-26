@@ -271,7 +271,7 @@ return () => {
     )}
   </>
 );
-};
+
 
 // 安装入口
 export function installLongPressDebug(opts?: { maxLines?: number }) {
