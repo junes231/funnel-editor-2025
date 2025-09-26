@@ -1,92 +1,52 @@
-:root {
-  --bg-primary: #1e1e1e;
-  --text-primary: #e0e0e0; /* 提高对比度 */
-  --padding-base: 16px;
-  --padding-sm: 8px;
-  --border-radius-base: 6px;
-  --border-radius-sm: 4px;
-  --transition-speed: 0.2s;
-  --status-error: #f44336;
-  --status-warning: #ff9800;
-  --status-info: #2196f3;
-  --status-ok: #4caf50;
-  --hover-bg: #333;
-  --details-bg: #2d2d2d;
-  --link-color: #4fc3f7;
-  --link-hover: #81d4fa;
-}
-
 .debug-report {
-  background: var(--bg-primary);
-  color: var(--text-primary);
-  padding: var(--padding-base);
-  border-radius: var(--border-radius-base);
-  font-size: 0.875rem; /* 14px 相对单位 */
+  padding: 15px;
+  background-color: #252526;
+  color: #d4d4d4;
+  font-size: 14px;
+  height: 100%;
 }
-
-.report-header {
+.debug-report h2, .debug-report h3 {
+  color: #00aaff;
+  border-bottom: 1px solid #444;
+  padding-bottom: 5px;
+  margin-top: 0;
+}
+.report-section {
+  margin-bottom: 20px;
+}
+.report-section ul {
+  list-style-type: disc;
+  padding-left: 20px;
+}
+.findings-list {
+  list-style-type: none;
+  padding-left: 0;
+}
+.finding-item {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
+  padding: 8px;
+  border-radius: 4px;
+  margin-bottom: 8px;
 }
-
-.finding-card {
-  padding: var(--padding-sm);
-  margin-bottom: var(--padding-sm);
-  border-radius: var(--border-radius-sm);
-  cursor: pointer;
-  transition: background var(--transition-speed);
+.finding-item.status-ok { background-color: rgba(76, 175, 80, 0.2); }
+.finding-item.status-error { background-color: rgba(244, 67, 54, 0.2); }
+.finding-item.status-warning { background-color: rgba(255, 193, 7, 0.2); }
+.status-icon {
+  font-size: 20px;
+  margin-right: 12px;
+  line-height: 1.2;
 }
-.finding-card:hover {
-  background: var(--hover-bg);
+.finding-description {
+  margin: 0;
+  font-weight: bold;
 }
-.finding-header {
-  display: flex;
-  align-items: center;
-  gap: var(--padding-sm);
-}
-
-.status-error { border-left: 4px solid var(--status-error); }
-.status-warning { border-left: 4px solid var(--status-warning); }
-.status-info { border-left: 4px solid var(--status-info); }
-.status-ok { border-left: 4px solid var(--status-ok); }
-
 .finding-details {
-  margin-top: var(--padding-sm);
-  background: var(--details-bg);
-  padding: var(--padding-sm);
-  border-radius: var(--border-radius-sm);
-  overflow-x: auto;
-  overflow-y: auto; /* 添加纵向滚动 */
-  max-height: 200px; /* 可调整的 max-height */
+  margin: 5px 0 0;
+  padding: 8px;
+  background-color: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
   white-space: pre-wrap;
-  font-size: 0.75rem; /* 12px 相对单位 */
-}
-
-.clickable-stack {
-  cursor: pointer;
-  color: var(--link-color);
-  text-decoration: underline;
-}
-.clickable-stack:hover {
-  color: var(--link-hover);
-}
-.clickable-stack:focus {
-  outline: 2px solid var(--link-hover);
-  outline-offset: 2px;
-}
-
-/* 移动端适配 */
-@media (max-width: 768px) {
-  .debug-report {
-    font-size: 0.75rem; /* 12px */
-    padding: calc(var(--padding-base) / 2);
-  }
-  .finding-details {
-    max-height: 150px; /* 调整移动端高度 */
-    font-size: 0.7rem; /* 10px */
-  }
-  .finding-card {
-    padding: calc(var(--padding-sm) / 2);
-  }
+  word-break: break-all;
+  font-size: 12px;
 }
