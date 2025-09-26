@@ -15,7 +15,8 @@ const app = express();
 // --- CORS 中间件 ---
 const allowedOrigins = [
   'https://funnel-editor2025.netlify.app',
-  'https://junes231.github.io/funnel-editor-2025/'
+  'https://junes231.github.io/funnel-editor-2025/',
+  'https://junes231.github.io'
 ];
 
 const corsOptions = {
