@@ -1,4 +1,3 @@
-// src/utils/longPressDebug.tsx
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { createRoot } from "react-dom/client";
 import DebugReport, { AnalysisReport, ReportFinding } from "../components/DebugReport.tsx";
@@ -30,21 +29,6 @@ export const LongPressDebug: React.FC<{ maxLines?: number }> = ({ maxLines = DEF
 
   const clearLogs = useCallback(() => setLogs([]), []);
 
-  const serializeBody = (body: any) => {
-    try {
-      if (!body) return body;
-      if (typeof body === "string") return body;
-      if (body instanceof FormData) {
-        const obj: Record<string, any> = {};
-        for (const [k, v] of body.entries()) obj[k] = v;
-        return obj;
-      }
-      return JSON.parse(JSON.stringify(body));
-    } catch {
-      return "[unserializable body]";
-    }
-  };
-
   const getSourceMapForStack = useCallback(async () => {
     const scripts = Array.from(document.scripts).filter(s => s.src);
     for (const script of scripts) {
@@ -65,6 +49,7 @@ export const LongPressDebug: React.FC<{ maxLines?: number }> = ({ maxLines = DEF
     return null;
   }, []);
 
+  // 捕获全局错误
   useEffect(() => {
     window.onerror = async (msg, src, line, col, err) => {
       let stack = err?.stack || `${msg} at ${src}:${line}:${col}`;
@@ -89,60 +74,41 @@ export const LongPressDebug: React.FC<{ maxLines?: number }> = ({ maxLines = DEF
     };
   }, [addLog, getSourceMapForStack]);
 
- useEffect(() => {
-  const originalFetch = window.fetch;
-window.fetch = async (url: RequestInfo, init?: RequestInit) => {
-  const method = init?.method || "GET";
-  try {
-    const res = await originalFetch(url, init);
-
-    // ✅ 克隆一份给调用方，避免流被消耗
-    const clone = res.clone();
-
-    // 尝试只读取部分内容（避免日志太大）
-    let preview = "";
-    try {
-      preview = await res.clone().text();
-      if (preview.length > 1000) {
-        preview = preview.slice(0, 1000) + " ... (truncated)";
+  // 拦截 fetch
+  useEffect(() => {
+    const originalFetch = window.fetch;
+    window.fetch = async (url: RequestInfo, init?: RequestInit) => {
+      const method = init?.method || "GET";
+      try {
+        const res = await originalFetch(url, init);
+        const clone = res.clone();
+        let preview = "";
+        try {
+          preview = await res.clone().text();
+          if (preview.length > 1000) preview = preview.slice(0, 1000) + " ... (truncated)";
+        } catch {
+          preview = "[非文本响应]";
+        }
+        addLog({
+          id: Date.now() + "-net",
+          type: res.ok ? "network" : "error",
+          message: `[${method}] ${url} → ${res.status} ${res.statusText}`,
+          stack: preview,
+          meta: { method, url, options: init },
+        });
+        if (preview.includes("noop") || preview.includes("targetChange")) {
+          addLog({ id: Date.now() + "-net-end", type: "info", message: `Loading ended for ${url}` });
+        }
+        return clone;
+      } catch (err: any) {
+        addLog({ id: Date.now() + "-neterr", type: "error", message: `Failed: ${err.message}` });
+        throw err;
       }
-    } catch {
-      preview = "[非文本响应]";
-    }
+    };
+    return () => { window.fetch = originalFetch; };
+  }, [addLog]);
 
-    addLog({
-      id: Date.now() + "-net",
-      type: res.ok ? "network" : "error",
-      message: `[${method}] ${url} → ${res.status} ${res.statusText}`,
-      stack: preview,
-      meta: { method, url, options: init },
-    });
-
-    // ✅ 假设加载完成条件
-    if (preview.includes("noop") || preview.includes("targetChange")) {
-      addLog({
-        id: Date.now() + "-net-end",
-        type: "info",
-        message: `Loading ended for ${url}`,
-      });
-    }
-
-    return clone; // ✅ 返回 clone
-  } catch (err: any) {
-    addLog({
-      id: Date.now() + "-neterr",
-      type: "error",
-      message: `Failed: ${err.message}`,
-    });
-    throw err;
-  }
-};
-
-// 清理时恢复原始 fetch
-return () => {
-  window.fetch = originalFetch;
-};
-
+  // 控制台执行 JS
   const runConsoleCode = useCallback(() => {
     const code = consoleInputRef.current?.value;
     if (!code || !code.trim()) return;
@@ -159,7 +125,12 @@ return () => {
 
   const copyLogs = useCallback(async () => {
     const text = logs.map(l => `[${l.type.toUpperCase()}] ${l.message}${l.stack ? "\n" + l.stack : ""}`).join("\n\n");
-    try { await navigator.clipboard.writeText(text); addLog({ id: Date.now() + "-copy", type: "info", message: "已复制日志到剪贴板" }); } catch { addLog({ id: Date.now() + "-copy-err", type: "error", message: "复制失败" }); }
+    try {
+      await navigator.clipboard.writeText(text);
+      addLog({ id: Date.now() + "-copy", type: "info", message: "已复制日志到剪贴板" });
+    } catch {
+      addLog({ id: Date.now() + "-copy-err", type: "error", message: "复制失败" });
+    }
   }, [logs, addLog]);
 
   const runAnalysis = useCallback(() => {
@@ -171,7 +142,11 @@ return () => {
       findings.push({ status: "error", description: l.message, details: l.stack });
     });
     logsSnapshot.filter(l => l.type === "network" && l.meta?.url).forEach(l => {
-      findings.push({ status: l.message.includes("→") && !l.message.includes("200") ? "warning" : "info", description: `[${l.meta.method}] ${l.meta.url} → ${l.message.split("→")[1] ?? ""}`, details: JSON.stringify(l.meta, null, 2) });
+      findings.push({
+        status: l.message.includes("→") && !l.message.includes("200") ? "warning" : "info",
+        description: `[${l.meta.method}] ${l.meta.url} → ${l.message.split("→")[1] ?? ""}`,
+        details: JSON.stringify(l.meta, null, 2)
+      });
     });
     logsSnapshot.filter(l => l.type === "lint" || l.type === "info").forEach(l => {
       findings.push({ status: "info", description: l.message });
@@ -189,70 +164,70 @@ return () => {
   const filteredLogs = logs.filter(l => l.message.toLowerCase().includes(filter.toLowerCase()));
 
   return (
-  <>
-    <button 
-      style={{ 
-        position: "fixed", 
-        right: 10, 
-        bottom: 65, 
-        width: 56, 
-        height: 56, 
-        borderRadius: 28, 
-        background: "#007acc", 
-        color: "#fff", 
-        zIndex: 120001, // 提高 z-index
-        fontSize: 12, 
-        border: "none", 
-        boxShadow: "0 4px 12px rgba(0,0,0,0.3)" 
-      }}
-      onClick={() => setVisible(v => !v)}
-    >
-      Debug
-    </button>
-
-    {visible && (
-      <div 
-        style={{ 
-          position: "fixed", 
-          bottom: 0, 
-          left: 0, 
-          width: "100%", 
-          height: "70vh", // 适配屏幕高度
-          maxHeight: "90vh", 
-          background: "#111", 
-          color: "#fff", 
-          fontFamily: "monospace", 
-          fontSize: 12, 
-          zIndex: 120000, 
-          display: "flex", 
-          flexDirection: "column" 
+    <>
+      {/* Debug 开关按钮 */}
+      <button 
+        style={{
+          position: "fixed",
+          right: 10,
+          bottom: 65,
+          width: 56,
+          height: 56,
+          borderRadius: 28,
+          background: "#007acc",
+          color: "#fff",
+          zIndex: 120001,
+          fontSize: 12,
+          border: "none",
+          boxShadow: "0 4px 12px rgba(0,0,0,0.3)"
         }}
+        onClick={() => setVisible(v => !v)}
       >
-        {/* 工具栏 */}
-        <div style={{ display: "flex", gap: 8, padding: 8, alignItems: "center", borderBottom: "1px solid #333" }}>
-          <input 
-            placeholder="搜索日志" 
-            value={filter} 
-            onChange={e => setFilter(e.target.value)} 
-            style={{ flexGrow: 1, minWidth: 120, padding: 6, background: "#222", color: "#fff", border: "1px solid #333", borderRadius: 4 }} 
-          />
-          <button onClick={runAnalysis}>智能分析</button>
-          <button onClick={clearLogs}>清除</button>
-          <button onClick={copyLogs}>复制</button>
-        </div>
+        Debug
+      </button>
 
-        {/* 日志列表和报告容器 */}
-        <div style={{ flexGrow: 1, overflowY: "auto", padding: 8, display: "flex", flexDirection: "column" }}>
-          {filteredLogs.map((l, index) => (
-            <div key={l.id} style={{ borderBottom: "1px solid #222", padding: "6px 4px", color: l.type === "error" ? "#f48771" : l.type === "network" ? "#cca700" : "#d4d4d4" }}>
-              <div><strong>[{l.type.toUpperCase()}]</strong> {l.message}</div>
-              {l.stack && <pre style={{ whiteSpace: "pre-wrap", marginTop: 6, color: "#ccc" }}>{l.stack}</pre>}
-            </div>
-          ))}
-          {report && <DebugReport report={report} />} {/* 确保报告在可见区域 */}
-        </div>
+      {visible && (
+        <div style={{
+          position: "fixed",
+          bottom: 0,
+          left: 0,
+          width: "100%",
+          height: "70vh",
+          maxHeight: "90vh",
+          background: "#111",
+          color: "#fff",
+          fontFamily: "monospace",
+          fontSize: 12,
+          zIndex: 120000,
+          display: "flex",
+          flexDirection: "column"
+        }}>
+          {/* 工具栏 */}
+          <div style={{ display: "flex", gap: 8, padding: 8, alignItems: "center", borderBottom: "1px solid #333" }}>
+            <input 
+              placeholder="搜索日志"
+              value={filter}
+              onChange={e => setFilter(e.target.value)}
+              style={{ flexGrow: 1, minWidth: 120, padding: 6, background: "#222", color: "#fff", border: "1px solid #333", borderRadius: 4 }}
+            />
+            <button onClick={runAnalysis}>智能分析</button>
+            <button onClick={clearLogs}>清除</button>
+            <button onClick={copyLogs}>复制</button>
+          </div>
 
-        {/* 控制台 */}
+          {/* 日志列表 */}
+          <div style={{ flexGrow: 1, overflowY: "auto", padding: 8, display: "flex", flexDirection: "column" }}>
+            {filteredLogs.map(l => (
+              <div key={l.id} style={{ borderBottom: "1px solid #222", padding: "6px 4px", color: l.type === "error" ? "#f48771" : l.type === "network" ? "#cca700" : "#d4d4d4" }}>
+                <div><strong>[{l.type.toUpperCase()}]</strong> {l.message}</div>
+                {l.stack && <pre style={{ whiteSpace: "pre-wrap", marginTop: 6, color: "#ccc" }}>{l.stack}</pre>}
+              </div>
+            ))}
+            {report && <DebugReport report={report} />}
+          </div>
+
+          {/* 控制台 */}
+      
         <div style={{ borderTop: "1px solid #333", padding: 8 }}>
           <textarea 
             ref={consoleInputRef} 
@@ -273,10 +248,4 @@ return () => {
 );
 
 
-// 安装入口
-export function installLongPressDebug(opts?: { maxLines?: number }) {
-  const container = document.createElement("div");
-  document.body.appendChild(container);
-  const root = createRoot(container);
-  root.render(<LongPressDebug maxLines={opts?.maxLines} />);
-}
+
