@@ -499,22 +499,8 @@ const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData }) => 
 }, [funnelId, db, navigate]);
 
   const saveFunnelToFirestore = useCallback(() => {
-    if (!funnelId) return;
-    const newData: FunnelData = {
-      questions,
-      finalRedirectLink,
-      tracking,
-      conversionGoal,
-      primaryColor,
-      buttonColor,
-      backgroundColor,
-      textColor,
-    };
-    setDebugLinkValue(`Saving: ${finalRedirectLink || 'Empty'}`);
-    console.log('FunnelEditor: Saving finalRedirectLink to Firestore:', finalRedirectLink);
-    updateFunnelData(funnelId, newData);
-  }, [
-    funnelId,
+  if (!funnelId) return;
+  const newData: FunnelData = {
     questions,
     finalRedirectLink,
     tracking,
@@ -523,8 +509,9 @@ const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData }) => 
     buttonColor,
     backgroundColor,
     textColor,
-    updateFunnelData,
-  ]);
+  };
+  updateFunnelData(funnelId, newData);
+}, [funnelId, questions, finalRedirectLink, tracking, conversionGoal, primaryColor, buttonColor, backgroundColor, textColor, updateFunnelData]);
 
   useEffect(() => {
     if (!isDataLoaded) return;
@@ -853,7 +840,7 @@ interface QuizPlayerProps {
 const QuizPlayer: React.FC<QuizPlayerProps> = ({ db }) => {
   const { funnelId } = useParams<{ funnelId: string }>();
   const navigate = useNavigate();
-
+   const debounceRef = useRef(false);
   const [funnelData, setFunnelData] = useState<FunnelData | null>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [clickedAnswerIndex, setClickedAnswerIndex] = useState<number | null>(null);
@@ -909,59 +896,58 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ db }) => {
 
   // [中文注释] 关键升级：这是新的 handleAnswerClick 函数
   const handleAnswerClick = async (answerIndex: number, answerId: string) => {
-  if (isAnimating || !funnelData) return;
-
+  if (isAnimating || !funnelData) {
+    console.log('Click blocked due to isAnimating or no funnelData');
+    return;
+  }
+  if (debounceRef.current) return;
+  debounceRef.current = true;
   setIsAnimating(true);
   setClickedAnswerIndex(answerIndex);
 
-   const affiliateLink = currentQuestion?.data?.affiliateLinks?.[answerIndex];
+  const affiliateLink = currentQuestion?.data?.affiliateLinks?.[answerIndex];
+  console.log('Affiliate link for index', answerIndex, ':', affiliateLink);
 
-  // --- ↓↓↓ 健壮的点击追踪逻辑 ↓↓↓ ---
-   if (funnelId && currentQuestion?.id && answerId) {
+  // 记录点击
+  if (funnelData && currentQuestion?.id && answerId) {
     fetch(trackClickEndpoint, {
       method: "POST",
       mode: "cors",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        data: {
-          funnelId: funnelId,
-          questionId: currentQuestion.id,
-          answerId: answerId,
-        },
-      }),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ data: { funnelId, questionId: currentQuestion.id, answerId } }),
     })
     .then(response => {
-      if (!response.ok) {
-        // 追踪失败，在控制台记录错误，但不阻塞用户
-        console.error("Failed to track click (API Error):", response.statusText);
-      } else {
-        console.log("Click tracked successfully.");
-      }
+      if (!response.ok) console.error("Failed to track click:", response.statusText);
+      else console.log("Click tracked successfully.");
     })
-    .catch(err => {
-      // 网络或其他错误，在控制台记录错误，但不阻塞用户
-      console.error("Failed to track click (Network error):", err);
-    });
+    .catch(err => console.error("Network error:", err));
   }
-  // --- ↑↑↑ 修复结束 ↑↑↑ ---
-  
-  // [中文注释] 在新标签页中打开推广链接（这应该立即发生）
+
+  // 优先处理 affiliateLink
   if (affiliateLink && affiliateLink.trim() !== "") {
     window.open(affiliateLink, "_blank");
   }
 
-  // 动画和跳题逻辑 (保持不变，但现在是异步的)
+  // 动画后执行跳转逻辑
   setTimeout(() => {
     setIsAnimating(false);
     setClickedAnswerIndex(null);
+    debounceRef.current = false;
     if (!funnelData) return;
-    // ... (跳到下一个问题/重定向逻辑)
-  }, 500); // 这里的延迟现在只用于视觉动画
+
+    const nextIndex = currentQuestionIndex + 1;
+    if (nextIndex < funnelData.questions.length) {
+      setCurrentQuestionIndex(nextIndex); // 跳转到下一个问题
+    } else if (funnelData.finalRedirectLink && funnelData.finalRedirectLink.trim() !== "") {
+      window.location.href = funnelData.finalRedirectLink; // 结束时重定向
+    } else {
+      // 默认跳转（如果没有 finalRedirectLink）
+      window.location.href = '/'; // 或 '/completed' 页面
+    }
+  }, 500);
 };
-  
-  // [中文注释] 组件的 JSX 渲染部分保持不变...
+
+ // [中文注释] 组件的 JSX 渲染部分保持不变...
   if (isLoading) {
     return (
       <div className="quiz-player-container" style={{ textAlign: 'center', marginTop: '80px' }}>
@@ -1437,19 +1423,8 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
         {/* Use the stable sortedAnswers array for rendering */}
         {sortedAnswers.map((answer, index) => (
           <div key={answer.id} className="answer-input-group">
-            <input
-              type="text"
-              value={answer.text}
-              onChange={(e) => handleAnswerTextChange(answer.id, e.target.value)}
-              placeholder={`Option ${String.fromCharCode(65 + index)}`}
-            />
-            <input
-              type="url"
-              value={affiliateLinks[index] || ''}
-              onChange={(e) => handleLinkChange(index, e.target.value)}
-              placeholder="Affiliate link (optional)"
-              className="affiliate-link-input"
-            />
+    <input type="text" value={answer.text} onChange={(e) => handleAnswerTextChange(answer.id, e.target.value)} />
+    <input type="url" value={affiliateLinks[index] || ''} onChange={(e) => handleLinkChange(index, e.target.value)} placeholder="Affiliate link (optional)" />
             <div style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               padding: '8px 12px', backgroundColor: '#f0f0f0', borderRadius: '6px',
