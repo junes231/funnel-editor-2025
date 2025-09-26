@@ -90,34 +90,58 @@ export const LongPressDebug: React.FC<{ maxLines?: number }> = ({ maxLines = DEF
   }, [addLog, getSourceMapForStack]);
 
  useEffect(() => {
-  const originalFetch = window.fetch.bind(window);
-  window.fetch = async (input: any, init: any = {}) => {
-    const url = typeof input === "string" ? input : input?.url || String(input);
-    const method = (init?.method || "GET").toUpperCase(); // ✅ 补上 method
-    addLog({ id: Date.now() + "-net-start", type: "info", message: `Loading started for ${url}` });
+  const originalFetch = window.fetch;
+window.fetch = async (url: RequestInfo, init?: RequestInit) => {
+  const method = init?.method || "GET";
+  try {
+    const res = await originalFetch(url, init);
+
+    // ✅ 克隆一份给调用方，避免流被消耗
+    const clone = res.clone();
+
+    // 尝试只读取部分内容（避免日志太大）
+    let preview = "";
     try {
-      const res = await originalFetch(input, init);
-      const clone = res.clone(); // ✅ 克隆一份，保证调用方还能用
-      const text = await res.text(); // 只给日志用
-      addLog({
-        id: Date.now() + "-net",
-        type: res.ok ? "network" : "error",
-        message: `[${method}] ${url} → ${res.status} ${res.statusText}`,
-        stack: text,
-        meta: { method, url, options: init },
-      });
-      // 假设加载完成条件
-      if (text.includes("noop") || text.includes("targetChange")) {
-        addLog({ id: Date.now() + "-net-end", type: "info", message: `Loading ended for ${url}` });
+      preview = await res.clone().text();
+      if (preview.length > 1000) {
+        preview = preview.slice(0, 1000) + " ... (truncated)";
       }
-      return clone; // ✅ 返回 clone，而不是已消耗的 res
-    } catch (err: any) {
-      addLog({ id: Date.now() + "-neterr", type: "error", message: `Failed: ${err.message}` });
-      throw err;
+    } catch {
+      preview = "[非文本响应]";
     }
-  };
-  return () => { window.fetch = originalFetch; };
-}, [addLog]);
+
+    addLog({
+      id: Date.now() + "-net",
+      type: res.ok ? "network" : "error",
+      message: `[${method}] ${url} → ${res.status} ${res.statusText}`,
+      stack: preview,
+      meta: { method, url, options: init },
+    });
+
+    // ✅ 假设加载完成条件
+    if (preview.includes("noop") || preview.includes("targetChange")) {
+      addLog({
+        id: Date.now() + "-net-end",
+        type: "info",
+        message: `Loading ended for ${url}`,
+      });
+    }
+
+    return clone; // ✅ 返回 clone
+  } catch (err: any) {
+    addLog({
+      id: Date.now() + "-neterr",
+      type: "error",
+      message: `Failed: ${err.message}`,
+    });
+    throw err;
+  }
+};
+
+// 清理时恢复原始 fetch
+return () => {
+  window.fetch = originalFetch;
+};
 
   const runConsoleCode = useCallback(() => {
     const code = consoleInputRef.current?.value;
