@@ -194,7 +194,7 @@ export const LongPressDebug: React.FC<{ maxLines?: number }> = ({ maxLines = DEF
           width: "100%",
           height: "70vh",
           maxHeight: "90vh",
-          background: "#111",
+          background: "#1e1e1e", // MODIFIED: 深色背景以匹配主题
           color: "#fff",
           fontFamily: "monospace",
           fontSize: 12,
@@ -203,49 +203,63 @@ export const LongPressDebug: React.FC<{ maxLines?: number }> = ({ maxLines = DEF
           flexDirection: "column"
         }}>
           {/* 工具栏 */}
-          <div style={{ display: "flex", gap: 8, padding: 8, alignItems: "center", borderBottom: "1px solid #333" }}>
+          <div style={{ display: "flex", gap: 8, padding: 8, alignItems: "center", borderBottom: "1px solid #333", flexShrink: 0 }}>
             <input 
               placeholder="搜索日志"
               value={filter}
               onChange={e => setFilter(e.target.value)}
-              style={{ flexGrow: 1, minWidth: 120, padding: 6, background: "#222", color: "#fff", border: "1px solid #333", borderRadius: 4 }}
+              style={{ flexGrow: 1, minWidth: 120, padding: 6, background: "#252526", color: "#fff", border: "1px solid #3c3c3c", borderRadius: 4 }}
             />
-            <button onClick={runAnalysis}>智能分析</button>
-            <button onClick={clearLogs}>清除</button>
-            <button onClick={copyLogs}>复制</button>
+            <button onClick={runAnalysis} style={{ background: "#37373d", color: "#fff", border: "1px solid #3c3c3c", borderRadius: 4, padding: "8px 12px", cursor: "pointer" }}>智能分析</button>
+            <button onClick={clearLogs} style={{ background: "#37373d", color: "#fff", border: "1px solid #3c3c3c", borderRadius: 4, padding: "8px 12px", cursor: "pointer" }}>清除</button>
+            <button onClick={copyLogs} style={{ background: "#37373d", color: "#fff", border: "1px solid #3c3c3c", borderRadius: 4, padding: "8px 12px", cursor: "pointer" }}>复制</button>
           </div>
 
           {/* 日志列表 */}
-          <div style={{ flexGrow: 1, overflowY: "auto", padding: 8, display: "flex", flexDirection: "column" }}>
+          <div style={{ flexGrow: 1, overflowY: "auto", padding: 8, display: "flex", flexDirection: "column-reverse" }}> {/* MODIFIED: 使用 column-reverse 让新日志在顶部 */}
+            {report && <DebugReport report={report} />} {/* MODIFIED: 将报告放在顶部 */}
             {filteredLogs.map(l => (
-              <div key={l.id} style={{ borderBottom: "1px solid #222", padding: "6px 4px", color: l.type === "error" ? "#f48771" : l.type === "network" ? "#cca700" : "#d4d4d4" }}>
+              <div key={l.id} style={{ borderBottom: "1px solid #2a2a2a", padding: "6px 4px", color: l.type === "error" ? "#f48771" : l.type === "network" ? "#cca700" : "#d4d4d4" }}>
                 <div><strong>[{l.type.toUpperCase()}]</strong> {l.message}</div>
                 {l.stack && <pre style={{ whiteSpace: "pre-wrap", marginTop: 6, color: "#ccc" }}>{l.stack}</pre>}
               </div>
             ))}
-            {report && <DebugReport report={report} />}
           </div>
 
           {/* 控制台 */}
-      
-        <div style={{ borderTop: "1px solid #333", padding: 8 }}>
-          <textarea 
-            ref={consoleInputRef} 
-            rows={3} 
-            placeholder="输入 JS 代码 (Ctrl/Cmd+Enter 执行)" 
-            style={{ width: "100%", background: "#222", color: "#fff", border: "1px solid #333", borderRadius: 4, padding: 8, fontFamily: "monospace" }} 
-            onKeyDown={e => { if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { e.preventDefault(); runConsoleCode(); } }} 
-          />
-          <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 8 }}>
-            <button onClick={runConsoleCode}>运行</button>
-            <button onClick={clearLogs}>清除</button>
-            <button onClick={copyLogs}>复制</button>
+          <div style={{ borderTop: "1px solid #3c3c3c", padding: 8, flexShrink: 0 }}>
+            <textarea 
+              ref={consoleInputRef} 
+              rows={3} 
+              placeholder="输入 JS 代码 (Ctrl/Cmd+Enter 执行)" 
+              style={{ width: "100%", background: "#2a2a2e", color: "#fff", border: "1px solid #3c3c3c", borderRadius: 4, padding: 8, fontFamily: "monospace" }} 
+              onKeyDown={e => { if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { e.preventDefault(); runConsoleCode(); } }} 
+            />
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 8 }}>
+              <button onClick={runConsoleCode} style={{ background: "#007acc", color: "#fff", border: "1px solid #3c3c3c", borderRadius: 4, padding: "8px 12px", cursor: "pointer" }}>运行</button>
+              <button onClick={clearLogs} style={{ background: "#37373d", color: "#fff", border: "1px solid #3c3c3c", borderRadius: 4, padding: "8px 12px", cursor: "pointer" }}>清除</button>
+              <button onClick={copyLogs} style={{ background: "#37373d", color: "#fff", border: "1px solid #3c3c3c", borderRadius: 4, padding: "8px 12px", cursor: "pointer" }}>复制</button>
+            </div>
           </div>
         </div>
-      </div>
-    )}
-  </>
-);
+      )}
+    </>
+  );
+};
 
+// MODIFIED: 移除旧的 initializeDebugger 函数，使用新的 LongPressDebug 组件
+// MODIFIED: 移除旧的全局 window.onerror 捕获，现在在 useEffect 中处理
+// MODIFIED: 移除旧的全局 window.fetch 拦截，现在在 useEffect 中处理
 
+// 这个函数现在只负责将 React 组件挂载到 DOM
+export function installLongPressDebug(options: { enable?: boolean } = {}) {
+  const { enable = (typeof window !== 'undefined' && window.location.search.includes('debug=1')) } = options;
+  if (!enable) return;
 
+  const debugContainer = document.createElement('div');
+  debugContainer.id = '__lp_debug_container';
+  document.body.appendChild(debugContainer);
+
+  const root = createRoot(debugContainer);
+  root.render(<LongPressDebug />);
+}
