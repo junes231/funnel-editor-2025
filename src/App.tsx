@@ -831,8 +831,14 @@ case 'analytics':
            </h3>
           <p>Get data-driven insights to boost your funnel's performance.</p>
           </div>
-            <BackButton goBack={true}>
-       <span role="img" aria-label="back">←</span> Back to All Funnels
+              <BackButton onClick={(e) => {
+              // 在 BackButton 中我们已经添加了 animate-out 类
+              // 现在添加 1000 毫秒的延迟来等待动画完成
+              setTimeout(() => {
+                navigate('/'); // 1秒后安全地执行跳转
+              }, 1000);
+            }}>
+               <span role="img" aria-label="back">←</span> Back to All Funnels
             </BackButton>
             <div style={{ marginTop: '20px', padding: '10px', border: '1px dashed #ccc', fontSize: '0.8em', wordBreak: 'break-all', textAlign: 'left' }}>
               <strong>DEBUG:</strong> {debugLinkValue}
