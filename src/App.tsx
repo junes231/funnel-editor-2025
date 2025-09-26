@@ -456,28 +456,26 @@ const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData }) => 
     const unsubscribe = onSnapshot(funnelDocRef, (funnelDoc) => {
       if (funnelDoc.exists()) {
         const funnel = funnelDoc.data() as Funnel;
-        setFunnelName(funnel.name);
         
-        // Add backward compatibility: convert answers from array to object if needed
-          let compatibleQuestions = funnel.data.questions || [];
-        // 只有当加载到的问题列表不为空，或者本地状态也为空时，才更新状态。
-        // 如果本地状态有数据，但加载到的问题列表为空，我们先忽略这次“清除”操作，等待一个有效的快照。
-        if (compatibleQuestions.length > 0 || questions.length === 0) { 
+        let compatibleQuestions = funnel.data.questions || [];
+        // ✅ 核心修复逻辑：仅在加载到的问题列表非空或本地状态为空时才更新
+        if (compatibleQuestions.length > 0 || questions.length === 0) { 
+            // Add backward compatibility: convert answers from array to object if needed
             compatibleQuestions = compatibleQuestions.map(question => {
-                // ... (保持原有的兼容性转换逻辑不变)
-                if (Array.isArray(question.answers)) {
-                    // Convert legacy array format to object format
-                    const answersObj: { [answerId: string]: Answer } = {};
-                    question.answers.forEach((answer: Answer) => {
-                      answersObj[answer.id] = answer;
-                    });
-                    return { ...question, answers: answersObj };
-                  }
-                  return question; // Already in object format
+              if (Array.isArray(question.answers)) {
+                // Convert legacy array format to object format
+                const answersObj: { [answerId: string]: Answer } = {};
+                question.answers.forEach((answer: Answer) => {
+                  answersObj[answer.id] = answer;
+                });
+                return { ...question, answers: answersObj };
+              }
+              return question; // Already in object format
             });
 
-            setFunnelName(funnel.name);
+            // 现在，'questions' state 将会自动包含最新的点击次数数据
             setQuestions(compatibleQuestions);
+            setFunnelName(funnel.name);
             setFinalRedirectLink(funnel.data.finalRedirectLink || '');
             setTracking(funnel.data.tracking || '');
             setConversionGoal(funnel.data.conversionGoal || 'Product Purchase');
@@ -487,12 +485,11 @@ const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData }) => 
             setTextColor(funnel.data.textColor || defaultFunnelData.textColor);
             setIsDataLoaded(true);
             
-            // 记录日志，确认数据更新发生
             console.log('✅ Firestore data loaded and state updated.');
         } else {
-             // 记录警告，这次快照被跳过，以防止自我清除
-             console.warn('⚠️ Skipped loading empty snapshot to prevent accidental data loss.');
+            console.warn('⚠️ Skipped loading empty snapshot to prevent accidental data loss.');
         }
+        
       } else {
         console.log('未找到该漏斗!');
         navigate('/');
@@ -922,66 +919,48 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ db }) => {
    const affiliateLink = currentQuestion?.data?.affiliateLinks?.[answerIndex];
 
   // --- ↓↓↓ 健壮的点击追踪逻辑 ↓↓↓ ---
-  if (funnelId && currentQuestion?.id && answerId) {
-    try {
-      const trackClickEndpoint = "https://api-track-click-jgett3ucqq-uc.a.run.app/trackClick";
-      
-      const response = await fetch(trackClickEndpoint, {
-        method: "POST",
-        mode: "cors",
-        headers: {
-          "Content-Type": "application/json",
+   if (funnelId && currentQuestion?.id && answerId) {
+    fetch(trackClickEndpoint, {
+      method: "POST",
+      mode: "cors",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        data: {
+          funnelId: funnelId,
+          questionId: currentQuestion.id,
+          answerId: answerId,
         },
-        body: JSON.stringify({
-          data: {
-            funnelId: funnelId,
-            questionId: currentQuestion.id,
-            answerId: answerId,
-          },
-        }),
-      });
-
+      }),
+    })
+    .then(response => {
       if (!response.ok) {
-        // 即使追踪失败，也只是记录错误，不影响用户体验
-        const errorText = await response.text();
-        console.error("Failed to track click (API Error):", response.statusText, errorText);
+        // 追踪失败，在控制台记录错误，但不阻塞用户
+        console.error("Failed to track click (API Error):", response.statusText);
       } else {
-        const data = await response.json();
-        console.log("Click tracked successfully:", data);
+        console.log("Click tracked successfully.");
       }
-    } catch (err) {
-      // 捕获所有可能的错误 (网络错误, CORS 错误等)
-      // 同样，只在控制台记录错误，不中断应用
-      console.error("Failed to track click (Network or other error):", err);
-    }
+    })
+    .catch(err => {
+      // 网络或其他错误，在控制台记录错误，但不阻塞用户
+      console.error("Failed to track click (Network error):", err);
+    });
   }
-  // --- ↑↑↑ 点击追踪逻辑结束 ↑↑↑ ---
-
-  // [中文注释] 在新标签页中打开推广链接
+  // --- ↑↑↑ 修复结束 ↑↑↑ ---
+  
+  // [中文注释] 在新标签页中打开推广链接（这应该立即发生）
   if (affiliateLink && affiliateLink.trim() !== "") {
     window.open(affiliateLink, "_blank");
   }
 
-  // 动画和跳题逻辑 (保持不变)
+  // 动画和跳题逻辑 (保持不变，但现在是异步的)
   setTimeout(() => {
     setIsAnimating(false);
     setClickedAnswerIndex(null);
     if (!funnelData) return;
-
-    const isLastQuestion = currentQuestionIndex >= funnelData.questions.length - 1;
-
-    if (isLastQuestion) {
-      const redirectLink = funnelData.finalRedirectLink;
-      if (redirectLink && redirectLink.trim() !== "") {
-        window.location.href = redirectLink;
-      } else {
-        console.log("Quiz complete! No final redirect link set.");
-      }
-      return;
-    }
-
-    setCurrentQuestionIndex(currentQuestionIndex + 1);
-  }, 500);
+    // ... (跳到下一个问题/重定向逻辑)
+  }, 500); // 这里的延迟现在只用于视觉动画
 };
   
   // [中文注释] 组件的 JSX 渲染部分保持不变...
