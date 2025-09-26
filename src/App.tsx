@@ -457,51 +457,46 @@ const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData }) => 
       const funnel = funnelDoc.data() as Funnel;
       
       let compatibleQuestions = funnel.data.questions || [];
-      // ✅ 关键修复：当且仅当快照数据有效（有数据）时才更新前端状态
-      if (compatibleQuestions.length > 0) { 
-        compatibleQuestions = compatibleQuestions.map(question => {
-          if (Array.isArray(question.answers)) {
-            const answersObj: { [answerId: string]: Answer } = {};
-            question.answers.forEach((answer: Answer) => {
-              answersObj[answer.id] = answer;
-            });
-            return { ...question, answers: answersObj };
-          }
-          return question;
-        });
+      compatibleQuestions = compatibleQuestions.map(question => {
+        if (Array.isArray(question.answers)) {
+          const answersObj: { [answerId: string]: Answer } = {};
+          question.answers.forEach((answer: Answer) => {
+            answersObj[answer.id] = answer;
+          });
+          return { ...question, answers: answersObj };
+        }
+        return question;
+      });
 
-        setFunnelName(funnel.name);
-        setQuestions(compatibleQuestions);
-        setFinalRedirectLink(funnel.data.finalRedirectLink || '');
-        setTracking(funnel.data.tracking || '');
-        setConversionGoal(funnel.data.conversionGoal || 'Product Purchase');
-        setPrimaryColor(funnel.data.primaryColor || defaultFunnelData.primaryColor);
-        setButtonColor(funnel.data.buttonColor || defaultFunnelData.buttonColor);
-        setBackgroundColor(funnel.data.backgroundColor || defaultFunnelData.backgroundColor);
-        setTextColor(funnel.data.textColor || defaultFunnelData.textColor);
-        setIsDataLoaded(true);
-        
-        console.log('✅ Firestore data loaded and state updated.');
-      } else {
-        // 如果快照没有数据，但文档存在，说明数据被清空了，
-        // 此时不应该更新前端状态，防止自动保存覆盖。
-        console.warn('⚠️ Skipped loading empty snapshot to prevent accidental data loss.');
-      }
+      // ✅ 移除 if (compatibleQuestions.length > 0) 检查，总是加载
+      // 这能防止初始空数据时阻塞
+      setFunnelName(funnel.name);
+      setQuestions(compatibleQuestions);
+      setFinalRedirectLink(funnel.data.finalRedirectLink || '');
+      setTracking(funnel.data.tracking || '');
+      setConversionGoal(funnel.data.conversionGoal || 'Product Purchase');
+      setPrimaryColor(funnel.data.primaryColor || defaultFunnelData.primaryColor);
+      setButtonColor(funnel.data.buttonColor || defaultFunnelData.buttonColor);
+      setBackgroundColor(funnel.data.backgroundColor || defaultFunnelData.backgroundColor);
+      setTextColor(funnel.data.textColor || defaultFunnelData.textColor);
+      setIsDataLoaded(true);  // 总是设置为true，确保保存能触发
+      
+      console.log('✅ Firestore data loaded and state updated. Questions length:', compatibleQuestions.length);
       
     } else {
       console.log('未找到该漏斗!');
       navigate('/');
     }
   }, (error) => {
-      console.error("监听漏斗数据变化时出错:", error);
-      console.log('加载漏斗数据失败。');
-      navigate('/');
+    console.error("监听漏斗数据变化时出错:", error);
+    console.error('Failed to load funnel data.', 'error');  // ✅ 添加通知
+    navigate('/');
   });
 
   return () => {
     unsubscribe();
   };
-}, [funnelId, db, navigate, questions.length]);
+}, [funnelId, db, navigate]);
 
   const saveFunnelToFirestore = useCallback(() => {
     if (!funnelId) return;
@@ -1395,24 +1390,14 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
   };
   // --- 恢复您设计的 Delete 按钮动画和跳转逻辑 ---
    const handleDelete = () => {
-  setIsDeleting(true); // 启动动画状态
-
+  setIsDeleting(true);
   const button = document.querySelector('.delete-button');
   if (button) {
-    button.classList.add('animate-out'); // 给按钮加上淡出动画
+    button.classList.add('animate-out');
   }
-
-  // ⏳ 等待1秒（动画时间），再执行删除 + 跳转
   setTimeout(() => {
-    // 删除数据
-    setFunnelData(prev => ({
-      ...prev,
-      questions: prev.questions.filter((_, i) => i !== questionIndex),
-    }));
-
-    // 跳转上一页
-    navigate(-1, { replace: true });
-  }, 1000); // 这里的 1000ms 要和 CSS 动画时长保持一致
+    onDelete();  // 使用props的onDelete，而不是setFunnelData
+  }, 1000);
 };
   // Defensive check: If for some reason no question is provided, render nothing.
   if (!question) {
