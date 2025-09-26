@@ -449,61 +449,59 @@ const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData }) => 
   setTemplateFiles(availableTemplates);
 }, []);
   useEffect(() => {
-    if (!funnelId) return;
-    const funnelDocRef = doc(db, 'funnels', funnelId);
+  if (!funnelId) return;
+  const funnelDocRef = doc(db, 'funnels', funnelId);
 
-    // 设置一个实时监听器
-    const unsubscribe = onSnapshot(funnelDocRef, (funnelDoc) => {
-      if (funnelDoc.exists()) {
-        const funnel = funnelDoc.data() as Funnel;
-        setFunnelName(funnel.name);
-        let compatibleQuestions = funnel.data.questions || [];
-        // ✅ 核心修复逻辑：仅在加载到的问题列表非空或本地状态为空时才更新
-        if (compatibleQuestions.length > 0 || questions.length === 0) { 
-            // Add backward compatibility: convert answers from array to object if needed
-            compatibleQuestions = compatibleQuestions.map(question => {
-              if (Array.isArray(question.answers)) {
-                // Convert legacy array format to object format
-                const answersObj: { [answerId: string]: Answer } = {};
-                question.answers.forEach((answer: Answer) => {
-                  answersObj[answer.id] = answer;
-                });
-                return { ...question, answers: answersObj };
-              }
-              return question; // Already in object format
+  const unsubscribe = onSnapshot(funnelDocRef, (funnelDoc) => {
+    if (funnelDoc.exists()) {
+      const funnel = funnelDoc.data() as Funnel;
+      
+      let compatibleQuestions = funnel.data.questions || [];
+      // ✅ 关键修复：当且仅当快照数据有效（有数据）时才更新前端状态
+      if (compatibleQuestions.length > 0) { 
+        compatibleQuestions = compatibleQuestions.map(question => {
+          if (Array.isArray(question.answers)) {
+            const answersObj: { [answerId: string]: Answer } = {};
+            question.answers.forEach((answer: Answer) => {
+              answersObj[answer.id] = answer;
             });
+            return { ...question, answers: answersObj };
+          }
+          return question;
+        });
 
-            // 现在，'questions' state 将会自动包含最新的点击次数数据
-            setQuestions(compatibleQuestions);
-            setFinalRedirectLink(funnel.data.finalRedirectLink || '');
-            setTracking(funnel.data.tracking || '');
-            setConversionGoal(funnel.data.conversionGoal || 'Product Purchase');
-            setPrimaryColor(funnel.data.primaryColor || defaultFunnelData.primaryColor);
-            setButtonColor(funnel.data.buttonColor || defaultFunnelData.buttonColor);
-            setBackgroundColor(funnel.data.backgroundColor || defaultFunnelData.backgroundColor);
-            setTextColor(funnel.data.textColor || defaultFunnelData.textColor);
-            setIsDataLoaded(true);
-            
-            console.log('✅ Firestore data loaded and state updated.');
-        } else {
-            console.warn('⚠️ Skipped loading empty snapshot to prevent accidental data loss.');
-        }
+        setFunnelName(funnel.name);
+        setQuestions(compatibleQuestions);
+        setFinalRedirectLink(funnel.data.finalRedirectLink || '');
+        setTracking(funnel.data.tracking || '');
+        setConversionGoal(funnel.data.conversionGoal || 'Product Purchase');
+        setPrimaryColor(funnel.data.primaryColor || defaultFunnelData.primaryColor);
+        setButtonColor(funnel.data.buttonColor || defaultFunnelData.buttonColor);
+        setBackgroundColor(funnel.data.backgroundColor || defaultFunnelData.backgroundColor);
+        setTextColor(funnel.data.textColor || defaultFunnelData.textColor);
+        setIsDataLoaded(true);
         
+        console.log('✅ Firestore data loaded and state updated.');
       } else {
-        console.log('未找到该漏斗!');
-        navigate('/');
+        // 如果快照没有数据，但文档存在，说明数据被清空了，
+        // 此时不应该更新前端状态，防止自动保存覆盖。
+        console.warn('⚠️ Skipped loading empty snapshot to prevent accidental data loss.');
       }
-    }, (error) => {
-        console.error("监听漏斗数据变化时出错:", error);
-        console.log('加载漏斗数据失败。');
-        navigate('/');
-    });
+      
+    } else {
+      console.log('未找到该漏斗!');
+      navigate('/');
+    }
+  }, (error) => {
+      console.error("监听漏斗数据变化时出错:", error);
+      console.log('加载漏斗数据失败。');
+      navigate('/');
+  });
 
-    // 清理函数：当组件被卸载时，这个函数会运行，以停止监听
-    return () => {
-      unsubscribe();
-    };
-  }, [funnelId, db, navigate]);
+  return () => {
+    unsubscribe();
+  };
+}, [funnelId, db, navigate, questions.length]);
 
   const saveFunnelToFirestore = useCallback(() => {
     if (!funnelId) return;
