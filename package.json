@@ -2,7 +2,7 @@
   "name": "funnel-editor",
   "version": "1.0.0",
   "private": true,
-"homepage": "https://junes231.github.io/funnel-editor-2025/"
+  "homepage": "https://junes231.github.io/funnel-editor-2025/",
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
