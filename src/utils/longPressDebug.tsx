@@ -55,7 +55,7 @@ function initializeDebugger() {
     #panel-console-buttons button:active { background: #4a4a52; }
     #console-run-btn { background-color: #007acc; }
     #__lp_debug_toggle {
-      position: fixed; right: -50px; bottom: 65px; z-index: 100000; background: #007acc; color: white;
+      position: fixed; right: 100px; bottom: 65px; z-index: 100000; background: #007acc; color: white;
       border: none; border-radius: 50%; width: 65px; height: 50px; font-size: 12px;
       cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center;
     }
