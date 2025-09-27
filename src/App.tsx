@@ -905,8 +905,8 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ db }) => {
   setIsAnimating(true);
   setClickedAnswerIndex(answerIndex);
 
-  const affiliateLink = currentQuestion?.data?.affiliateLinks?.[answerIndex];
-  console.log('Affiliate link for index', answerIndex, ':', affiliateLink);
+  const affiliateLink = currentQuestion?.data?.affiliateLinks?.[answer.id];
+console.log('Affiliate link for answer', answer.id, ':', affiliateLink);
 
   // 记录点击
   if (funnelData && currentQuestion?.id && answerId) {
