@@ -134,7 +134,24 @@ function initializeDebugger() {
   runBtn.addEventListener('click', executeCode);
   clearBtn.addEventListener('click', () => { consoleOutput.innerHTML = ''; });
   copyBtn.addEventListener('click', () => { navigator.clipboard.writeText(consoleOutput.textContent || ''); });
-  consoleInput.addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { executeCode(); e.preventDefault(); } });
+  // --- 安全处理 consoleInput 的键盘事件 ---
+consoleInput.addEventListener('keydown', (e) => {
+  // 阻止事件冒泡，避免触发全局快捷键或跳转
+  e.stopPropagation();
+
+  // Ctrl+Enter 或 Cmd+Enter 执行代码
+  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+    executeCode();
+    e.preventDefault(); // 阻止默认换行
+    return;
+  }
+
+  // 可选：阻止普通 Enter 提交表单
+  if (e.key === 'Enter') {
+    e.preventDefault(); // 阻止换行或表单提交
+    return;
+  }
+});
 
   function logToPanel(type: string, args: any[]) {
     const line = document.createElement('div');
