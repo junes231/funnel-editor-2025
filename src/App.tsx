@@ -896,55 +896,71 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ db }) => {
 
   // [中文注释] 关键升级：这是新的 handleAnswerClick 函数
   const handleAnswerClick = async (answerIndex: number, answerId: string) => {
-  if (isAnimating || !funnelData) {
-    console.log('Click blocked due to isAnimating or no funnelData');
-    return;
-  }
-  if (debounceRef.current) return;
-  debounceRef.current = true;
-  setIsAnimating(true);
+  if (isAnimating || !funnelData) return;
+
+  setIsAnimating(true); // 1. 立即开始动画
   setClickedAnswerIndex(answerIndex);
 
-  const affiliateLink = currentQuestion?.data?.affiliateLinks?.[answer.id];
-console.log('Affiliate link for answer', answer.id, ':', affiliateLink);
+  const affiliateLink = currentQuestion?.data?.affiliateLinks?.[answerIndex];
 
-  // 记录点击
-  if (funnelData && currentQuestion?.id && answerId) {
+  // --- 2. 异步启动点击追踪（不使用 await，确保不阻塞主线程） ---
+  if (funnelId && currentQuestion?.id && answerId) {
+    const trackClickEndpoint = "https://api-track-click-jgett3ucqq-uc.a.run.app/trackClick";
+    
+    // 异步启动 fetch，不使用 await
     fetch(trackClickEndpoint, {
       method: "POST",
       mode: "cors",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ data: { funnelId, questionId: currentQuestion.id, answerId } }),
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        data: {
+          funnelId: funnelId,
+          questionId: currentQuestion.id,
+          answerId: answerId,
+        },
+      }),
     })
     .then(response => {
-      if (!response.ok) console.error("Failed to track click:", response.statusText);
-      else console.log("Click tracked successfully.");
+      // 追踪成功或失败，都在后台处理，不影响用户流程
+      if (!response.ok) {
+        console.error("Failed to track click (API Error):", response.statusText);
+      }
     })
-    .catch(err => console.error("Network error:", err));
+    .catch(err => {
+      console.error("Failed to track click (Network or other error):", err);
+    });
   }
-
-  // 优先处理 affiliateLink
+  
+  // --- 3. 立即打开按答案配置的推广链接 (如果存在) ---
+  // 无论是否追踪成功，都立即打开链接（在新的标签页中），不阻塞流程
   if (affiliateLink && affiliateLink.trim() !== "") {
     window.open(affiliateLink, "_blank");
   }
 
-  // 动画后执行跳转逻辑
+  // --- 4. 动画结束后跳转（500ms 延迟，实现半秒动画）---
   setTimeout(() => {
     setIsAnimating(false);
     setClickedAnswerIndex(null);
-    debounceRef.current = false;
     if (!funnelData) return;
 
-    const nextIndex = currentQuestionIndex + 1;
-    if (nextIndex < funnelData.questions.length) {
-      setCurrentQuestionIndex(nextIndex); // 跳转到下一个问题
-    } else if (funnelData.finalRedirectLink && funnelData.finalRedirectLink.trim() !== "") {
-      window.location.href = funnelData.finalRedirectLink; // 结束时重定向
-    } else {
-      // 默认跳转（如果没有 finalRedirectLink）
-      window.location.href = '/'; // 或 '/completed' 页面
+    const isLastQuestion = currentQuestionIndex >= funnelData.questions.length - 1;
+
+    if (isLastQuestion) {
+      // 如果是最后一个问题，跳转到最终重定向链接
+      const redirectLink = funnelData.finalRedirectLink;
+      if (redirectLink && redirectLink.trim() !== "") {
+        window.location.href = redirectLink; 
+      } else {
+        console.log("Quiz complete! No final redirect link set.");
+      }
+      return;
     }
-  }, 500);
+
+    // 跳转到下一个问题
+    setCurrentQuestionIndex(currentQuestionIndex + 1); 
+  }, 500); // 500ms 延迟，实现半秒动画
 };
 
  // [中文注释] 组件的 JSX 渲染部分保持不变...
