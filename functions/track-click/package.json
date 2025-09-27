@@ -5,12 +5,9 @@
   "scripts": {
     "start": "node index.js"
   },
-  "engines": {
-    "node": ">=18.0.0"
-  },
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^4.19.2",
-    "firebase-admin": "^12.5.0"
+    "firebase-admin": "^11.11.1"
   }
 }
