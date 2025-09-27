@@ -237,7 +237,9 @@ function initializeDebugger() {
       duration: 0,
       responseText: '',
     };
-
+     if (requestInfo.method === 'GET' && requestInfo.url.includes('trackClick')) {
+  console.warn('Unexpected GET request to trackClick:', requestInfo.url);
+}
     // Read headers safely
     requestInfo.headers = headersToObject(request.headers);
 
@@ -371,7 +373,7 @@ function initializeDebugger() {
             status: 'error',
             description: '发送的 questionId 不存在于 funnel 数据中。',
             details: `Sent: ${sentQuestionId}, Available: ${JSON.stringify(questionIds)}`,
-            suggestedAction: '检查 App.tsx 中的 currentQuestion.id 或 Firestore 数据，确保前端使用的 funnel 数据是最新且完整的。',
+            suggestedAction: '检查 QuizPlayer.tsx 中的 currentQuestion.id 或 Firestore 数据，确保前端使用的 funnel 数据是最新且完整的。',
           });
         }
       }
