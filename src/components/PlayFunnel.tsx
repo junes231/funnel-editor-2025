@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { initializeApp } from 'firebase/app';
-import { getFirestore, getDoc, doc } from 'firebase/firestore';
-import { firebaseConfig } from '../../firebase-config'; // 调整为项目路径
+import { getDoc, doc } from 'firebase/firestore'; // 只导入所需方法
+import { db } from '../firebase.ts'; // 导入已初始化的 db 实例
 
 const PlayFunnel = () => {
   const { id } = useParams<{ id: string }>();
@@ -10,9 +9,6 @@ const PlayFunnel = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-
     const fetchFunnel = async () => {
       if (!id) {
         setLoading(false);
