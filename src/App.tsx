@@ -823,15 +823,19 @@ case 'analytics':
            </h3>
           <p>Get data-driven insights to boost your funnel's performance.</p>
           </div>
-              <BackButton onClick={(e) => {
-              // 在 BackButton 中我们已经添加了 animate-out 类
-              // 现在添加 1000 毫秒的延迟来等待动画完成
-              setTimeout(() => {
-                navigate('/'); // 1秒后安全地执行跳转
-              }, 1000);
-            }}>
-               <span role="img" aria-label="back">←</span> Back to All Funnels
-            </BackButton>
+            <BackButton
+  onClick={(e) => {
+    // 添加淡出动画
+    e.currentTarget.classList.add('animate-out');
+
+    // 1 秒后执行跳转，动画和跳转总时间控制在 1 秒
+    setTimeout(() => {
+      navigate('/'); // 安全跳转
+    }, 1000);
+  }}
+>
+  <span role="img" aria-label="back">←</span> Back to All Funnels
+</BackButton>
             <div style={{ marginTop: '20px', padding: '10px', border: '1px dashed #ccc', fontSize: '0.8em', wordBreak: 'break-all', textAlign: 'left' }}>
               <strong>DEBUG:</strong> {debugLinkValue}
             </div>
@@ -1340,12 +1344,12 @@ const LinkSettingsComponent: React.FC<LinkSettingsComponentProps> = ({
         </select>
       </div>
       <div className="form-actions">
-      <button className="save-button" onClick={() => showNotification('Settings applied! (Auto-saved)')}>
-      <span role="img" aria-label="save">
-        💾
-      </span>{' '}
-       Applied
-       </button>
+      <button className="save-button">
+  <span role="img" aria-label="save">
+    💾
+  </span>{' '}
+  Applied
+</button>
         
         <BackButton onClick={onBack}>
   <span role="img" aria-label="back">←</span> Back to Editor
@@ -1405,12 +1409,12 @@ const ColorCustomizerComponent: React.FC<ColorCustomizerComponentProps> = ({
         <input type="color" value={textColor} onChange={(e) => setTextColor(e.target.value)} />
       </div>
       <div className="form-actions">
-        <button className="save-button" onClick={() => showNotification('Color settings applied! (Auto-saved)')}>
-        <span role="img" aria-label="save">
-          💾
-        </span>{' '}
-        Applied
-        </button>
+        <button className="save-button">
+  <span role="img" aria-label="save">
+    💾
+  </span>{' '}
+  Applied
+</button>
          
         <BackButton onClick={onBack}>
   <span role="img" aria-label="back">←</span> Back to Editor
