@@ -356,19 +356,30 @@ const FunnelDashboard: React.FC<FunnelDashboardProps> = ({ db, user, isAdmin, fu
   };
   
   const handleCopyLink = (funnelId: string) => {
-  // 使用 window.location.href 获取完整的当前URL
-  const baseUrl = window.location.href.split('#')[0];
-  // 构建完整的funnel链接
-  const url = `${baseUrl}/#/play/${funnelId}`;
-  
-  // 使用clipboard API
-  navigator.clipboard.writeText(url).then(() => {
-    // 使用自定义通知而不是alert
-    showNotification('Funnel link copied to clipboard!');
-  }).catch(err => {
-    console.error('Failed to copy:', err);
-    showNotification('Failed to copy link', 'error');
-  });
+  // 验证 funnelId
+  if (!funnelId || typeof funnelId !== 'string') {
+    showNotification('Invalid funnel ID', 'error');
+    return;
+  }
+
+  // 使用 window.location.origin 构建基础 URL
+  const baseUrl = window.location.origin;
+  // 结合 homepage 路径（假设已设为 /funnel-editor-2025/）
+  const fullUrl = `${baseUrl}/funnel-editor-2025/#/play/${funnelId}`;
+
+  // 使用 clipboard API
+  navigator.clipboard
+    .writeText(fullUrl)
+    .then(() => {
+      // 自定义通知
+      showNotification('Funnel link copied to clipboard!');
+    })
+    .catch((err) => {
+      console.error('Failed to copy:', err);
+      showNotification('Failed to copy link', 'error');
+      // Fallback: 提示用户手动复制
+      prompt('Copy this link manually:', fullUrl);
+    });
 };
 
   
