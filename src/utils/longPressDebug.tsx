@@ -1,29 +1,31 @@
+// src/utils/longPressDebug.tsx  （或你原来文件的位置）
+// 修改说明：安全地覆盖 fetch、headers/body 处理、调整 window.onerror 返回值以便不屏蔽浏览器控制台错误。
+// 保持原有面板、控制台、智能分析逻辑。
+
 import React from 'react';
 import ReactDOM from 'react-dom';
 // 确保 DebugReport.tsx 和其 CSS 文件存在于 src/components/ 目录下
 import DebugReport, { AnalysisReport, ReportFinding } from '../components/DebugReport.tsx';
 
 // --- 模块 1: 全局致命错误捕获 ---
-// 这个模块会捕获导致整个应用崩溃的错误，是智能分析的核心数据来源。
 let capturedFatalError: ReportFinding | null = null;
 window.onerror = function(message, source, lineno, colno, error) {
   // 忽略一些由浏览器插件等引起的、与应用本身无关的常见错误
   if (typeof message === 'string' && message.includes('ResizeObserver loop')) {
-    return;
+    return false;
   }
-  
+
   capturedFatalError = {
     status: 'error',
     description: '捕获到导致应用崩溃的致命错误 (Fatal Error)！',
-    details: `Message: ${message}\nSource: ${source}\nLine: ${lineno}, Column: ${colno}`
+    details: `Message: ${message}\nSource: ${source}\nLine: ${lineno}, Column: ${colno}\nError: ${error ? String(error) : 'N/A'}`
   };
-  // 也在原生控制台打印，以防万一
   console.log('>>> FATAL ERROR CAPTURED:', capturedFatalError);
-  return true; // 阻止浏览器默认的错误处理（即在控制台显示红色错误）
+  // 允许浏览器继续输出错误到控制台（方便开发时追踪真实堆栈）
+  return false;
 };
 
 // --- 模块 2: 调试器核心初始化函数 ---
-// 这个函数负责创建调试器的所有界面和功能
 function initializeDebugger() {
   if ((window as any).__lp_debug_installed) return;
   (window as any).__lp_debug_installed = true;
@@ -149,44 +151,159 @@ function initializeDebugger() {
   // --- 模块 4: 网络监视器模块 (Network Module) ---
   const networkPanel = container.querySelector('#panel-network')!;
   const capturedRequests: any[] = [];
-  const originalFetch = window.fetch;
-window.fetch = async function (...args) {
-  const requestInfo = {
-    url: args[0].toString(),
-    method: (args[1]?.method || 'GET'),
-    headers: args[1]?.headers || {},
-    body: args[1]?.body ? await (args[1].body instanceof FormData ? 'FormData' : args[1].body.text()) : null,
-    status: 0,
-    startTime: Date.now(),
-    duration: 0,
-    responseText: '',
+
+  const originalFetch = window.fetch.bind(window);
+
+  // helper: convert Headers to plain object
+  function headersToObject(h: Headers | Record<string, any> | undefined) {
+    try {
+      if (!h) return {};
+      if (h instanceof Headers) {
+        const obj: Record<string, string> = {};
+        h.forEach((v, k) => (obj[k] = v));
+        return obj;
+      }
+      // may be plain object already
+      return h;
+    } catch (e) {
+      return { error: 'Could not read headers' };
+    }
+  }
+
+  // helper: safe read body representation (no throwing)
+  async function safeReadBody(requestOrInit: Request | { body?: any }) {
+    try {
+      const body = (requestOrInit as any).body;
+      if (!body) return null;
+      // If it's a ReadableStream / non-readable, just return a placeholder
+      if (typeof body === 'string') return body;
+      if (body instanceof FormData) {
+        const entries: any[] = [];
+        body.forEach((v, k) => entries.push([k, v]));
+        return { formData: entries };
+      }
+      if (body instanceof URLSearchParams) {
+        return body.toString();
+      }
+      if (body instanceof Blob) {
+        return `[Blob size=${body.size} type=${body.type}]`;
+      }
+      if (body instanceof ArrayBuffer) {
+        return `[ArrayBuffer byteLength=${body.byteLength}]`;
+      }
+      // if it's a Request object, attempt to clone and text()
+      if (requestOrInit instanceof Request) {
+        try {
+          const clone = requestOrInit.clone();
+          return await clone.text().catch(() => '[Could not read request body]');
+        } catch {
+          return '[Unreadable Request body]';
+        }
+      }
+      // fallback: try text() if exists
+      if (typeof body.text === 'function') {
+        return await body.text().catch(() => '[Could not read body via text()]');
+      }
+      // last resort, JSON stringify
+      return typeof body === 'object' ? JSON.stringify(body) : String(body);
+    } catch (e) {
+      return `[Body read error: ${String(e)}]`;
+    }
+  }
+
+  // override fetch safely
+  window.fetch = async function (...args: any[]) {
+    // Normalize to Request object when possible
+    let request: Request;
+    try {
+      if (args[0] instanceof Request) {
+        request = args[0];
+      } else {
+        request = new Request(args[0], args[1]);
+      }
+    } catch (e) {
+      // If Request construction fails, fallback to calling originalFetch directly
+      return originalFetch(...args);
+    }
+
+    // Build requestInfo safely
+    const requestInfo: any = {
+      url: request.url,
+      method: request.method || 'GET',
+      headers: {},
+      body: null,
+      status: 0,
+      startTime: Date.now(),
+      duration: 0,
+      responseText: '',
+    };
+
+    // Read headers safely
+    requestInfo.headers = headersToObject(request.headers);
+
+    // Read body representation safely (non-blocking for actual request)
+    try {
+      requestInfo.body = await safeReadBody(request);
+    } catch (e) {
+      requestInfo.body = `[Body read error: ${String(e)}]`;
+    }
+
+    // push to captured list
+    capturedRequests.unshift(requestInfo);
+    renderNetworkPanel();
+
+    // perform actual fetch and capture response/metrics, but do NOT swallow errors from original fetch
+    let response: Response;
+    try {
+      response = await originalFetch(request);
+    } catch (fetchError) {
+      // mark as failed
+      requestInfo.duration = Date.now() - requestInfo.startTime;
+      requestInfo.status = -1;
+      requestInfo.responseText = `[Fetch failed: ${String(fetchError)}]`;
+      renderNetworkPanel();
+      throw fetchError; // rethrow so application-level error handling still works
+    }
+
+    try {
+      const resClone = response.clone();
+      requestInfo.status = response.status;
+      requestInfo.responseText = await resClone.text().catch(() => '[Response could not be read]');
+      requestInfo.duration = Date.now() - requestInfo.startTime;
+    } catch (e) {
+      requestInfo.responseText = `[Response read error: ${String(e)}]`;
+      requestInfo.duration = Date.now() - requestInfo.startTime;
+    }
+
+    renderNetworkPanel();
+    return response;
   };
-  capturedRequests.unshift(requestInfo);
-  renderNetworkPanel();
 
-  const promise = originalFetch(...args);
-  const response = await promise;
-  const resClone = response.clone();
-  requestInfo.status = response.status;
-  requestInfo.responseText = await resClone.text().catch(() => '[Response could not be read]');
-  requestInfo.duration = Date.now() - requestInfo.startTime;
-  renderNetworkPanel();
-  return promise;
-};
+  // escape helper for safe HTML insertion
+  function escapeHtml(s: any) {
+    if (s === null || s === undefined) return '';
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
 
-function renderNetworkPanel() {
-  networkPanel.innerHTML = capturedRequests.map(r => `
-    <div class="lp-log-line ${r.status === -1 || r.status >= 400 ? 'error' : ''}">
-      [${r.status || '...'} | ${r.method}] ${r.url} (${r.duration}ms)
-      <details>
-        <summary>Details</summary>
-        <pre>Headers: ${JSON.stringify(r.headers, null, 2)}</pre>
-        <pre>Body: ${r.body || 'N/A'}</pre>
-        <pre>Response: ${r.responseText}</pre>
-      </details>
-    </div>
-  `).join('');
-}
+  function renderNetworkPanel() {
+    networkPanel.innerHTML = capturedRequests.map((r) => {
+      const isError = r.status === -1 || (r.status >= 400 && r.status !== 0);
+      return `
+      <div class="lp-log-line ${isError ? 'error' : ''}">
+        [${escapeHtml(r.status || '...')} | ${escapeHtml(r.method)}] ${escapeHtml(r.url)} (${escapeHtml(r.duration)}ms)
+        <details>
+          <summary>Details</summary>
+          <pre>Headers: ${escapeHtml(JSON.stringify(r.headers, null, 2))}</pre>
+          <pre>Body: ${escapeHtml(typeof r.body === 'object' ? JSON.stringify(r.body, null, 2) : r.body)}</pre>
+          <pre>Response: ${escapeHtml(r.responseText)}</pre>
+        </details>
+      </div>`;
+    }).join('');
+  }
+
   // --- 模块 5: 智能分析模块 (Smart Analysis Module) ---
   const analysisPanel = container.querySelector('#panel-analysis')!;
   const runAnalysisBtn = document.createElement('button');
@@ -205,58 +322,75 @@ function renderNetworkPanel() {
   };
 
   async function analyzeCurrentState(): Promise<AnalysisReport> {
-  let findings: ReportFinding[] = [];
-  if (capturedFatalError) {
-    findings.push(capturedFatalError);
-  } else {
-    findings.push({ status: 'info', description: '未捕获到任何导致应用崩溃的致命错误。' });
-  }
-
-  const rootEl = document.getElementById('root');
-  if (rootEl && rootEl.innerHTML.trim() !== '') {
-    findings.push({ status: 'ok', description: 'React 应用已成功挂载到 #root 节点。' });
-  } else {
-    findings.push({ status: 'error', description: 'React 应用未能渲染到 #root 节点，这很可能是白屏的原因。' });
-  }
-
-  const trackClickReq = capturedRequests.find(r => r.url.includes('api-track-click'));
-  if (trackClickReq) {
-    const reqBody = JSON.parse(trackClickReq.body || '{}')?.data || {};
-    if (trackClickReq.status >= 200 && trackClickReq.status < 300) {
-      findings.push({ status: 'ok', description: '已成功发送 "trackClick" 请求并收到成功响应。', details: `Status: ${trackClickReq.status}` });
+    let findings: ReportFinding[] = [];
+    if (capturedFatalError) {
+      findings.push(capturedFatalError);
     } else {
-      findings.push({ status: 'error', description: '发送了 "trackClick" 请求，但服务器返回了错误。', details: `Status: ${trackClickReq.status}, Response: ${trackClickReq.responseText}` });
-
-      // 添加 questionId 验证
-      const funnelData = (window as any).__funnelData; // 假设通过全局变量或状态管理获取
-      const questionIds = funnelData?.questions?.map((q: any) => q.id) || [];
-      const sentQuestionId = reqBody.questionId;
-      if (sentQuestionId && !questionIds.includes(sentQuestionId)) {
-        findings.push({
-          status: 'error',
-          description: '发送的 questionId 不存在于 funnel 数据中。',
-          details: `Sent: ${sentQuestionId}, Available: ${JSON.stringify(questionIds)}`,
-          suggestedAction: '检查 App.tsx 中的 currentQuestion.id 或 Firestore 数据。',
-        });
-      }
+      findings.push({ status: 'info', description: '未捕获到任何导致应用崩溃的致命错误。' });
     }
-  } else {
-    findings.push({ status: 'warning', description: '在本次会话中，未检测到发送 "trackClick" 的网络请求。' });
-  }
 
-  return {
-    title: '综合诊断报告',
-    findings,
-    potentialCauses: ['请根据上述[发现]中的红色或黄色项目，定位可能原因。'],
-    suggestedActions: ['对于致命错误，请检查代码。对于网络错误，请检查后端日志或前端 payload。对于未发送请求，请检查点击事件逻辑。'],
-  };
-}
+    const rootEl = document.getElementById('root');
+    if (rootEl && rootEl.innerHTML.trim() !== '') {
+      findings.push({ status: 'ok', description: 'React 应用已成功挂载到 #root 节点。' });
+    } else {
+      findings.push({ status: 'error', description: 'React 应用未能渲染到 #root 节点，这很可能是白屏的原因。' });
+    }
+
+    // 尝试查找 trackClick 或 api-track-click 或 track-click 等变体
+    const trackClickReq = capturedRequests.find((r: any) =>
+      (r.url || '').includes('api-track-click') ||
+      (r.url || '').includes('trackClick') ||
+      (r.url || '').includes('track-click')
+    );
+
+    if (trackClickReq) {
+      let reqBody: any = {};
+      try {
+        if (typeof trackClickReq.body === 'string') {
+          reqBody = JSON.parse(trackClickReq.body || '{}')?.data || {};
+        } else if (typeof trackClickReq.body === 'object' && trackClickReq.body !== null) {
+          reqBody = (trackClickReq.body.data) || {};
+        } else {
+          reqBody = {};
+        }
+      } catch {
+        reqBody = {};
+      }
+
+      if (trackClickReq.status >= 200 && trackClickReq.status < 300) {
+        findings.push({ status: 'ok', description: '已成功发送 "trackClick" 请求并收到成功响应。', details: `Status: ${trackClickReq.status}` });
+      } else {
+        findings.push({ status: 'error', description: '发送了 "trackClick" 请求，但服务器返回了错误或请求失败。', details: `Status: ${trackClickReq.status}, Response: ${trackClickReq.responseText}` });
+
+        // 添加 questionId 验证（尽可能安全地读取全局 funnel 数据）
+        const funnelData = (window as any).__funnelData || (window as any).funnelData || null;
+        const questionIds = funnelData?.questions?.map((q: any) => q.id) || [];
+        const sentQuestionId = reqBody.questionId || reqBody?.question?.id || null;
+        if (sentQuestionId && !questionIds.includes(sentQuestionId)) {
+          findings.push({
+            status: 'error',
+            description: '发送的 questionId 不存在于 funnel 数据中。',
+            details: `Sent: ${sentQuestionId}, Available: ${JSON.stringify(questionIds)}`,
+            suggestedAction: '检查 App.tsx 中的 currentQuestion.id 或 Firestore 数据，确保前端使用的 funnel 数据是最新且完整的。',
+          });
+        }
+      }
+    } else {
+      findings.push({ status: 'warning', description: '在本次会话中，未检测到发送 "trackClick" 的网络请求。' });
+    }
+
+    return {
+      title: '综合诊断报告',
+      findings,
+      potentialCauses: ['请根据上述[发现]中的红色或黄色项目，定位可能原因。'],
+      suggestedActions: ['对于致命错误，请检查代码。对于网络错误，请检查后端日志或前端 payload。对于未发送请求，请检查点击事件逻辑及请求构造。'],
+    };
+  }
 
   logToPanel('info', ['Ultimate Debugger Ready.']);
 }
 
 // --- 模块 6: 导出与安装 ---
-// 这是我们工具的唯一入口，它确保所有操作都在页面准备好之后再执行。
 export function installLongPressDebug(options: { enable?: boolean } = {}) {
   const { enable = (typeof window !== 'undefined' && window.location.search.includes('debug=1')) } = options;
   if (!enable) return;
