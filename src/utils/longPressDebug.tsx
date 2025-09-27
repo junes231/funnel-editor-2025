@@ -150,31 +150,43 @@ function initializeDebugger() {
   const networkPanel = container.querySelector('#panel-network')!;
   const capturedRequests: any[] = [];
   const originalFetch = window.fetch;
-  window.fetch = function(...args) {
-    const requestInfo = { url: args[0].toString(), method: (args[1]?.method || 'GET'), status: 0, startTime: Date.now(), duration: 0, responseText: '' };
-    capturedRequests.unshift(requestInfo);
-    renderNetworkPanel();
-    
-    const promise = originalFetch(...args);
-    promise.then(async res => {
-      requestInfo.status = res.status;
-      const resClone = res.clone();
-      requestInfo.responseText = await resClone.text().catch(() => '[Response could not be read]');
-    }).catch(err => {
-      requestInfo.status = -1; // Indicate network error
-      requestInfo.responseText = err.message;
-    }).finally(() => {
-      requestInfo.duration = Date.now() - requestInfo.startTime;
-      renderNetworkPanel();
-    });
-    return promise;
+window.fetch = async function (...args) {
+  const requestInfo = {
+    url: args[0].toString(),
+    method: (args[1]?.method || 'GET'),
+    headers: args[1]?.headers || {},
+    body: args[1]?.body ? await (args[1].body instanceof FormData ? 'FormData' : args[1].body.text()) : null,
+    status: 0,
+    startTime: Date.now(),
+    duration: 0,
+    responseText: '',
   };
-  function renderNetworkPanel() {
-    networkPanel.innerHTML = capturedRequests.map(r => 
-      `<div class="lp-log-line ${r.status === -1 || r.status >= 400 ? 'error' : ''}">[${r.status || '...'} | ${r.method}] ${r.url} (${r.duration}ms)</div>`
-    ).join('');
-  }
-  
+  capturedRequests.unshift(requestInfo);
+  renderNetworkPanel();
+
+  const promise = originalFetch(...args);
+  const response = await promise;
+  const resClone = response.clone();
+  requestInfo.status = response.status;
+  requestInfo.responseText = await resClone.text().catch(() => '[Response could not be read]');
+  requestInfo.duration = Date.now() - requestInfo.startTime;
+  renderNetworkPanel();
+  return promise;
+};
+
+function renderNetworkPanel() {
+  networkPanel.innerHTML = capturedRequests.map(r => `
+    <div class="lp-log-line ${r.status === -1 || r.status >= 400 ? 'error' : ''}">
+      [${r.status || '...'} | ${r.method}] ${r.url} (${r.duration}ms)
+      <details>
+        <summary>Details</summary>
+        <pre>Headers: ${JSON.stringify(r.headers, null, 2)}</pre>
+        <pre>Body: ${r.body || 'N/A'}</pre>
+        <pre>Response: ${r.responseText}</pre>
+      </details>
+    </div>
+  `).join('');
+}
   // --- 模块 5: 智能分析模块 (Smart Analysis Module) ---
   const analysisPanel = container.querySelector('#panel-analysis')!;
   const runAnalysisBtn = document.createElement('button');
@@ -193,37 +205,52 @@ function initializeDebugger() {
   };
 
   async function analyzeCurrentState(): Promise<AnalysisReport> {
-    let findings: ReportFinding[] = [];
-    if (capturedFatalError) {
-      findings.push(capturedFatalError);
-    } else {
-      findings.push({ status: 'info', description: '未捕获到任何导致应用崩溃的致命错误。' });
-      const rootEl = document.getElementById('root');
-      if (rootEl && rootEl.innerHTML.trim() !== '') {
-        findings.push({ status: 'ok', description: 'React 应用已成功挂载到 #root 节点。' });
-      } else {
-        findings.push({ status: 'error', description: 'React 应用未能渲染到 #root 节点，这很可能是白屏的原因。' });
-      }
-    }
-    
-    const trackClickReq = capturedRequests.find(r => r.url.includes('api-track-click'));
-    if (trackClickReq) {
-      if (trackClickReq.status >= 200 && trackClickReq.status < 300) {
-        findings.push({ status: 'ok', description: '已成功发送 "trackClick" 请求并收到成功响应。', details: `Status: ${trackClickReq.status}` });
-      } else {
-        findings.push({ status: 'error', description: '发送了 "trackClick" 请求，但服务器返回了错误。', details: `Status: ${trackClickReq.status}, Response: ${trackClickReq.responseText}`});
-      }
-    } else {
-      findings.push({ status: 'warning', description: '在本次会话中，未检测到发送 "trackClick" 的网络请求。' });
-    }
-
-    return {
-      title: '综合诊断报告',
-      findings,
-      potentialCauses: ['请根据上述[发现]中的红色或黄色项目，定位可能原因。'],
-      suggestedActions: ['对于致命错误，请检查代码。对于网络错误，请检查后端日志。对于未发送请求，请检查前端点击事件逻辑。'],
-    };
+  let findings: ReportFinding[] = [];
+  if (capturedFatalError) {
+    findings.push(capturedFatalError);
+  } else {
+    findings.push({ status: 'info', description: '未捕获到任何导致应用崩溃的致命错误。' });
   }
+
+  const rootEl = document.getElementById('root');
+  if (rootEl && rootEl.innerHTML.trim() !== '') {
+    findings.push({ status: 'ok', description: 'React 应用已成功挂载到 #root 节点。' });
+  } else {
+    findings.push({ status: 'error', description: 'React 应用未能渲染到 #root 节点，这很可能是白屏的原因。' });
+  }
+
+  const trackClickReq = capturedRequests.find(r => r.url.includes('api-track-click'));
+  if (trackClickReq) {
+    const reqBody = JSON.parse(trackClickReq.body || '{}')?.data || {};
+    if (trackClickReq.status >= 200 && trackClickReq.status < 300) {
+      findings.push({ status: 'ok', description: '已成功发送 "trackClick" 请求并收到成功响应。', details: `Status: ${trackClickReq.status}` });
+    } else {
+      findings.push({ status: 'error', description: '发送了 "trackClick" 请求，但服务器返回了错误。', details: `Status: ${trackClickReq.status}, Response: ${trackClickReq.responseText}` });
+
+      // 添加 questionId 验证
+      const funnelData = (window as any).__funnelData; // 假设通过全局变量或状态管理获取
+      const questionIds = funnelData?.questions?.map((q: any) => q.id) || [];
+      const sentQuestionId = reqBody.questionId;
+      if (sentQuestionId && !questionIds.includes(sentQuestionId)) {
+        findings.push({
+          status: 'error',
+          description: '发送的 questionId 不存在于 funnel 数据中。',
+          details: `Sent: ${sentQuestionId}, Available: ${JSON.stringify(questionIds)}`,
+          suggestedAction: '检查 App.tsx 中的 currentQuestion.id 或 Firestore 数据。',
+        });
+      }
+    }
+  } else {
+    findings.push({ status: 'warning', description: '在本次会话中，未检测到发送 "trackClick" 的网络请求。' });
+  }
+
+  return {
+    title: '综合诊断报告',
+    findings,
+    potentialCauses: ['请根据上述[发现]中的红色或黄色项目，定位可能原因。'],
+    suggestedActions: ['对于致命错误，请检查代码。对于网络错误，请检查后端日志或前端 payload。对于未发送请求，请检查点击事件逻辑。'],
+  };
+}
 
   logToPanel('info', ['Ultimate Debugger Ready.']);
 }
