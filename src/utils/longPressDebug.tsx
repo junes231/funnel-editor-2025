@@ -161,9 +161,6 @@ window.fetch = async function (...args) {
     duration: 0,
     responseText: '',
   };
- if (requestInfo.method === 'GET' && requestInfo.url.includes('trackClick')) {
-  console.warn('Unexpected GET request to trackClick:', requestInfo.url);
-}
   capturedRequests.unshift(requestInfo);
   renderNetworkPanel();
 
