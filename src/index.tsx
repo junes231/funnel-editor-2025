@@ -6,6 +6,7 @@ import './index.css';
 
 // 只需导入一次，内部已经防重复
 import { db, auth } from './firebase.ts';
+/*
 import { installLongPressDebug } from './utils/longPressDebug.tsx';
 (window as any).auth = auth;
 
@@ -15,7 +16,7 @@ installLongPressDebug({
   longPressMs: 2000,
   maxLines: 300,
 });
-
+*/
 
 const rootEl = document.getElementById('root')!;
 createRoot(rootEl).render(
