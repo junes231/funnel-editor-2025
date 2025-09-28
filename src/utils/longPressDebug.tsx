@@ -529,14 +529,4 @@ function startAnswerTracking() {
 }
 
 // --- 模块 8: 导出与安装 ---
-export function installLongPressDebug(options: { enable?: boolean } = {}) {
-  const { enable = (typeof window !== 'undefined' && window.location.search.includes('debug=1')) } = options;
-  if (!enable) return;
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initializeDebugger);
-  } else {
-    initializeDebugger();
-    
-  }
-}
+export { installLongPressDebug };
