@@ -1145,16 +1145,30 @@ const stableAnswers = React.useMemo(() => {
 
   // --- UNCHANGED: Affiliate link logic remains the same ---
   const handleLinkChange = (index: number, value: string) => {
-    const updatedLinks = [...affiliateLinks];
-    updatedLinks[index] = value;
-    setAffiliateLinks(updatedLinks);
-    if (question) {
-        onUpdate({
-            ...question,
-            data: { ...question.data, affiliateLinks: updatedLinks },
-        });
-    }
+  if (!question || !stableAnswers[index]) return;
+
+  const answerId = stableAnswers[index].id;
+
+  // 1. 更新本地的 affiliateLinks 数组
+  const newLinks = [...affiliateLinks];
+  newLinks[index] = value;
+  setAffiliateLinks(newLinks);
+
+  // 2. 更新 Map（answerId -> link）
+  const newLinksMap = {
+    ...(question.data?.affiliateLinks || {}),
   };
+  newLinksMap[answerId] = value;
+
+  // 3. 调用 onUpdate（安全调用，避免未定义时报错）
+  onUpdate?.({
+    ...question,
+    data: {
+      ...question.data,
+      affiliateLinks: newLinksMap,
+    },
+  });
+};
   
   const handleSave = async () => {
     // --- MODIFIED: Now handleSave reads directly from props and local state ---
