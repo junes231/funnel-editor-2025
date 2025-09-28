@@ -544,61 +544,73 @@ const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData }) => 
   ]);
   // 在 FunnelEditor 组件内部，可以放在 saveFunnelToFirestore 函数的下面
 
- // --- 模板加载函数 ---
-  const handleSelectTemplate = async (templateName: string) => {
-    console.log(`[LOG] handleSelectTemplate called with: ${templateName}`);
+const handleSelectTemplate = async (templateName: string) => {
+  console.log(`[LOG] handleSelectTemplate called with: ${templateName}`);
+  
+  if (questions.length >= 6) {
+    setNotification({ message: 'Cannot add from template, the 6-question limit has been reached.', type: 'error' });
+    return;
+  }
 
-    if (questions.length >= 6) {
-      setNotification({ message: 'Cannot add from template, the 6-question limit has been reached.', type: 'error' });
+  try {
+    const response = await fetch(`${process.env.PUBLIC_URL}/templates/${templateName}.json`);
+    if (!response.ok) {
+        throw new Error(`Network response was not ok: ${response.statusText}`);
+    }
+    const templateData = await response.json();
+
+    // --- 核心修复逻辑开始 ---
+    // 验证模板数据是一个数组
+    if (!Array.isArray(templateData)) {
+        throw new Error("Template format is invalid. Expected an array of questions.");
+    }
+    
+    // 为模板中的问题和答案生成新的、唯一的ID，并转换数据结构
+    const newQuestionsWithIds: Question[] = templateData.map((q: any, questionIndex: number) => {
+      const questionId = `question-${Date.now()}-${questionIndex}`;
+      const answersObj: { [answerId: string]: Answer } = {};
+      
+      // 确保 q.answers 是一个数组再进行遍历
+      if (Array.isArray(q.answers)) {
+        q.answers.forEach((answer: any, answerIndex: number) => {
+          // 确保答案文本存在且为字符串
+          if (answer && typeof answer.text === 'string') {
+            const answerId = `answer-${Date.now()}-${questionIndex}-${answerIndex}`;
+            answersObj[answerId] = {
+              id: answerId,
+              text: answer.text.trim(),
+              clickCount: 0 // 初始化点击次数
+            };
+          }
+        });
+      }
+
+      // 返回符合您应用内部 Question 结构的对象
+      return {
+        ...q,
+        id: questionId,
+        type: q.type || 'single-choice', // 提供默认类型
+        answers: answersObj,
+      };
+    });
+    // --- 核心修复逻辑结束 ---
+
+    // 检查合并后是否超出限制
+    if (questions.length + newQuestionsWithIds.length > 6) {
+      setNotification({ message: `Cannot add all questions from template, it would exceed the 6-question limit.`, type: 'error' });
       return;
     }
 
-    try {
-      const response = await fetch(`${process.env.PUBLIC_URL}/templates/${templateName}.json`);
-      if (!response.ok) throw new Error(`Network response was not ok: ${response.statusText}`);
+    setQuestions(prevQuestions => [...prevQuestions, ...newQuestionsWithIds]);
+    setNotification({ message: `Template "${templateName}" loaded successfully!`, type: 'success' });
 
-      const templateData = await response.json();
-
-      if (!Array.isArray(templateData)) {
-        throw new Error("Template format is invalid. Expected an array of questions.");
-      }
-
-      const newQuestions: Question[] = templateData.map((q: any) => {
-        const questionId = uuidv4();
-        const answersObj: Record<string, Answer> = {};
-
-        if (Array.isArray(q.answers)) {
-          q.answers.forEach((ans: any) => {
-            if (ans && typeof ans.text === "string") {
-              const answerId = uuidv4();
-              answersObj[answerId] = { id: answerId, text: ans.text.trim(), clickCount: 0 };
-            }
-          });
-        }
-
-        return {
-          ...q,
-          id: questionId,
-          type: q.type || "single-choice",
-          answers: answersObj,
-          data: { affiliateLinks: q.data?.affiliateLinks || ["", "", "", ""] },
-        };
-      });
-
-      if (questions.length + newQuestions.length > 6) {
-        setNotification({ message: "Cannot add all questions from template, it would exceed the 6-question limit.", type: "error" });
-        return;
-      }
-
-      setQuestions(prev => [...prev, ...newQuestions]);
-      setNotification({ message: `Template "${templateName}" loaded successfully!`, type: "success" });
-
-    } catch (error) {
-      console.error("Error loading template:", error);
-      const errorMessage = (error as Error).message || "Failed to load the template.";
-      setNotification({ message: errorMessage, type: "error" });
-    }
-  };
+  } catch (error) {
+    console.error('Error loading template:', error);
+    // 强制类型转换以访问 message 属性
+    const errorMessage = (error as Error).message || 'Failed to load the template.';
+    setNotification({ message: errorMessage, type: 'error' });
+  }
+};
   const handleAddQuestion = () => {
     if (questions.length >= 6) {
     //  alert('You can only have up to 6 questions for this quiz.');
@@ -1186,10 +1198,10 @@ const stableAnswers = React.useMemo(() => {
       const filteredAnswersObj = convertAnswersArrayToObject(filteredAnswers);
       
       // The final object is passed up to the parent component
-        onUpdate?.({
+      onUpdate({
         ...question,
-        answers: Object.fromEntries(answersArray.map(a => [a.id, a])),
-        data: { affiliateLinks },
+        answers: filteredAnswersObj,
+        data: { affiliateLinks: cleanAffiliateLinks },
       });
 
       // 中文注释：然后调用 onSaveAndClose 来触发返回列表页的操作，恢复按钮原有功能！
