@@ -1106,7 +1106,7 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
   // --- MODIFIED: Create a stable, sorted array for rendering ---
   // This solves the "answer order is messy" problem permanently.
   // It directly uses the 'question' prop, solving the "uploaded file not showing" problem.
-  const sortedAnswers = question ? Object.values(question.answers).sort((a, b) => {
+  const sortedAnswers = question ? Object.values(question.answers) : [];
     // A simple sort by ID or text can provide stability. Sorting by text is user-friendly.
     return a.text.localeCompare(b.text);
   }) : [];
