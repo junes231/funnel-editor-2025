@@ -727,13 +727,16 @@ const handleImportQuestions = (importedQuestions: Question[]) => {
           <QuestionFormComponent
             question={questionToEdit}
             questionIndex={selectedQuestionIndex}
-            onSave={(q) => {
+            onUpdate={(q) => {
               setQuestions((prev) => {
                 if (selectedQuestionIndex === null) return prev;
                 const next = [...prev];
                 next[selectedQuestionIndex] = q;
                 return next;
               });
+            }}
+            // 修改：onSave 现在只负责关闭编辑窗口，返回列表
+            onSave={() => {
               setSelectedQuestionIndex(null);
               setCurrentSubView('quizEditorList');
             }}
@@ -1066,7 +1069,7 @@ const QuizEditorComponent: React.FC<QuizEditorComponentProps> = ({
 interface QuestionFormComponentProps {
   question?: Question;
   questionIndex: number | null;
-  onSave: (question: Question) => void;
+  onSave: () => void;
   onCancel: () => void;
   onDelete: () => void;
 }
@@ -1078,7 +1081,7 @@ interface QuestionFormComponentProps {
 const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
   question,
   questionIndex,
-  onSave,
+  onSave: onSaveAndClose,
   onCancel, // --- MODIFIED: Renamed from onClose for clarity if needed, or keep as is.
   onDelete,
 }) => {
@@ -1125,7 +1128,7 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
   // --- MODIFIED: Event handlers now create an updated question object and pass it up ---
   const handleTitleChange = (newTitle: string) => {
     if (question) {
-      onSave({ ...question, title: newTitle });
+      onUpdate({ ...question, title: newTitle });
     }
   };
 
@@ -1135,7 +1138,7 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
         ...question.answers,
         [answerId]: { ...question.answers[answerId], text: newText },
       };
-      onSave({ ...question, answers: updatedAnswers });
+      onUpdate({ ...question, answers: updatedAnswers });
     }
   };
 
@@ -1144,6 +1147,12 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
     const updatedLinks = [...affiliateLinks];
     updatedLinks[index] = value;
     setAffiliateLinks(updatedLinks);
+    if (question) {
+        onUpdate({
+            ...question,
+            data: { ...question.data, affiliateLinks: updatedLinks },
+        });
+    }
   };
   
   const handleSave = async () => {
@@ -1172,11 +1181,14 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
       const filteredAnswersObj = convertAnswersArrayToObject(filteredAnswers);
       
       // The final object is passed up to the parent component
-      onSave({
+      onUpdate({
         ...question,
         answers: filteredAnswersObj,
         data: { affiliateLinks: cleanAffiliateLinks },
       });
+
+      // 中文注释：然后调用 onSaveAndClose 来关闭页面
+      onSaveAndClose();
 
     } catch (error) {
       console.error("Error saving question:", error);
