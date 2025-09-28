@@ -3,6 +3,8 @@ import ReactDOM from 'react-dom';
 // 确保 DebugReport.tsx 和其 CSS 文件存在于 src/components/ 目录下
 import DebugReport, { AnalysisReport, ReportFinding } from '../components/DebugReport.tsx';
 
+(window as any).__capturedRequests = (window as any).__capturedRequests || [];
+const capturedRequests = (window as any).__capturedRequests;
 // --- 模块 1: 全局致命错误捕获 ---
 let capturedFatalError: ReportFinding | null = null;
 window.onerror = function(message, source, lineno, colno, error) {
@@ -151,8 +153,6 @@ function initializeDebugger() {
 
   // --- 模块 4: 网络监视器模块 (Network Module) ---
   const networkPanel = container.querySelector('#panel-network')!;
-  const capturedRequests: any[] = [];
-
   const originalFetch = window.fetch.bind(window);
 
   function headersToObject(h: Headers | Record<string, any> | undefined) {
@@ -285,151 +285,137 @@ function initializeDebugger() {
   }
 
   // --- 模块 5: 智能分析模块 (Smart Analysis Module) ---
-  const analysisPanel = container.querySelector('#panel-analysis')!;
-  const runAnalysisBtn = document.createElement('button');
-  runAnalysisBtn.textContent = '开始诊断当前页面问题';
-  runAnalysisBtn.style.cssText = 'width: 100%; padding: 10px; background: #007acc; color: white; border: none; font-size: 16px; cursor: pointer;';
-  const reportContainer = document.createElement('div');
-  analysisPanel.append(runAnalysisBtn, reportContainer);
+const analysisPanel = container.querySelector('#panel-analysis')!;
 
-  runAnalysisBtn.onclick = async () => {
-    ReactDOM.render(React.createElement(DebugReport, { report: null }), reportContainer);
-    runAnalysisBtn.textContent = '正在分析...'; runAnalysisBtn.disabled = true;
-    await new Promise(resolve => setTimeout(resolve, 50));
-    const report = await analyzeCurrentState();
-    ReactDOM.render(React.createElement(DebugReport, { report }), reportContainer);
-    runAnalysisBtn.textContent = '重新诊断'; runAnalysisBtn.disabled = false;
-  };
+// 创建手动刷新按钮
+const refreshBtn = document.createElement('button');
+refreshBtn.textContent = '手动刷新 Funnel 数据';
+refreshBtn.style.cssText = 'width:100%; padding:10px; background:#28a745; color:white; border:none; font-size:16px; cursor:pointer; margin-bottom:8px;';
+analysisPanel.prepend(refreshBtn);
 
-  async function analyzeCurrentState(): Promise<AnalysisReport> {
-    let findings: ReportFinding[] = [];
-    if (capturedFatalError) {
-      findings.push(capturedFatalError);
-    } else {
-      findings.push({ status: 'info', description: '未捕获到任何导致应用崩溃的致命错误。' });
-    }
+// 创建诊断按钮
+const runAnalysisBtn = document.createElement('button');
+runAnalysisBtn.textContent = '开始诊断当前页面问题';
+runAnalysisBtn.style.cssText = 'width: 100%; padding: 10px; background: #007acc; color: white; border: none; font-size: 16px; cursor: pointer;';
+const reportContainer = document.createElement('div');
+analysisPanel.append(runAnalysisBtn, reportContainer);
 
-    const rootEl = document.getElementById('root');
-    if (rootEl && rootEl.innerHTML.trim() !== '') {
-      findings.push({ status: 'ok', description: 'React 应用已成功挂载到 #root 节点。' });
-    } else {
-      findings.push({ status: 'error', description: 'React 应用未能渲染到 #root 节点，这很可能是白屏的原因。' });
-    }
+// 手动刷新按钮逻辑
+refreshBtn.onclick = async () => {
+  refreshBtn.textContent = '正在刷新...';
+  refreshBtn.disabled = true;
 
-    const funnelData = (window as any).__funnelData || (window as any).funnelData || null;
-    if (!funnelData) {
-      findings.push({
-        status: 'error',
-        description: '未检测到 funnelData，这意味着问题列表和答案可能未加载或未保存。'
-      });
-    } else {
-      // 检查问题列表
-      if (!Array.isArray(funnelData.questions) || funnelData.questions.length === 0) {
-        findings.push({
-          status: 'warning',
-          description: '问题列表为空，可能没有保存任何问题。'
-        });
-      } else {
-        funnelData.questions.forEach((q: any, idx: number) => {
-          if (!q.id || !q.text) {
-            findings.push({
-              status: 'error',
-              description: `问题 #${idx + 1} 缺少 id 或 text，可能未正确保存。`
-            });
-          }
-          const answers = q.answers ? Object.values(q.answers) : [];
-          if (!answers.length) {
-            findings.push({
-              status: 'warning',
-              description: `问题 "${q.text}" 没有答案，可能未保存完整。`
-            });
-          } else {
-            answers.forEach((ans: any, aIdx: number) => {
-              if (!ans.id || !ans.text) {
-                findings.push({
-                  status: 'error',
-                  description: `问题 "${q.text}" 的答案 #${aIdx + 1} 缺少 id 或 text。`
-                });
-              }
-            });
-          }
-          if (q.data?.affiliateLinks) {
-            q.data.affiliateLinks.forEach((link: string, lIdx: number) => {
-              if (typeof link !== 'string' || link.trim() === '') {
-                findings.push({
-                  status: 'error',
-                  description: `问题 "${q.text}" 的链接 #${lIdx + 1} 无效，可能未保存。`
-                });
-              }
-            });
-          }
-          if (q.data?.redirectLink) {
-            if (typeof q.data.redirectLink !== 'string' || q.data.redirectLink.trim() === '') {
-              findings.push({
-                status: 'error',
-                description: `问题 "${q.text}" 的重定向链接未设置或为空，可能未保存。`
-              });
-            }
-          } else {
-            findings.push({
-              status: 'warning',
-              description: `问题 "${q.text}" 没有重定向链接字段，可能未设置或未保存。`
-            });
-          }
-        });
-      }
-    }
+  // 渲染占位空报告，防止 React 复用旧组件
+  ReactDOM.render(React.createElement(DebugReport, { report: null }), reportContainer);
 
-    const trackClickReq = capturedRequests.find((r: any) =>
-      (r.url || '').includes('api-track-click') ||
-      (r.url || '').includes('trackClick') ||
-      (r.url || '').includes('track-click')
-    );
+  await new Promise(r => setTimeout(r, 50)); // 确保 UI 更新
+  const report = await analyzeCurrentState();
+  ReactDOM.render(React.createElement(DebugReport, { report }), reportContainer);
 
-    if (trackClickReq) {
-      let reqBody: any = {};
-      try {
-        if (typeof trackClickReq.body === 'string') {
-          reqBody = JSON.parse(trackClickReq.body || '{}')?.data || {};
-        } else if (typeof trackClickReq.body === 'object' && trackClickReq.body !== null) {
-          reqBody = (trackClickReq.body.data) || {};
-        } else {
-          reqBody = {};
-        }
-      } catch {
-        reqBody = {};
-      }
+  refreshBtn.textContent = '手动刷新 Funnel 数据';
+  refreshBtn.disabled = false;
+};
 
-      if (trackClickReq.status >= 200 && trackClickReq.status < 300) {
-        findings.push({ status: 'ok', description: '已成功发送 "trackClick" 请求并收到成功响应。', details: `Status: ${trackClickReq.status}` });
-      } else {
-        findings.push({ status: 'error', description: '发送了 "trackClick" 请求，但服务器返回了错误或请求失败。', details: `Status: ${trackClickReq.status}, Response: ${trackClickReq.responseText}` });
+// 分析按钮逻辑
+runAnalysisBtn.onclick = async () => {
+  ReactDOM.render(React.createElement(DebugReport, { report: null }), reportContainer);
+  runAnalysisBtn.textContent = '正在分析...'; 
+  runAnalysisBtn.disabled = true;
 
-        const funnelData = (window as any).__funnelData || (window as any).funnelData || null;
-        const questionIds = funnelData?.questions?.map((q: any) => q.id) || [];
-        const sentQuestionId = reqBody.questionId || reqBody?.question?.id || null;
-        if (sentQuestionId && !questionIds.includes(sentQuestionId)) {
-          findings.push({
-            status: 'error',
-            description: '发送的 questionId 不存在于 funnel 数据中。',
-            details: `Sent: ${sentQuestionId}, Available: ${JSON.stringify(questionIds)}`,
-            suggestedAction: '检查 QuizPlayer.tsx 中的 currentQuestion.id 或 Firestore 数据，确保前端使用的 funnel 数据是最新且完整的。',
-          });
-        }
-      }
-    } else {
-      findings.push({ status: 'warning', description: '在本次会话中，未检测到发送 "trackClick" 的网络请求。' });
-    }
+  await new Promise(resolve => setTimeout(resolve, 50));
+  const report = await analyzeCurrentState();
+  ReactDOM.render(React.createElement(DebugReport, { report }), reportContainer);
 
-    return {
-      title: '综合诊断报告',
-      findings,
-      potentialCauses: ['请根据上述[发现]中的红色或黄色项目，定位可能原因。'],
-      suggestedActions: ['对于致命错误，请检查代码。对于网络错误，请检查后端日志或前端 payload。对于未发送请求，请检查点击事件逻辑及请求构造。'],
-    };
+  runAnalysisBtn.textContent = '重新诊断'; 
+  runAnalysisBtn.disabled = false;
+};
+
+// 分析函数
+async function analyzeCurrentState(): Promise<AnalysisReport> {
+  const capturedRequests: any[] = (window as any).__capturedRequests || [];
+  let findings: ReportFinding[] = [];
+
+  if (capturedFatalError) {
+    findings.push(capturedFatalError);
+  } else {
+    findings.push({ status: 'info', description: '未捕获到任何导致应用崩溃的致命错误。' });
   }
 
-  logToPanel('info', ['Ultimate Debugger Ready.']);
+  const rootEl = document.getElementById('root');
+  if (rootEl && rootEl.innerHTML.trim() !== '') {
+    findings.push({ status: 'ok', description: 'React 应用已成功挂载到 #root 节点。' });
+  } else {
+    findings.push({ status: 'error', description: 'React 应用未能渲染到 #root 节点，这很可能是白屏的原因。' });
+  }
+
+  const funnelData = (window as any).__funnelData || (window as any).funnelData || null;
+  if (!funnelData) {
+    findings.push({
+      status: 'error',
+      description: '未检测到 funnelData，这意味着问题列表和答案可能未加载或未保存。'
+    });
+  } else {
+    if (!Array.isArray(funnelData.questions) || funnelData.questions.length === 0) {
+      findings.push({ status: 'warning', description: '问题列表为空，可能没有保存任何问题。' });
+    } else {
+      funnelData.questions.forEach((q: any, idx: number) => {
+        if (!q.id || !q.text) findings.push({ status: 'error', description: `问题 #${idx+1} 缺少 id 或 text` });
+        const answers = q.answers ? Object.values(q.answers) : [];
+        if (!answers.length) findings.push({ status: 'warning', description: `问题 "${q.text}" 没有答案` });
+        else answers.forEach((ans: any, aIdx: number) => {
+          if (!ans.id || !ans.text) findings.push({ status:'error', description: `问题 "${q.text}" 的答案 #${aIdx+1} 缺少 id 或 text` });
+        });
+        if (q.data?.affiliateLinks) {
+          q.data.affiliateLinks.forEach((link:string,lIdx:number)=>{
+            if(typeof link!=='string'||link.trim()==='') findings.push({status:'error',description:`问题 "${q.text}" 的链接 #${lIdx+1} 无效`});
+          });
+        }
+        if (q.data?.redirectLink) {
+          if(typeof q.data.redirectLink!=='string'||q.data.redirectLink.trim()==='') findings.push({status:'error',description:`问题 "${q.text}" 的重定向链接为空`});
+        } else {
+          findings.push({status:'warning',description:`问题 "${q.text}" 没有重定向链接字段`});
+        }
+      });
+    }
+  }
+
+  const trackClickReq = capturedRequests.find((r:any)=>
+    (r.url||'').includes('api-track-click') ||
+    (r.url||'').includes('trackClick') ||
+    (r.url||'').includes('track-click')
+  );
+
+  if(trackClickReq){
+    let reqBody:any={};
+    try{
+      if(typeof trackClickReq.body==='string') reqBody=JSON.parse(trackClickReq.body||'{}')?.data||{};
+      else if(typeof trackClickReq.body==='object' && trackClickReq.body!==null) reqBody=trackClickReq.body.data||{};
+    }catch{reqBody={};}
+
+    if(trackClickReq.status>=200 && trackClickReq.status<300){
+      findings.push({status:'ok',description:'已成功发送 "trackClick" 请求并收到成功响应。',details:`Status: ${trackClickReq.status}`});
+    }else{
+      findings.push({status:'error',description:'发送了 "trackClick" 请求，但服务器返回了错误或请求失败。',details:`Status: ${trackClickReq.status}, Response: ${trackClickReq.responseText}`});
+      const funnelData = (window as any).__funnelData || (window as any).funnelData || null;
+      const questionIds = funnelData?.questions?.map((q:any)=>q.id)||[];
+      const sentQuestionId = reqBody.questionId || reqBody?.question?.id || null;
+      if(sentQuestionId && !questionIds.includes(sentQuestionId)){
+        findings.push({status:'error',description:'发送的 questionId 不存在于 funnel 数据中。',details:`Sent: ${sentQuestionId}, Available: ${JSON.stringify(questionIds)}`, suggestedAction:'检查 QuizPlayer.tsx 中的 currentQuestion.id 或 Firestore 数据，确保前端使用的 funnel 数据是最新且完整的。'});
+      }
+    }
+  }else{
+    findings.push({status:'warning',description:'在本次会话中，未检测到发送 "trackClick" 的网络请求。'});
+  }
+
+  return {
+    title:'综合诊断报告',
+    findings,
+    potentialCauses:['请根据上述[发现]中的红色或黄色项目，定位可能原因。'],
+    suggestedActions:['对于致命错误，请检查代码。对于网络错误，请检查后端日志或前端 payload。对于未发送请求，请检查点击事件逻辑及请求构造。'],
+  };
+}
+
+logToPanel('info',['Ultimate Debugger Ready.']);
 }
 
   // --- 模块 6: UI 监控模块 (UI Monitoring) ---
