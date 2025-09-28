@@ -1072,6 +1072,7 @@ interface QuestionFormComponentProps {
   onSave: () => void;
   onCancel: () => void;
   onDelete: () => void;
+  onUpdate: (updatedQuestion: Question) => void;
 }
 
 // ===================================================================
@@ -1084,6 +1085,7 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
   onSave: onSaveAndClose,
   onCancel, // --- MODIFIED: Renamed from onClose for clarity if needed, or keep as is.
   onDelete,
+  onUpdate,
 }) => {
   // --- UNCHANGED: Navigation logic remains the same ---
   const navigate = useNavigate();
