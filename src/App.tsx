@@ -704,7 +704,7 @@ const handleImportQuestions = (importedQuestions: Question[]) => {
       show: true,
       message: 'Error reading or parsing JSON file. Please check file format.',
       type: 'error',
-    });
+    });　
   }
 };
   const renderEditorContent = () => {
@@ -735,7 +735,7 @@ const handleImportQuestions = (importedQuestions: Question[]) => {
                 return next;
               });
             }}
-            // 修改：onSave 现在只负责关闭编辑窗口，返回列表
+            // onSave 只负责在点击保存按钮后返回列表
             onSave={() => {
               setSelectedQuestionIndex(null);
               setCurrentSubView('quizEditorList');
@@ -1107,7 +1107,10 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
   // This solves the "answer order is messy" problem permanently.
   // It directly uses the 'question' prop, solving the "uploaded file not showing" problem.
   // 中文注释：移除 .sort(...) 部分，以解决移动端输入问题
-const sortedAnswers = question ? Object.values(question.answers) : [];
+const stableAnswers = React.useMemo(() => {
+    if (!question) return [];
+    return Object.values(question.answers).sort((a, b) => a.id.localeCompare(b.id));
+  }, [question]);
 
 
   // --- UNCHANGED: Helper functions can be kept if used elsewhere, but are not needed for rendering now ---
@@ -1185,7 +1188,7 @@ const sortedAnswers = question ? Object.values(question.answers) : [];
         data: { affiliateLinks: cleanAffiliateLinks },
       });
 
-      // 中文注释：然后调用 onSaveAndClose 来关闭页面
+      // 中文注释：然后调用 onSaveAndClose 来触发返回列表页的操作，恢复按钮原有功能！
       onSaveAndClose();
 
     } catch (error) {
@@ -1252,7 +1255,7 @@ const sortedAnswers = question ? Object.values(question.answers) : [];
       <div className="answer-options-section">
         <p>Answer Options (Max 4):</p>
         {/* Use the stable sortedAnswers array for rendering */}
-        {sortedAnswers.map((answer, index) => (
+        {stableAnswers.map((answer, index) => (
           <div key={answer.id} className="answer-input-group">
     <input type="text" value={answer.text} onChange={(e) => handleAnswerTextChange(answer.id, e.target.value)} />
     <input type="url" value={affiliateLinks[index] || ''} onChange={(e) => handleLinkChange(index, e.target.value)} placeholder="Affiliate link (optional)" />
