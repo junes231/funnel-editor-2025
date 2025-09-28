@@ -83,51 +83,40 @@ const defaultFunnelData: FunnelData = { questions: [] };
   }, [funnelId, db]);
 
   // [中文注释] 关键升级：这是新的 handleAnswerClick 函数
-  const handleAnswerClick = async (answerIndex: number, answerId: string) => {
+  const currentQuestion = funnelData?.questions[currentQuestionIndex];
+const handleAnswerClick = async (answerIndex: number, answerId: string) => {
   if (isAnimating || !funnelData) return;
 
-  setIsAnimating(true); // 1. 立即开始动画
+  setIsAnimating(true);
   setClickedAnswerIndex(answerIndex);
 
   const affiliateLink = currentQuestion?.data?.affiliateLinks?.[answerIndex];
 
-  // --- 2. 异步启动点击追踪（不使用 await，确保不阻塞主线程） ---
   if (funnelId && currentQuestion?.id && answerId) {
     const trackClickEndpoint = "https://api-track-click-jgett3ucqq-uc.a.run.app/trackClick";
-    
-    // 异步启动 fetch，不使用 await
     fetch(trackClickEndpoint, {
       method: "POST",
       mode: "cors",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        data: {
-          funnelId: funnelId,
-          questionId: currentQuestion.id,
-          answerId: answerId,
-        },
+        data: { funnelId, questionId: currentQuestion.id, answerId },
       }),
     })
     .then(response => {
-      // 追踪成功或失败，都在后台处理，不影响用户流程
       if (!response.ok) {
         console.error("Failed to track click (API Error):", response.statusText);
+        return response.text().then(text => { throw new Error(text); });
       }
+      return response.json();
     })
-    .catch(err => {
-      console.error("Failed to track click (Network or other error):", err);
-    });
+    .then(data => console.log("Tracking successful:", data))
+    .catch(err => console.error("Tracking failed:", err.message || err));
   }
   
-  // --- 3. 立即打开按答案配置的推广链接 (如果存在) ---
-  // 无论是否追踪成功，都立即打开链接（在新的标签页中），不阻塞流程
   if (affiliateLink && affiliateLink.trim() !== "") {
     window.open(affiliateLink, "_blank");
   }
 
-  // --- 4. 动画结束后跳转（500ms 延迟，实现半秒动画）---
   setTimeout(() => {
     setIsAnimating(false);
     setClickedAnswerIndex(null);
@@ -136,19 +125,17 @@ const defaultFunnelData: FunnelData = { questions: [] };
     const isLastQuestion = currentQuestionIndex >= funnelData.questions.length - 1;
 
     if (isLastQuestion) {
-      // 如果是最后一个问题，跳转到最终重定向链接
       const redirectLink = funnelData.finalRedirectLink;
       if (redirectLink && redirectLink.trim() !== "") {
-        window.location.href = redirectLink; 
+        window.location.href = redirectLink;
       } else {
         console.log("Quiz complete! No final redirect link set.");
       }
       return;
     }
 
-    // 跳转到下一个问题
-    setCurrentQuestionIndex(currentQuestionIndex + 1); 
-  }, 500); // 500ms 延迟，实现半秒动画
+    setCurrentQuestionIndex(currentQuestionIndex + 1);
+  }, 500);
 };
 
  // [中文注释] 组件的 JSX 渲染部分保持不变...
