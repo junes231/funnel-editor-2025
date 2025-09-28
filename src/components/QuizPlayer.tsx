@@ -83,7 +83,7 @@ const defaultFunnelData: FunnelData = { questions: [] };
   }, [funnelId, db]);
 
   // [中文注释] 关键升级：这是新的 handleAnswerClick 函数
-  const currentQuestion = funnelData?.questions[currentQuestionIndex];
+  
 const handleAnswerClick = async (answerIndex: number, answerId: string) => {
   if (isAnimating || !funnelData) return;
 
