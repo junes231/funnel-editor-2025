@@ -92,10 +92,10 @@ function initializeDebugger() {
   toggleBtn.id = '__lp_debug_toggle';
   toggleBtn.textContent = 'Debug';
   document.body.appendChild(toggleBtn);
-  
+
   // 3. 绑定核心交互 (Bind Core Interactions)
   toggleBtn.onclick = () => { container.style.display = container.style.display === 'none' ? 'flex' : 'none'; };
-  
+
   const tabs = container.querySelector('#__lp_debug_tabs')!;
   const panels = container.querySelectorAll('.lp-panel-content');
   tabs.addEventListener('click', (e) => {
@@ -106,15 +106,14 @@ function initializeDebugger() {
       panels.forEach(p => p.classList.toggle('active', p.id === targetPanelId));
     }
   });
-   startUIMonitoring();
-  startAnswerTracking();
+
   // --- 模块 3: 控制台模块 (Console Module) ---
   const consoleOutput = container.querySelector('#panel-console-output')!;
   const consoleInput = container.querySelector('#panel-console-input') as HTMLTextAreaElement;
   const runBtn = container.querySelector('#console-run-btn')!;
   const clearBtn = container.querySelector('#console-clear-btn')!;
   const copyBtn = container.querySelector('#console-copy-btn')!;
-  
+
   function executeCode() {
     const code = consoleInput.value;
     if (!code.trim()) return;
@@ -131,13 +130,12 @@ function initializeDebugger() {
   runBtn.addEventListener('click', executeCode);
   clearBtn.addEventListener('click', () => { consoleOutput.innerHTML = ''; });
   copyBtn.addEventListener('click', () => { navigator.clipboard.writeText(consoleOutput.textContent || ''); });
-  // --- 安全处理 consoleInput 的键盘事件 ---
-consoleInput.addEventListener('keydown', (e) => {
-  if (e.target === consoleInput && e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-    executeCode();
-    e.preventDefault();
-  }
-});
+  consoleInput.addEventListener('keydown', (e) => {
+    if (e.target === consoleInput && e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+      executeCode();
+      e.preventDefault();
+    }
+  });
 
   function logToPanel(type: string, args: any[]) {
     const line = document.createElement('div');
@@ -157,7 +155,6 @@ consoleInput.addEventListener('keydown', (e) => {
 
   const originalFetch = window.fetch.bind(window);
 
-  // helper: convert Headers to plain object
   function headersToObject(h: Headers | Record<string, any> | undefined) {
     try {
       if (!h) return {};
@@ -166,19 +163,16 @@ consoleInput.addEventListener('keydown', (e) => {
         h.forEach((v, k) => (obj[k] = v));
         return obj;
       }
-      // may be plain object already
       return h;
     } catch (e) {
       return { error: 'Could not read headers' };
     }
   }
 
-  // helper: safe read body representation (no throwing)
   async function safeReadBody(requestOrInit: Request | { body?: any }) {
     try {
       const body = (requestOrInit as any).body;
       if (!body) return null;
-      // If it's a ReadableStream / non-readable, just return a placeholder
       if (typeof body === 'string') return body;
       if (body instanceof FormData) {
         const entries: any[] = [];
@@ -194,7 +188,6 @@ consoleInput.addEventListener('keydown', (e) => {
       if (body instanceof ArrayBuffer) {
         return `[ArrayBuffer byteLength=${body.byteLength}]`;
       }
-      // if it's a Request object, attempt to clone and text()
       if (requestOrInit instanceof Request) {
         try {
           const clone = requestOrInit.clone();
@@ -203,20 +196,16 @@ consoleInput.addEventListener('keydown', (e) => {
           return '[Unreadable Request body]';
         }
       }
-      // fallback: try text() if exists
       if (typeof body.text === 'function') {
         return await body.text().catch(() => '[Could not read body via text()]');
       }
-      // last resort, JSON stringify
       return typeof body === 'object' ? JSON.stringify(body) : String(body);
     } catch (e) {
       return `[Body read error: ${String(e)}]`;
     }
   }
 
-  // override fetch safely
   window.fetch = async function (...args: any[]) {
-    // Normalize to Request object when possible
     let request: Request;
     try {
       if (args[0] instanceof Request) {
@@ -225,11 +214,9 @@ consoleInput.addEventListener('keydown', (e) => {
         request = new Request(args[0], args[1]);
       }
     } catch (e) {
-      // If Request construction fails, fallback to calling originalFetch directly
       return originalFetch(...args);
     }
 
-    // Build requestInfo safely
     const requestInfo: any = {
       url: request.url,
       method: request.method || 'GET',
@@ -240,34 +227,23 @@ consoleInput.addEventListener('keydown', (e) => {
       duration: 0,
       responseText: '',
     };
-     if (requestInfo.method === 'GET' && requestInfo.url.includes('trackClick')) {
-  console.warn('Unexpected GET request to trackClick:', requestInfo.url);
-}
-    // Read headers safely
-    requestInfo.headers = headersToObject(request.headers);
-
-    // Read body representation safely (non-blocking for actual request)
-    try {
-      requestInfo.body = await safeReadBody(request);
-    } catch (e) {
-      requestInfo.body = `[Body read error: ${String(e)}]`;
+    if (requestInfo.method === 'GET' && requestInfo.url.includes('trackClick')) {
+      console.warn('Unexpected GET request to trackClick:', requestInfo.url);
     }
-
-    // push to captured list
+    requestInfo.headers = headersToObject(request.headers);
+    requestInfo.body = await safeReadBody(request);
     capturedRequests.unshift(requestInfo);
     renderNetworkPanel();
 
-    // perform actual fetch and capture response/metrics, but do NOT swallow errors from original fetch
     let response: Response;
     try {
       response = await originalFetch(request);
     } catch (fetchError) {
-      // mark as failed
       requestInfo.duration = Date.now() - requestInfo.startTime;
       requestInfo.status = -1;
       requestInfo.responseText = `[Fetch failed: ${String(fetchError)}]`;
       renderNetworkPanel();
-      throw fetchError; // rethrow so application-level error handling still works
+      throw fetchError;
     }
 
     try {
@@ -284,7 +260,6 @@ consoleInput.addEventListener('keydown', (e) => {
     return response;
   };
 
-  // escape helper for safe HTML insertion
   function escapeHtml(s: any) {
     if (s === null || s === undefined) return '';
     return String(s)
@@ -341,73 +316,70 @@ consoleInput.addEventListener('keydown', (e) => {
       findings.push({ status: 'error', description: 'React 应用未能渲染到 #root 节点，这很可能是白屏的原因。' });
     }
 
-    // --- 检查 Funnel 数据完整性 ---
-const funnelData = (window as any).__funnelData || (window as any).funnelData || null;
-
-if (!funnelData) {
-  findings.push({
-    status: 'error',
-    description: '未检测到 funnelData，这意味着问题列表和答案可能未加载或未保存。'
-  });
-} else {
-  // 检查问题列表
-  if (!Array.isArray(funnelData.questions) || funnelData.questions.length === 0) {
-    findings.push({
-      status: 'warning',
-      description: '问题列表为空，可能没有保存任何问题。'
-    });
-  } else {
-    funnelData.questions.forEach((q: any, idx: number) => {
-      if (!q.id || !q.text) {
-        findings.push({
-          status: 'error',
-          description: `问题 #${idx + 1} 缺少 id 或 text，可能未正确保存。`
-        });
-      }
-      // 检查答案
-      const answers = q.answers ? Object.values(q.answers) : [];
-      if (!answers.length) {
+    const funnelData = (window as any).__funnelData || (window as any).funnelData || null;
+    if (!funnelData) {
+      findings.push({
+        status: 'error',
+        description: '未检测到 funnelData，这意味着问题列表和答案可能未加载或未保存。'
+      });
+    } else {
+      // 检查问题列表
+      if (!Array.isArray(funnelData.questions) || funnelData.questions.length === 0) {
         findings.push({
           status: 'warning',
-          description: `问题 "${q.text}" 没有答案，可能未保存完整。`
+          description: '问题列表为空，可能没有保存任何问题。'
         });
       } else {
-        answers.forEach((ans: any, aIdx: number) => {
-          if (!ans.id || !ans.text) {
+        funnelData.questions.forEach((q: any, idx: number) => {
+          if (!q.id || !q.text) {
             findings.push({
               status: 'error',
-              description: `问题 "${q.text}" 的答案 #${aIdx + 1} 缺少 id 或 text。`
+              description: `问题 #${idx + 1} 缺少 id 或 text，可能未正确保存。`
+            });
+          }
+          const answers = q.answers ? Object.values(q.answers) : [];
+          if (!answers.length) {
+            findings.push({
+              status: 'warning',
+              description: `问题 "${q.text}" 没有答案，可能未保存完整。`
+            });
+          } else {
+            answers.forEach((ans: any, aIdx: number) => {
+              if (!ans.id || !ans.text) {
+                findings.push({
+                  status: 'error',
+                  description: `问题 "${q.text}" 的答案 #${aIdx + 1} 缺少 id 或 text。`
+                });
+              }
+            });
+          }
+          if (q.data?.affiliateLinks) {
+            q.data.affiliateLinks.forEach((link: string, lIdx: number) => {
+              if (typeof link !== 'string' || link.trim() === '') {
+                findings.push({
+                  status: 'error',
+                  description: `问题 "${q.text}" 的链接 #${lIdx + 1} 无效，可能未保存。`
+                });
+              }
+            });
+          }
+          if (q.data?.redirectLink) {
+            if (typeof q.data.redirectLink !== 'string' || q.data.redirectLink.trim() === '') {
+              findings.push({
+                status: 'error',
+                description: `问题 "${q.text}" 的重定向链接未设置或为空，可能未保存。`
+              });
+            }
+          } else {
+            findings.push({
+              status: 'warning',
+              description: `问题 "${q.text}" 没有重定向链接字段，可能未设置或未保存。`
             });
           }
         });
       }
-      // 检查 affiliateLinks
-      if (q.data?.affiliateLinks) {
-        q.data.affiliateLinks.forEach((link: string, lIdx: number) => {
-          if (typeof link !== 'string' || link.trim() === '') {
-            findings.push({
-              status: 'error',
-              description: `问题 "${q.text}" 的链接 #${lIdx + 1} 无效，可能未保存。`
-              });
-              }
-             });
-             }
-            // 检查重定向链接
-if (q.data?.redirectLink) {
-    if (typeof q.data.redirectLink !== 'string' || q.data.redirectLink.trim() === '') {
-      findings.push({
-        status: 'error',
-        description: `问题 "${q.text}" 的重定向链接未设置或为空，可能未保存。`
-      });
     }
-  } else {
-    findings.push({
-      status: 'warning',
-      description: `问题 "${q.text}" 没有重定向链接字段，可能未设置或未保存。`
-    });
-  }
- });
-    // 尝试查找 trackClick 或 api-track-click 或 track-click 等变体
+
     const trackClickReq = capturedRequests.find((r: any) =>
       (r.url || '').includes('api-track-click') ||
       (r.url || '').includes('trackClick') ||
@@ -433,7 +405,6 @@ if (q.data?.redirectLink) {
       } else {
         findings.push({ status: 'error', description: '发送了 "trackClick" 请求，但服务器返回了错误或请求失败。', details: `Status: ${trackClickReq.status}, Response: ${trackClickReq.responseText}` });
 
-        // 添加 questionId 验证（尽可能安全地读取全局 funnel 数据）
         const funnelData = (window as any).__funnelData || (window as any).funnelData || null;
         const questionIds = funnelData?.questions?.map((q: any) => q.id) || [];
         const sentQuestionId = reqBody.questionId || reqBody?.question?.id || null;
@@ -461,72 +432,79 @@ if (q.data?.redirectLink) {
   logToPanel('info', ['Ultimate Debugger Ready.']);
 }
 
+  // --- 模块 6: UI 监控模块 (UI Monitoring) ---
+  function startUIMonitoring() {
+    setInterval(() => {
+      const rootEl = document.getElementById('root');
+      if (!rootEl || rootEl.innerHTML.trim() === '') {
+        console.error('[UI-Monitor] Root 节点为空，可能白屏');
+      }
 
-// --- 模块 6: UI 监控模块 (UI Monitoring) ---
-function startUIMonitoring() {
-  setInterval(() => {
-    const rootEl = document.getElementById('root');
-    if (!rootEl || rootEl.innerHTML.trim() === '') {
-      console.error('[UI-Monitor] Root 节点为空，可能白屏');
-    }
+      if (!document.getElementById('__lp_debug_toggle')) {
+        console.warn('[UI-Monitor] Debug 按钮丢失，调试器可能被卸载');
+      }
 
-    // 检查 Debug 按钮是否存在
-    if (!document.getElementById('__lp_debug_toggle')) {
-      console.warn('[UI-Monitor] Debug 按钮丢失，调试器可能被卸载');
-    }
+      const backButton = document.querySelector('button[data-role="back"]');
+      if (!backButton) {
+        console.warn('[UI-Monitor] 返回按钮未找到');
+      }
+    }, 5000);
+  }
 
-    // 其他关键节点检测，例如按钮、输入框
-    const backButton = document.querySelector('button[data-role="back"]');
-    if (!backButton) {
-      console.warn('[UI-Monitor] 返回按钮未找到');
-    }
-  }, 5000); // 每 5 秒检查一次
-}
-// --- 模块 7: 答案保存追踪 (Answer Tracking) ---
-function startAnswerTracking() {
-  // 每次捕获到请求时，分析 answerId / affiliateLink 是否存在
-  const checkAnswerRequests = () => {
-    const answerReqs = capturedRequests.filter(r =>
-      (r.url || '').includes('trackClick') ||
-      (r.url || '').includes('answer') ||
-      (r.url || '').includes('save')
-    );
+  // --- 模块 7: 答案保存追踪 (Answer Tracking) ---
+  function startAnswerTracking() {
+    const checkAnswerRequests = () => {
+      const answerReqs = capturedRequests.filter(r =>
+        (r.url || '').includes('trackClick') ||
+        (r.url || '').includes('answer') ||
+        (r.url || '').includes('save')
+      );
 
-    if (answerReqs.length === 0) {
-      console.warn('[AnswerTracking] 暂未检测到答案保存请求');
-      return;
-    }
+      if (answerReqs.length === 0) {
+        console.warn('[AnswerTracking] 暂未检测到答案保存请求');
+        return;
+      }
 
-    answerReqs.forEach(req => {
-      let reqBody: any = {};
-      try {
-        if (typeof req.body === 'string') {
-          reqBody = JSON.parse(req.body || '{}')?.data || {};
-        } else if (typeof req.body === 'object') {
-          reqBody = req.body.data || {};
+      answerReqs.forEach(req => {
+        let reqBody: any = {};
+        try {
+          if (typeof req.body === 'string') {
+            reqBody = JSON.parse(req.body || '{}')?.data || {};
+          } else if (typeof req.body === 'object') {
+            reqBody = req.body.data || {};
+          }
+        } catch (e) {
+          console.error('[AnswerTracking] 请求体解析失败', e);
         }
-      } catch (e) {
-        console.error('[AnswerTracking] 请求体解析失败', e);
-      }
 
-      const answerId = reqBody.answerId || null;
-      const questionId = reqBody.questionId || null;
-      const affiliateLink = reqBody.affiliateLink || null;
+        const answerId = reqBody.answerId || null;
+        const questionId = reqBody.questionId || null;
+        const affiliateLink = reqBody.affiliateLink || null;
 
-      if (req.status >= 200 && req.status < 300) {
-        console.log('[AnswerTracking] ✅ 答案保存成功', { questionId, answerId, affiliateLink });
-      } else {
-        console.error('[AnswerTracking] ❌ 答案保存失败', {
-          questionId, answerId, affiliateLink,
-          status: req.status, response: req.responseText
-        });
-      }
-    });
-  };
+        if (req.status >= 200 && req.status < 300) {
+          console.log('[AnswerTracking] ✅ 答案保存成功', { questionId, answerId, affiliateLink });
+        } else {
+          console.error('[AnswerTracking] ❌ 答案保存失败', {
+            questionId, answerId, affiliateLink,
+            status: req.status, response: req.responseText
+          });
+        }
+      });
+    };
 
-  // 定时检查（也可以改成按钮触发）
-  setInterval(checkAnswerRequests, 5000);
-}
+    setInterval(checkAnswerRequests, 5000);
+  }
 
-// --- 模块 8: 导出与安装 ---
-export { installLongPressDebug };
+  // --- 模块 8: 导出与安装 ---
+  export function installLongPressDebug(options: { enable?: boolean } = {}) {
+    const { enable = (typeof window !== 'undefined' && window.location.search.includes('debug=1')) } = options;
+    if (!enable) return;
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initializeDebugger);
+    } else {
+      initializeDebugger();
+      startUIMonitoring(); 
+      startAnswerTracking();
+    }
+  }
