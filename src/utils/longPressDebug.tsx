@@ -536,8 +536,8 @@ export function installLongPressDebug(options: { enable?: boolean } = {}) {
     document.addEventListener('DOMContentLoaded', initializeDebugger);
   } else {
     initializeDebugger();
-   logToPanel('info', ['Ultimate Debugger Ready.']);
-   installUIMonitor(); // <-- 安装 UI 监控
-   startAnswerTracking();
+    logToPanel('info', ['Ultimate Debugger Ready.']);
+    installUIMonitor(); 
+    startAnswerTracking();
   }
 }
