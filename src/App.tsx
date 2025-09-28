@@ -823,17 +823,8 @@ case 'analytics':
            </h3>
           <p>Get data-driven insights to boost your funnel's performance.</p>
           </div>
-            <BackButton
-  onClick={(e) => {
-    // 添加淡出动画
-    e.currentTarget.classList.add('animate-out');
-
-    // 1 秒后执行跳转，动画和跳转总时间控制在 1 秒
-    setTimeout(() => {
-      navigate('/'); // 安全跳转
-    }, 1000);
-  }}
->
+            
+  <BackButton onClick={onBack}>
   <span role="img" aria-label="back">←</span> Back to All Funnels
 </BackButton>
             <div style={{ marginTop: '20px', padding: '10px', border: '1px dashed #ccc', fontSize: '0.8em', wordBreak: 'break-all', textAlign: 'left' }}>
