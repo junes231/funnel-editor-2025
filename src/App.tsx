@@ -824,9 +824,9 @@ case 'analytics':
           <p>Get data-driven insights to boost your funnel's performance.</p>
           </div>
             
-  <BackButton onClick={onBack}>
-  <span role="img" aria-label="back">←</span> Back to All Funnels
-</BackButton>
+         <BackButton goBack={true}>
+         <span role="img" aria-label="back">←</span> Back to All Funnels
+         </BackButton>
             <div style={{ marginTop: '20px', padding: '10px', border: '1px dashed #ccc', fontSize: '0.8em', wordBreak: 'break-all', textAlign: 'left' }}>
               <strong>DEBUG:</strong> {debugLinkValue}
             </div>
