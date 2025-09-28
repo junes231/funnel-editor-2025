@@ -106,7 +106,8 @@ function initializeDebugger() {
       panels.forEach(p => p.classList.toggle('active', p.id === targetPanelId));
     }
   });
-
+   startUIMonitoring();
+  startAnswerTracking();
   // --- 模块 3: 控制台模块 (Console Module) ---
   const consoleOutput = container.querySelector('#panel-console-output')!;
   const consoleInput = container.querySelector('#panel-console-input') as HTMLTextAreaElement;
@@ -536,7 +537,6 @@ export function installLongPressDebug(options: { enable?: boolean } = {}) {
     document.addEventListener('DOMContentLoaded', initializeDebugger);
   } else {
     initializeDebugger();
-    startUIMonitoring(); 
-    startAnswerTracking();
+    
   }
 }
