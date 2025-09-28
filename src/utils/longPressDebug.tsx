@@ -1,7 +1,3 @@
-// src/utils/longPressDebug.tsx  （或你原来文件的位置）
-// 修改说明：安全地覆盖 fetch、headers/body 处理、调整 window.onerror 返回值以便不屏蔽浏览器控制台错误。
-// 保持原有面板、控制台、智能分析逻辑。
-
 import React from 'react';
 import ReactDOM from 'react-dom';
 // 确保 DebugReport.tsx 和其 CSS 文件存在于 src/components/ 目录下
@@ -344,6 +340,72 @@ consoleInput.addEventListener('keydown', (e) => {
       findings.push({ status: 'error', description: 'React 应用未能渲染到 #root 节点，这很可能是白屏的原因。' });
     }
 
+    // --- 检查 Funnel 数据完整性 ---
+const funnelData = (window as any).__funnelData || (window as any).funnelData || null;
+
+if (!funnelData) {
+  findings.push({
+    status: 'error',
+    description: '未检测到 funnelData，这意味着问题列表和答案可能未加载或未保存。'
+  });
+} else {
+  // 检查问题列表
+  if (!Array.isArray(funnelData.questions) || funnelData.questions.length === 0) {
+    findings.push({
+      status: 'warning',
+      description: '问题列表为空，可能没有保存任何问题。'
+    });
+  } else {
+    funnelData.questions.forEach((q: any, idx: number) => {
+      if (!q.id || !q.text) {
+        findings.push({
+          status: 'error',
+          description: `问题 #${idx + 1} 缺少 id 或 text，可能未正确保存。`
+        });
+      }
+      // 检查答案
+      const answers = q.answers ? Object.values(q.answers) : [];
+      if (!answers.length) {
+        findings.push({
+          status: 'warning',
+          description: `问题 "${q.text}" 没有答案，可能未保存完整。`
+        });
+      } else {
+        answers.forEach((ans: any, aIdx: number) => {
+          if (!ans.id || !ans.text) {
+            findings.push({
+              status: 'error',
+              description: `问题 "${q.text}" 的答案 #${aIdx + 1} 缺少 id 或 text。`
+            });
+          }
+        });
+      }
+      // 检查 affiliateLinks
+      if (q.data?.affiliateLinks) {
+        q.data.affiliateLinks.forEach((link: string, lIdx: number) => {
+          if (typeof link !== 'string' || link.trim() === '') {
+            findings.push({
+              status: 'error',
+              description: `问题 "${q.text}" 的链接 #${lIdx + 1} 无效，可能未保存。`
+              });
+              }
+             });
+             }
+            // 检查重定向链接
+if (q.data?.redirectLink) {
+    if (typeof q.data.redirectLink !== 'string' || q.data.redirectLink.trim() === '') {
+      findings.push({
+        status: 'error',
+        description: `问题 "${q.text}" 的重定向链接未设置或为空，可能未保存。`
+      });
+    }
+  } else {
+    findings.push({
+      status: 'warning',
+      description: `问题 "${q.text}" 没有重定向链接字段，可能未设置或未保存。`
+    });
+  }
+ });
     // 尝试查找 trackClick 或 api-track-click 或 track-click 等变体
     const trackClickReq = capturedRequests.find((r: any) =>
       (r.url || '').includes('api-track-click') ||
@@ -398,7 +460,74 @@ consoleInput.addEventListener('keydown', (e) => {
   logToPanel('info', ['Ultimate Debugger Ready.']);
 }
 
-// --- 模块 6: 导出与安装 ---
+
+// --- 模块 6: UI 监控模块 (UI Monitoring) ---
+function startUIMonitoring() {
+  setInterval(() => {
+    const rootEl = document.getElementById('root');
+    if (!rootEl || rootEl.innerHTML.trim() === '') {
+      console.error('[UI-Monitor] Root 节点为空，可能白屏');
+    }
+
+    // 检查 Debug 按钮是否存在
+    if (!document.getElementById('__lp_debug_toggle')) {
+      console.warn('[UI-Monitor] Debug 按钮丢失，调试器可能被卸载');
+    }
+
+    // 其他关键节点检测，例如按钮、输入框
+    const backButton = document.querySelector('button[data-role="back"]');
+    if (!backButton) {
+      console.warn('[UI-Monitor] 返回按钮未找到');
+    }
+  }, 5000); // 每 5 秒检查一次
+}
+// --- 模块 7: 答案保存追踪 (Answer Tracking) ---
+function startAnswerTracking() {
+  // 每次捕获到请求时，分析 answerId / affiliateLink 是否存在
+  const checkAnswerRequests = () => {
+    const answerReqs = capturedRequests.filter(r =>
+      (r.url || '').includes('trackClick') ||
+      (r.url || '').includes('answer') ||
+      (r.url || '').includes('save')
+    );
+
+    if (answerReqs.length === 0) {
+      console.warn('[AnswerTracking] 暂未检测到答案保存请求');
+      return;
+    }
+
+    answerReqs.forEach(req => {
+      let reqBody: any = {};
+      try {
+        if (typeof req.body === 'string') {
+          reqBody = JSON.parse(req.body || '{}')?.data || {};
+        } else if (typeof req.body === 'object') {
+          reqBody = req.body.data || {};
+        }
+      } catch (e) {
+        console.error('[AnswerTracking] 请求体解析失败', e);
+      }
+
+      const answerId = reqBody.answerId || null;
+      const questionId = reqBody.questionId || null;
+      const affiliateLink = reqBody.affiliateLink || null;
+
+      if (req.status >= 200 && req.status < 300) {
+        console.log('[AnswerTracking] ✅ 答案保存成功', { questionId, answerId, affiliateLink });
+      } else {
+        console.error('[AnswerTracking] ❌ 答案保存失败', {
+          questionId, answerId, affiliateLink,
+          status: req.status, response: req.responseText
+        });
+      }
+    });
+  };
+
+  // 定时检查（也可以改成按钮触发）
+  setInterval(checkAnswerRequests, 5000);
+}
+
+// --- 模块 8: 导出与安装 ---
 export function installLongPressDebug(options: { enable?: boolean } = {}) {
   const { enable = (typeof window !== 'undefined' && window.location.search.includes('debug=1')) } = options;
   if (!enable) return;
@@ -407,5 +536,8 @@ export function installLongPressDebug(options: { enable?: boolean } = {}) {
     document.addEventListener('DOMContentLoaded', initializeDebugger);
   } else {
     initializeDebugger();
+   logToPanel('info', ['Ultimate Debugger Ready.']);
+   installUIMonitor(); // <-- 安装 UI 监控
+   startAnswerTracking();
   }
 }
