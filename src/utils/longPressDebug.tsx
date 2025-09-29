@@ -117,17 +117,26 @@ function initializeDebugger() {
   const copyBtn = container.querySelector('#console-copy-btn')!;
 
   function executeCode() {
-    const code = consoleInput.value;
-    if (!code.trim()) return;
-    logToPanel('log', [`> ${code}`]);
-    try {
-      const result = window.eval(code);
+  const code = consoleInput.value;
+  if (!code.trim()) return;
+  logToPanel('log', [`> ${code}`]);
+  try {
+    // 限制可执行代码，例如只允许特定函数
+    const allowedFunctions = {
+      testFunction: () => 'Test result',
+      // 其他安全函数
+    };
+    if (allowedFunctions[code]) {
+      const result = allowedFunctions[code]();
       logToPanel('log', ['<-', result]);
-    } catch (err) {
-      logToPanel('error', [err]);
+    } else {
+      throw new Error('Invalid command');
     }
-    consoleInput.value = '';
+  } catch (err) {
+    logToPanel('error', [err]);
   }
+  consoleInput.value = '';
+}
 
   runBtn.addEventListener('click', executeCode);
   clearBtn.addEventListener('click', () => { consoleOutput.innerHTML = ''; });
