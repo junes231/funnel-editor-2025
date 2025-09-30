@@ -337,14 +337,21 @@ refreshBtn.onclick = async () => {
 };
 
 runAnalysisBtn.onclick = async () => {
-  ReactDOM.render(React.createElement(DebugReport, { report: null }), reportContainer);
-  runAnalysisBtn.textContent = '正在分析...'; runAnalysisBtn.disabled = true;
-  await new Promise(resolve => setTimeout(resolve, 50));
-  const report = await analyzeCurrentState();
-  ReactDOM.render(React.createElement(DebugReport, { report }), reportContainer);
-  runAnalysisBtn.textContent = '重新诊断'; runAnalysisBtn.disabled = false;
-};
+  runAnalysisBtn.textContent = "正在分析...";
+  runAnalysisBtn.disabled = true;
 
+  // 清空报告
+  reportRoot.render(<DebugReport report={null} />);
+
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  const report = await analyzeCurrentState();
+
+  // 渲染新的报告
+  reportRoot.render(<DebugReport report={report} />);
+
+  runAnalysisBtn.textContent = "重新诊断";
+  runAnalysisBtn.disabled = false;
+};
 async function analyzeCurrentState(): Promise<AnalysisReport> {
   let findings: ReportFinding[] = [];
 
