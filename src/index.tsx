@@ -14,7 +14,7 @@ import { installLongPressDebug } from './utils/longPressDebug.tsx';
 installLongPressDebug({
   enable: true,   // 或省略，默认 ?debug=1 启用
   longPressMs: 2000,
-  maxLines: 300,
+  maxLines: 50,
 });
 
 const rootEl = document.getElementById('root')!;
