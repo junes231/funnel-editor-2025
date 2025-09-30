@@ -25,43 +25,60 @@ app.use(express.json());
 
 // --- 路由定义 ---
 app.post("/trackClick", async (req, res) => {
-  try {
+  // 使用事务来确保读取和写入操作的原子性，避免并发冲突
+  const transactionResult = await db.runTransaction(async (transaction) => {
     const { funnelId, questionId, answerId } = req.body.data || {};
+
     if (!funnelId || !questionId || !answerId) {
-      return res.status(400).send({ error: "Missing required fields" });
+      return { status: 400, body: { error: "Missing required fields" } };
     }
     
     const funnelRef = db.collection("funnels").doc(funnelId);
+    const funnelDoc = await transaction.get(funnelRef);
 
-    // --- ↓↓↓ 核心修复在这里 ↓↓↓ ---
-    // 使用“点表示法”来精确定位并更新嵌套对象中的 clickCount 字段
-    // 1. 首先，我们需要找到正确的 question 在数组中的索引
-    const funnelDoc = await funnelRef.get();
     if (!funnelDoc.exists) {
-        return res.status(404).send({ error: "Funnel not found" });
-    }
-    const questions = funnelDoc.data().data?.questions || [];
-    const questionIndex = questions.findIndex(q => q.id === questionId);
-
-    if (questionIndex === -1) {
-        return res.status(404).send({ error: "Question not found in funnel" });
+      return { status: 404, body: { error: "Funnel not found" } };
     }
 
-    // 2. 构建正确的更新路径
-    // 路径应该是 `data.questions.[索引].answers.[答案ID].clickCount`
-    const updatePath = `data.questions.${questionIndex}.answers.${answerId}.clickCount`;
+    // 1. 读取整个数据对象
+    const funnel = funnelDoc.data();
+    const funnelData = funnel.data || {};
+    const questions = funnelData.questions || [];
 
-    // 3. 使用 update 方法和 FieldValue.increment 来原子性地增加计数值
-    await funnelRef.update({
-      [updatePath]: admin.firestore.FieldValue.increment(1)
+    if (!Array.isArray(questions) || questions.length === 0) {
+        return { status: 404, body: { error: "No valid questions found in funnel data." } };
+    }
+
+    let answerUpdated = false;
+    
+    // 2. 在内存中定位并修改 clickCount
+    for (const question of questions) {
+        if (question.id === questionId && question.answers && question.answers[answerId]) {
+            // 确保 clickCount 存在并递增
+            const currentCount = question.answers[answerId].clickCount || 0;
+            question.answers[answerId].clickCount = currentCount + 1;
+            answerUpdated = true;
+            break;
+        }
+    }
+
+    if (!answerUpdated) {
+        return { status: 404, body: { error: "Question or Answer not found." } };
+    }
+
+    // 3. 写回整个 data 对象 (transaction 确保了原子性)
+    await transaction.update(funnelRef, {
+        data: funnelData
     });
-    // --- ↑↑↑ 修复结束 ↑↑↑ ---
 
-    res.status(200).send({ data: { success: true, message: `Click count for ${answerId} incremented.` } });
-  } catch (err) {
-    console.error("❌ Error tracking click:", err);
-    res.status(500).send({ error: "Internal server error" });
-  }
+    return { status: 200, body: { data: { success: true, message: `Click count for ${answerId} incremented.` } } };
+
+  }).catch(err => {
+    console.error("❌ Error tracking click (Transaction Failed):", err);
+    return { status: 500, body: { error: "Internal server error" } };
+  });
+
+  res.status(transactionResult.status).send(transactionResult.body);
 });
 
 app.get("/test-cors", (req, res) => {
