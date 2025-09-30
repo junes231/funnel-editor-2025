@@ -1351,7 +1351,7 @@ const LinkSettingsComponent: React.FC<LinkSettingsComponentProps> = ({
         </select>
       </div>
       <div className="form-actions">
-      <button className="save-button">
+   <button className="save-button" onClick={onBack as any}>  
   <span role="img" aria-label="save">
     💾
   </span>{' '}
@@ -1416,7 +1416,7 @@ const ColorCustomizerComponent: React.FC<ColorCustomizerComponentProps> = ({
         <input type="color" value={textColor} onChange={(e) => setTextColor(e.target.value)} />
       </div>
       <div className="form-actions">
-        <button className="save-button">
+        <button className="save-button" onClick={onBack as any}> 
   <span role="img" aria-label="save">
     💾
   </span>{' '}
