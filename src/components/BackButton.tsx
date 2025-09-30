@@ -9,9 +9,11 @@ interface BackButtonProps {
   onClick?: () => void;
   goBack?: boolean;
   children: React.ReactNode;
+  // ↓↓↓ 新增 className 属性 ↓↓↓
+  className?: string; 
 }
 
-const BackButton: React.FC<BackButtonProps> = ({ to, onClick, goBack, children }) => {
+const BackButton: React.FC<BackButtonProps> = ({ to, onClick, goBack, children, className }) => {
   // [中文注释] 使用 useState 来控制动画状态
   const [isFading, setIsFading] = useState(false);
   const navigate = useNavigate();
@@ -36,7 +38,8 @@ const BackButton: React.FC<BackButtonProps> = ({ to, onClick, goBack, children }
   return (
     <button
       // [中文注释] 根据 isFading 状态动态添加 'animate-out' 类
-      className={`back-button ${isFading ? 'animate-out' : ''}`}
+      // ↓↓↓ 应用传入的 className，并保留动画类 ↓↓↓
+      className={`${className || 'back-button'} ${isFading ? 'animate-out' : ''}`}
       onClick={handleClick}
       disabled={isFading} // [中文注释] 动画期间禁用按钮，防止重复点击
     >
