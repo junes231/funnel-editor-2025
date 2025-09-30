@@ -105,9 +105,11 @@ const handleAnswerClick = async (answerIndex: number, answerId: string) => {
     .then(response => {
       if (!response.ok) {
         console.error("Failed to track click (API Error):", response.statusText);
-        return response.text().then(text => { throw new Error(text); });
+        // 确保即使 API 失败，前端流程也能继续（即进入 setTimeout 块）
+        // 这里只是记录错误，然后让代码继续执行到 setTimeout
+        // 无需抛出异常，否则可能会跳过后面的 setTimeout 逻辑
       }
-      return response.json();
+      return response.json().catch(() => ({})); // 即使 JSON 解析失败也返回空对象
     })
     .then(data => console.log("Tracking successful:", data))
     .catch(err => console.error("Tracking failed:", err.message || err));
