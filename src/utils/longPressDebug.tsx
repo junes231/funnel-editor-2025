@@ -1,5 +1,5 @@
 import React from 'react';
-import ReactDOM from 'react-dom';
+import { createRoot } from 'react-dom/client';
 // 确保 DebugReport.tsx 和其 CSS 文件存在于 src/components/ 目录下
 import DebugReport, { AnalysisReport, ReportFinding } from '../components/DebugReport.tsx';
 
@@ -303,22 +303,36 @@ const reportContainer = document.createElement('div');
 analysisPanel.append(runAnalysisBtn, reportContainer);
 
 // 新增手动刷新按钮
-const refreshBtn = document.createElement('button');
-refreshBtn.textContent = '手动刷新 Funnel 数据';
-refreshBtn.style.cssText = 'width:100%; padding:10px; background:#28a745; color:white; border:none; font-size:16px; cursor:pointer; margin-bottom:8px;';
+const reportRoot = createRoot(reportContainer);
+
+const refreshBtn = document.createElement("button");
+refreshBtn.textContent = "手动刷新 Funnel 数据";
+refreshBtn.style.cssText = `
+  width:100%;
+  padding:10px;
+  background:#28a745;
+  color:white;
+  border:none;
+  font-size:16px;
+  cursor:pointer;
+  margin-bottom:8px;
+`;
 analysisPanel.prepend(refreshBtn);
 
 refreshBtn.onclick = async () => {
-  refreshBtn.textContent = '正在刷新...';
+  refreshBtn.textContent = "正在刷新...";
   refreshBtn.disabled = true;
 
-  ReactDOM.render(React.createElement(DebugReport, { report: null }), reportContainer);
-  
-  await new Promise(r => setTimeout(r, 50)); // 确保 UI 更新
-  const report = await analyzeCurrentState();
-  ReactDOM.render(React.createElement(DebugReport, { report }), reportContainer);
+  // 先清空报告
+  reportRoot.render(<DebugReport report={null} />);
 
-  refreshBtn.textContent = '手动刷新 Funnel 数据';
+  await new Promise((r) => setTimeout(r, 50)); // 确保 UI 更新
+  const report = await analyzeCurrentState();
+
+  // 渲染新的报告
+  reportRoot.render(<DebugReport report={report} />);
+
+  refreshBtn.textContent = "手动刷新 Funnel 数据";
   refreshBtn.disabled = false;
 };
 
