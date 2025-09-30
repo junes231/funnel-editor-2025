@@ -513,8 +513,12 @@ const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData }) => 
 
   const saveFunnelToFirestore = useCallback(() => {
   if (!funnelId) return;
+
+  // ↓↓↓ 增强防御性检查：在保存前确保 questions 是一个数组 ↓↓↓
+  const questionsToSave = Array.isArray(questions) ? questions : [];
+
   const newData: FunnelData = {
-    questions,
+    questions: questionsToSave, // 使用安全的数组
     finalRedirectLink,
     tracking,
     conversionGoal,
@@ -523,8 +527,17 @@ const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData }) => 
     backgroundColor,
     textColor,
   };
+  
+  // 检查关键数据：如果问题列表为空且我们正在加载模板，则跳过此次自动保存
+  // 避免在数据加载过程中，Firestore 自动监听器将中间的空状态写回去
+  if (questionsToSave.length === 0 && isDataLoaded) {
+      console.log('Skipping auto-save: Question list is empty.');
+      return;
+  }
+  // ↑↑↑ 增强防御性检查 ↑↑↑
+
   updateFunnelData(funnelId, newData);
-}, [funnelId, questions, finalRedirectLink, tracking, conversionGoal, primaryColor, buttonColor, backgroundColor, textColor, updateFunnelData]);
+}, [funnelId, questions, finalRedirectLink, tracking, conversionGoal, primaryColor, buttonColor, backgroundColor, textColor, updateFunnelData, isDataLoaded]); 
 
   useEffect(() => {
     if (!isDataLoaded) return;
