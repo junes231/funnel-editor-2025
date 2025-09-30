@@ -468,7 +468,7 @@ const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData }) => 
     if (funnelDoc.exists()) {
       const funnel = funnelDoc.data() as Funnel;
       
-      let compatibleQuestions = funnel.data.questions || [];
+      let compatibleQuestions = Array.isArray(funnel.data.questions) ? funnel.data.questions : [];
       compatibleQuestions = compatibleQuestions.map(question => {
         if (Array.isArray(question.answers)) {
           const answersObj: { [answerId: string]: Answer } = {};
@@ -1150,27 +1150,13 @@ const stableAnswers = React.useMemo(() => {
   const handleLinkChange = (index: number, value: string) => {
   if (!question || !stableAnswers[index]) return;
 
-  const answerId = stableAnswers[index].id;
-
-  // 1. 更新本地的 affiliateLinks 数组
+  // 仅更新本地的 affiliateLinks 数组状态
   const newLinks = [...affiliateLinks];
   newLinks[index] = value;
   setAffiliateLinks(newLinks);
 
-  // 2. 更新 Map（answerId -> link）
-  const newLinksMap = {
-    ...(question.data?.affiliateLinks || {}),
-  };
-  newLinksMap[answerId] = value;
-
-  // 3. 调用 onUpdate（安全调用，避免未定义时报错）
-  onUpdate?.({
-    ...question,
-    data: {
-      ...question.data,
-      affiliateLinks: newLinksMap,
-    },
-  });
+  // 【已移除】旧代码中不一致且多余的 onUpdate 调用被移除。
+  // 链接的最终保存将在用户点击“Save Question”时，由 handleSave 统一处理。
 };
   
   const handleSave = async () => {
