@@ -493,7 +493,7 @@ const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData }) => 
       setBackgroundColor(funnel.data.backgroundColor || defaultFunnelData.backgroundColor);
       setTextColor(funnel.data.textColor || defaultFunnelData.textColor);
       setIsDataLoaded(true);  // 总是设置为true，确保保存能触发
-      setDebugLinkValue(`Debug: ${loadedLink || 'N/A'}`);
+      setDebugLinkValue(`<strong>DEBUG:</strong> <br /> ${loadedLink || 'N/A'}`);
       console.log('✅ Firestore data loaded and state updated. Questions length:', compatibleQuestions.length);
       
     } else {
@@ -545,8 +545,8 @@ const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData }) => 
   ]);
   // 在 FunnelEditor 组件内部，可以放在 saveFunnelToFirestore 函数的下面
    useEffect(() => {
-      setDebugLinkValue(`DEBUG: ${finalRedirectLink || 'N/A'}`);
-  }, [finalRedirectLink]);
+    setDebugLinkValue(`<strong>DEBUG:</strong> <br /> ${finalRedirectLink || 'N/A'}`);
+}, [finalRedirectLink]);
 const handleSelectTemplate = async (templateName: string) => {
   console.log(`[LOG] handleSelectTemplate called with: ${templateName}`);
   
@@ -836,16 +836,24 @@ case 'analytics':
             </BackButton>
          </div>
 
-         <div style={{ marginTop: '20px', padding: '10px', border: '1px dashed #ccc', fontSize: '0.8em', wordBreak: 'break-all', textAlign: 'left' }}>
-              <strong>DEBUG:</strong> {debugLinkValue}
-            </div>
+         <div 
+         style={{ 
+         marginTop: '20px', 
+         padding: '10px', 
+         border: '1px dashed #ccc', 
+        fontSize: '0.8em', 
+        wordBreak: 'break-all', 
+        textAlign: 'left' 
+          }}
+            dangerouslySetInnerHTML={{ __html: debugLinkValue }} 
+           />
           </div>
-        );
-    }
-  };
+           );
+            }
+           };
 
-  return <div className="App">{renderEditorContent()}</div>;
-};
+           return <div className="App">{renderEditorContent()}</div>;
+           };
 
 
 interface QuizEditorComponentProps {
