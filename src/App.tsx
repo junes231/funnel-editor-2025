@@ -484,7 +484,8 @@ const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData }) => 
       // 这能防止初始空数据时阻塞
       setFunnelName(funnel.name);
       setQuestions(compatibleQuestions);
-      setFinalRedirectLink(funnel.data.finalRedirectLink || '');
+      const loadedLink = funnel.data.finalRedirectLink || '';
+      setFinalRedirectLink(loadedLink);
       setTracking(funnel.data.tracking || '');
       setConversionGoal(funnel.data.conversionGoal || 'Product Purchase');
       setPrimaryColor(funnel.data.primaryColor || defaultFunnelData.primaryColor);
@@ -492,7 +493,7 @@ const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData }) => 
       setBackgroundColor(funnel.data.backgroundColor || defaultFunnelData.backgroundColor);
       setTextColor(funnel.data.textColor || defaultFunnelData.textColor);
       setIsDataLoaded(true);  // 总是设置为true，确保保存能触发
-      
+      setDebugLinkValue(`Debug: ${loadedLink || 'N/A'}`);
       console.log('✅ Firestore data loaded and state updated. Questions length:', compatibleQuestions.length);
       
     } else {
@@ -543,7 +544,9 @@ const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData }) => 
     saveFunnelToFirestore,
   ]);
   // 在 FunnelEditor 组件内部，可以放在 saveFunnelToFirestore 函数的下面
-
+   useEffect(() => {
+      setDebugLinkValue(`DEBUG: ${finalRedirectLink || 'N/A'}`);
+  }, [finalRedirectLink]);
 const handleSelectTemplate = async (templateName: string) => {
   console.log(`[LOG] handleSelectTemplate called with: ${templateName}`);
   
