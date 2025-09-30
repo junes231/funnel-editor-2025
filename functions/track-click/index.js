@@ -45,6 +45,7 @@ app.post("/trackClick", async (req, res) => {
     const funnelData = funnel.data || {};
     const questions = funnelData.questions || [];
 
+    // 确保 questions 是一个数组，以防数据损坏
     if (!Array.isArray(questions) || questions.length === 0) {
         return { status: 404, body: { error: "No valid questions found in funnel data." } };
     }
@@ -53,7 +54,8 @@ app.post("/trackClick", async (req, res) => {
     
     // 2. 在内存中定位并修改 clickCount
     for (const question of questions) {
-        if (question.id === questionId && question.answers && question.answers[answerId]) {
+        // 使用 Object.keys 确保 questions.answers 是一个对象，且包含 answerId
+        if (question.id === questionId && question.answers && Object.prototype.hasOwnProperty.call(question.answers, answerId)) {
             // 确保 clickCount 存在并递增
             const currentCount = question.answers[answerId].clickCount || 0;
             question.answers[answerId].clickCount = currentCount + 1;
