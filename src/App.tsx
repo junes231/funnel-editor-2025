@@ -1364,17 +1364,16 @@ const LinkSettingsComponent: React.FC<LinkSettingsComponentProps> = ({
         </select>
       </div>
       <div className="form-actions">
-   <button className="save-button" onClick={onBack as any}>  
-  <span role="img" aria-label="save">
-    💾
-  </span>{' '}
-  Applied
-</button>
-        
-        <BackButton onClick={onBack}>
-  <span role="img" aria-label="back">←</span> Back to Editor
-       </BackButton>
-      </div>
+  {/* 新增的按钮：使用 BackButton 来获得动画，使用 className 继承蓝色样式 */}
+  <BackButton 
+      onClick={onBack} 
+      className="save-button" // 继承蓝色样式
+  >
+    <span role="img" aria-label="save">💾</span> Apply & Return to Editor
+  </BackButton>
+  
+  {/* 移除功能冗余的 Back to Editor 按钮 */}
+</div>
     </div>
   );
 };
@@ -1428,18 +1427,17 @@ const ColorCustomizerComponent: React.FC<ColorCustomizerComponentProps> = ({
         <label>Text Color:</label>
         <input type="color" value={textColor} onChange={(e) => setTextColor(e.target.value)} />
       </div>
-      <div className="form-actions">
-        <button className="save-button" onClick={onBack as any}> 
-  <span role="img" aria-label="save">
-    💾
-  </span>{' '}
-  Applied
-</button>
-         
-        <BackButton onClick={onBack}>
-  <span role="img" aria-label="back">←</span> Back to Editor
-        </BackButton>
-      </div>
+     <div className="form-actions">
+  {/* 新增的按钮：使用 BackButton 来获得动画，使用 className 继承蓝色样式 */}
+  <BackButton 
+      onClick={onBack} 
+      className="save-button" // 继承蓝色样式
+  >
+    <span role="img" aria-label="save">💾</span> Apply & Return to Editor
+  </BackButton>
+  
+  {/* 移除功能冗余的 Back to Editor 按钮 */}
+</div>
     </div>
   );
 };
