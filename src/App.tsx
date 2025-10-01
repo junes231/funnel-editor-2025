@@ -206,23 +206,24 @@ useEffect(() => {
               ? <div style={{ textAlign: 'center', marginTop: '50px' }}>Verifying user status...</div>
               : !user
                 ? <LoginPage />
-                : <>
-                    {/* 已登录时渲染头部和 Dashboard */}
-                    <AuthHeader user={user} isAdmin={isAdmin} />
-                    <FunnelDashboard
-                      db={db}
-                      user={user}
-                      isAdmin={isAdmin}
-                      funnels={funnels}
-                      setFunnels={setFunnels}
-                      createFunnel={createFunnel}
-                      deleteFunnel={deleteFunnel}
-                    />
-                  </>
+                : !user.emailVerified 
+                  ? <EmailVerifyPrompt /> // 未验证邮箱
+                  : <> {/* 已登录且已验证 */}
+                      <AuthHeader user={user} isAdmin={isAdmin} />
+                      <FunnelDashboard
+                        db={db}
+                        user={user}
+                        isAdmin={isAdmin}
+                        funnels={funnels}
+                        setFunnels={setFunnels}
+                        createFunnel={createFunnel}
+                        deleteFunnel={deleteFunnel}
+                      />
+                    </>
           }
         />
-        
-        {/* 编辑页 /edit/:funnelId -> Funnel Editor */}
+
+        {/* ↓↓↓ 2. 编辑页 /edit/:funnelId (Funnel Editor) 的新逻辑 ↓↓↓ */}
         <Route
           path="/edit/:funnelId"
           element={
@@ -230,15 +231,16 @@ useEffect(() => {
               ? <div style={{ textAlign: 'center', marginTop: '50px' }}>Verifying user status...</div>
               : !user
                 ? <LoginPage />
-                : <>
-                    {/* 已登录时渲染头部和 Editor */}
-                    <AuthHeader user={user} isAdmin={isAdmin} />
-                    <FunnelEditor db={db} updateFunnelData={updateFunnelData} />
-                  </>
+                : !user.emailVerified 
+                  ? <EmailVerifyPrompt /> // 未验证邮箱
+                  : <> {/* 已登录且已验证 */}
+                      <AuthHeader user={user} isAdmin={isAdmin} />
+                      <FunnelEditor db={db} updateFunnelData={updateFunnelData} />
+                    </>
           }
         />
-
-        <Route path="*" element={<h2>404 Not Found</h2>} />
+        
+      <Route path="*" element={<h2>404 Not Found</h2>} />
       </Routes>
       <NotificationComponent />
     </div>
@@ -254,7 +256,16 @@ const AuthHeader: React.FC<{ user: User, isAdmin: boolean }> = ({ user, isAdmin 
         <button onClick={() => signOut(getAuth())} style={{ padding: '8px 15px' }}>Logout</button>
     </div>
 );
-
+const EmailVerifyPrompt: React.FC = () => (
+    <div style={{ padding: 40, lineHeight: 1.6, textAlign: 'center', background: '#fff', borderRadius: '8px', maxWidth: '400px', margin: '50px auto', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+        <h2>Email Not Verified</h2>
+        <p>Your email address has not been verified.</p>
+        <p>Please check your inbox and click the verification link.</p>
+        <p style={{ marginTop: '20px' }}>
+            <a href="#/login" style={{ color: '#007bff', textDecoration: 'underline', fontWeight: 'bold' }}>Return to Login Page</a>
+        </p>
+    </div>
+);
 
 interface FunnelDashboardProps {
   db: Firestore;
