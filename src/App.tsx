@@ -457,13 +457,16 @@ const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData }) => 
   const [backgroundColor, setBackgroundColor] = useState(defaultFunnelData.backgroundColor);
   const [textColor, setTextColor] = useState(defaultFunnelData.textColor);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
-  const [selectedQuestionIndex, setSelectedQuestionIndex] = useState<number | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-   const initialSubView = new URLSearchParams(location.search).get('view') || 'mainEditorDashboard';
+  const initialSubView = new URLSearchParams(location.search).get('view') || 'mainEditorDashboard';
   const [currentSubView, _setCurrentSubView] = useState(initialSubView);
   const [templateFiles, setTemplateFiles] = useState<string[]>([]);
   const [debugLinkValue, setDebugLinkValue] = useState('Debug: N/A');
- 
+   const urlParams = new URLSearchParams(location.search);
+const urlIndex = urlParams.get('index');
+// 如果 view 是 questionForm，则解析 index，否则设为 null
+const selectedQuestionIndex = (currentSubView === 'questionForm' && urlIndex !== null) ? parseInt(urlIndex) : null;
+const questionToEdit = selectedQuestionIndex !== null ? questions[selectedQuestionIndex] : undefined;
   const setCurrentSubView = useCallback((newView: string) => {
     _setCurrentSubView(newView); // 1. 更新内部状态
     
@@ -684,13 +687,12 @@ const handleSelectTemplate = async (templateName: string) => {
         .map((_, i) => ({ id: `option-${Date.now()}-${i}`, text: `Option ${String.fromCharCode(65 + i)}` })),
     };
     setQuestions([...questions, newQuestion]);
-    setSelectedQuestionIndex(questions.length);
-    setCurrentSubView('questionForm');
+    
+    setCurrentSubView('questionForm?index=' + questions.length);
   };
 
   const handleEditQuestion = (index: number) => {
-    setSelectedQuestionIndex(index);
-    setCurrentSubView('questionForm');
+    setCurrentSubView('questionForm?index=' + index); 
   };
 
   const handleDeleteQuestion = () => {
@@ -709,7 +711,7 @@ const handleSelectTemplate = async (templateName: string) => {
   }
 };
  const handleCancel = () => {
-    setSelectedQuestionIndex(null);
+    
     setCurrentSubView('mainEditorDashboard');// 返回漏斗编辑页
   };
 const handleImportQuestions = (importedQuestions: Question[]) => {
@@ -781,7 +783,7 @@ const handleImportQuestions = (importedQuestions: Question[]) => {
             />
         );
       case 'questionForm':
-        const questionToEdit = selectedQuestionIndex !== null ? questions[selectedQuestionIndex] : undefined;
+        
         return (
           <QuestionFormComponent
             question={questionToEdit}
@@ -796,13 +798,17 @@ const handleImportQuestions = (importedQuestions: Question[]) => {
             }}
             // onSave 只负责在点击保存按钮后返回列表
             onSave={() => {
-              setSelectedQuestionIndex(null);
+              
               setCurrentSubView('quizEditorList');
             }}
-            onCancel={handleCancel}
-            onDelete={handleDeleteQuestion}
-          />
-        );
+          
+            onCancel={() => {
+        // 移除 setSelectedQuestionIndex(null);
+        setCurrentSubView('mainEditorDashboard');
+      }}
+      onDelete={handleDeleteQuestion} // handleDeleteQuestion 必须被修改为使用 urlIndex
+       />
+       );
       case 'linkSettings':
         return (
           <LinkSettingsComponent
