@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, ChangeEvent } from 'react';
 import { getAuth, onAuthStateChanged, User, signOut } from 'firebase/auth';
-import PrivateRoute from './components/PrivateRoute.tsx';
 import QuizPlayer from './components/QuizPlayer.tsx';
 import ResetPage from './pages/reset.tsx';
 import LoginPage from "./pages/Login.tsx";
