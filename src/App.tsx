@@ -199,45 +199,31 @@ useEffect(() => {
         {/* --- 2. 私有路由 (处理身份验证和加载状态) --- */}
         
          <Route
-          path="/"
-          element={
-            isLoading
-              ? <div style={{ textAlign: 'center', marginTop: '50px' }}>Verifying user status...</div>
-              : !user
-                ? <LoginPage />
-                : !user.emailVerified 
-                  ? <EmailVerifyPrompt /> // 未验证邮箱
-                  : <> {/* 已登录且已验证 */}
-                      <AuthHeader user={user} isAdmin={isAdmin} />
-                      <FunnelDashboard
-                        db={db}
-                        user={user}
-                        isAdmin={isAdmin}
-                        funnels={funnels}
-                        setFunnels={setFunnels}
-                        createFunnel={createFunnel}
-                        deleteFunnel={deleteFunnel}
-                      />
-                    </>
-          }
+  path="/"
+  element={
+    <AuthRouteWrapper user={user} isLoading={isLoading} isAdmin={isAdmin} db={db} {.../* 传递 FunnelDashboard 需要的所有 props */}>
+        <FunnelDashboard
+            db={db}
+            user={user}
+            isAdmin={isAdmin}
+            funnels={funnels}
+            setFunnels={setFunnels}
+            createFunnel={createFunnel}
+            deleteFunnel={deleteFunnel}
         />
+    </AuthRouteWrapper>
+  }
+/>
 
         {/* ↓↓↓ 2. 编辑页 /edit/:funnelId (Funnel Editor) 的新逻辑 ↓↓↓ */}
         <Route
-          path="/edit/:funnelId"
-          element={
-            isLoading
-              ? <div style={{ textAlign: 'center', marginTop: '50px' }}>Verifying user status...</div>
-              : !user
-                ? <LoginPage />
-                : !user.emailVerified 
-                  ? <EmailVerifyPrompt /> // 未验证邮箱
-                  : <> {/* 已登录且已验证 */}
-                      <AuthHeader user={user} isAdmin={isAdmin} />
-                      <FunnelEditor db={db} updateFunnelData={updateFunnelData} />
-                    </>
-          }
-        />
+  path="/edit/:funnelId"
+  element={
+    <AuthRouteWrapper user={user} isLoading={isLoading} isAdmin={isAdmin} db={db} {.../* 传递 FunnelEditor 需要的所有 props */}>
+        <FunnelEditor db={db} updateFunnelData={updateFunnelData} />
+    </AuthRouteWrapper>
+  }
+/>
         
       <Route path="*" element={<h2>404 Not Found</h2>} />
       </Routes>
@@ -247,10 +233,10 @@ useEffect(() => {
             {notification.message}
           </div>
         </div>
-      )}
-    </div>
-  );
-}
+          )}
+         </div>
+         );
+        }
 
 const AuthHeader: React.FC<{ user: User, isAdmin: boolean }> = ({ user, isAdmin }) => (
     <div style={{ marginBottom: 20, paddingBottom: 20, borderBottom: '1px solid #ccc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -271,7 +257,37 @@ const EmailVerifyPrompt: React.FC = () => (
         </p>
     </div>
 );
+interface AuthRouteWrapperProps {
+    children: React.ReactNode;
+    user: User | null;
+    isLoading: boolean;
+    isAdmin: boolean;
+    db: any; // Firestore instance
+    // ... 其他必要的 props
+}
 
+const AuthRouteWrapper: React.FC<AuthRouteWrapperProps> = ({ children, user, isLoading, isAdmin, ...props }) => {
+
+    if (isLoading) {
+        return <div style={{ textAlign: 'center', marginTop: '50px' }}>Verifying user status...</div>;
+    }
+
+    if (!user) {
+        return <LoginPage />;
+    }
+
+    if (!user.emailVerified) {
+        return <EmailVerifyPrompt />;
+    }
+
+    // 状态 4: 已登录且已验证，渲染子组件
+    return (
+        <>
+            <AuthHeader user={user} isAdmin={isAdmin} />
+            {children}
+        </>
+    );
+};
 interface FunnelDashboardProps {
   db: Firestore;
   user: User; // <-- 添加这一行
