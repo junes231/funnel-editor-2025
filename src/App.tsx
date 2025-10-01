@@ -1327,15 +1327,15 @@ const handleSave = async () => {
         <label>Question Title:</label>
         <input
           type="text"
-          value={question.title}
-          onChange={(e) => handleTitleChange(e.target.value)}
-          placeholder="e.g., What's your biggest health concern?"
+          value={question?.title || ''} 
+    onChange={(e) => handleTitleChange(e.target.value)}
+    placeholder="e.g., What's your biggest health concern?"
         />
       </div>
       <div className="form-group">
         <label>Question Type:</label>
-        <select value="single-choice" onChange={() => {}} disabled>
-          <option>Single Choice</option>
+        <select value={question?.type || 'single-choice'} onChange={() => {}} disabled>
+    <option>Single Choice</option>
           <option>Multiple Choice (Coming Soon)</option>
           <option>Text Input (Coming Soon)</option>
         </select>
@@ -1345,7 +1345,7 @@ const handleSave = async () => {
         {/* Use the stable sortedAnswers array for rendering */}
         {stableAnswers.map((answer, index) => (
           <div key={answer.id} className="answer-input-group">
-    <input type="text" value={answer.text} onChange={(e) => handleAnswerTextChange(answer.id, e.target.value)} />
+    <input type="text" value={answer.text || ''}  onChange={(e) => handleAnswerTextChange(answer.id, e.target.value)} />
     <input type="url" value={affiliateLinks[index] || ''} onChange={(e) => handleLinkChange(index, e.target.value)} placeholder="Affiliate link (optional)" />
             <div style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center',
