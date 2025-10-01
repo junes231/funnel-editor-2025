@@ -1180,44 +1180,57 @@ const stableAnswers = React.useMemo(() => {
   const newLinks = [...affiliateLinks];
   newLinks[index] = value;
   setAffiliateLinks(newLinks);
-
-  // 【已移除】旧代码中不一致且多余的 onUpdate 调用被移除。
-  // 链接的最终保存将在用户点击“Save Question”时，由 handleSave 统一处理。
 };
   
-  const handleSave = async () => {
-    // --- MODIFIED: Now handleSave reads directly from props and local state ---
+const handleSave = async () => {
     if (!question) return;
 
     setIsSaving(true);
     try {
-      const answersArray = convertAnswersObjectToArray(question.answers);
-      const filteredAnswers = answersArray.filter((ans) => ans.text.trim() !== "");
+      
+      const newAnswersMap: { [answerId: string]: Answer } = {};
+      let hasValidAnswer = false;
+      
+      // 1. 迭代 stableAnswers（这个数组包含了最新的文本和 clickCount）
+      // stableAnswers 是通过 React.useMemo 从 question.answers 派生的，包含所有属性
+      stableAnswers.forEach((answer) => {
+          const currentText = answer.text.trim();
+          
+          if (currentText !== "") {
+              // 2. 关键修复：将完整的 Answer 对象（包括 clickCount）传播到新的 Map 中
+              newAnswersMap[answer.id] = {
+                  ...answer, // 这一行至关重要：它继承了 clickCount 属性
+                  text: currentText, // 确保使用最新的、已修剪的文本
+              };
+              hasValidAnswer = true;
+          }
+      });
+      
+      // 检查标题和答案数量...
       if (!question.title.trim()) {
         console.error("Question title cannot be empty!");
-        setIsSaving(false); // Stop execution
+        setIsSaving(false);
         return;
       }
-      if (filteredAnswers.length === 0) {
+      
+      if (!hasValidAnswer) {
         console.error("Please provide at least one answer option.");
-        setIsSaving(false); // Stop execution
+        setIsSaving(false);
         return;
       }
 
+      // Preserve affiliate links logic
       const cleanAffiliateLinks = Array.from({ length: 4 }).map((_, index) => affiliateLinks[index] || '');
       
       await new Promise((resolve) => setTimeout(resolve, 1000));
       
-      const filteredAnswersObj = convertAnswersArrayToObject(filteredAnswers);
-      
       // The final object is passed up to the parent component
       onUpdate({
         ...question,
-        answers: filteredAnswersObj,
+        answers: newAnswersMap, // 使用安全构建的 Map
         data: { affiliateLinks: cleanAffiliateLinks },
       });
 
-      // 中文注释：然后调用 onSaveAndClose 来触发返回列表页的操作，恢复按钮原有功能！
       onSaveAndClose();
 
     } catch (error) {
