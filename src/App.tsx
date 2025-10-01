@@ -241,10 +241,16 @@ useEffect(() => {
         
       <Route path="*" element={<h2>404 Not Found</h2>} />
       </Routes>
-      <NotificationComponent />
+      {notification.visible && (
+        <div className={`custom-notification ${notification.type}`}>
+          <div className="notification-content">
+            {notification.message}
+          </div>
+        </div>
+      )}
     </div>
   );
-};
+}
 
 const AuthHeader: React.FC<{ user: User, isAdmin: boolean }> = ({ user, isAdmin }) => (
     <div style={{ marginBottom: 20, paddingBottom: 20, borderBottom: '1px solid #ccc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
