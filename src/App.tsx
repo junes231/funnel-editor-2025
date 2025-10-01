@@ -446,7 +446,7 @@ interface FunnelEditorProps {
 const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData }) => {
   const { funnelId } = useParams<{ funnelId: string }>();
   const navigate = useNavigate();
-
+  const location = useLocation(); 
   const [funnelName, setFunnelName] = useState('Loading...');
   const [questions, setQuestions] = useState<Question[]>([]);
   const [finalRedirectLink, setFinalRedirectLink] = useState('');
@@ -459,9 +459,38 @@ const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData }) => 
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [selectedQuestionIndex, setSelectedQuestionIndex] = useState<number | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [currentSubView, setCurrentSubView] = useState('mainEditorDashboard');
+   const initialSubView = new URLSearchParams(location.search).get('view') || 'mainEditorDashboard';
+  const [currentSubView, _setCurrentSubView] = useState(initialSubView);
   const [templateFiles, setTemplateFiles] = useState<string[]>([]);
   const [debugLinkValue, setDebugLinkValue] = useState('Debug: N/A');
+ 
+  const setCurrentSubView = useCallback((newView: string) => {
+    _setCurrentSubView(newView); // 1. 更新内部状态
+    
+    // 2. 更新 URL query parameter
+    const newParams = new URLSearchParams(location.search);
+    if (newView === 'mainEditorDashboard') {
+        newParams.delete('view'); // 默认视图，移除 URL 参数，保持 URL 干净
+    } else {
+        newParams.set('view', newView);
+    }
+    
+    // 3. 使用 navigate 更新 URL，保持在 /edit/:funnelId 路径上，并将新 URL 替换历史记录中的当前条目
+    navigate({
+        pathname: location.pathname,
+        search: newParams.toString()
+    }, { replace: true });
+  }, [location, navigate]);
+
+  useEffect(() => {
+    const urlView = new URLSearchParams(location.search).get('view') || 'mainEditorDashboard';
+    if (urlView !== currentSubView) {
+        // 如果 URL 中的视图与当前内部状态不一致，则更新内部状态
+        _setCurrentSubView(urlView); 
+    }
+  // 依赖 location.search，只在 URL 参数变化时执行
+  }, [location.search]); 
+ 
   useEffect(() => {
   // Hardcode the list of available template files.
   // This avoids the need for a server-side call on a static site.
