@@ -140,21 +140,7 @@ useEffect(() => {
         setIsAdmin(idTokenResult.claims.role === 'admin');
     }).catch(() => setIsAdmin(false));
   }, [user]);
-    useEffect(() => {
-    // 仅当用户成功登录后执行
-    if (user) {
-      // 获取当前所在的页面路径
-      const currentPath = window.location.hash.split('?')[0].replace('#', '');
-      // 定义所有与认证相关的页面
-      const authPages = ['/login', '/finish-email-verification', '/register', '/reset', '/verify'];
-      
-      // 如果用户当前在任何一个认证页面上，说明他刚刚完成了登录流程
-      if (authPages.includes(currentPath)) {
-        // 则将他导航到应用的主页
-        navigate('/');
-      }
-    }
-  }, [user, navigate]);
+    
   // --- CRUD Functions (These should be inside the App component) ---
   const createFunnel = async (name: string) => {
     if (!db || !user) return; 
@@ -201,77 +187,73 @@ useEffect(() => {
   };
 
   // --- Render Logic ---
-   const isPublicPlayPath = location.pathname.startsWith('/play/');
-
-  // 只有当页面正在加载，并且访问的不是公开播放页时，才显示用户状态验证
-  if (isLoading && !isPublicPlayPath) {
-    return <div style={{ textAlign: 'center', marginTop: '50px' }}>Verifying user status...</div>;
-  }
-  return (
+   return (
     <div style={{ padding: 24, fontFamily: 'Arial' }}>
       <Routes>
-        {/* 公开路由 */}
-        <Route path="/play/:funnelId" element={<QuizPlayer db={db} />} />
-       <Route path="/login" element={<LoginPage />} />
-       <Route path="/verify" element={<VerifyPage />} />
-       <Route path="/finish-email-verification" element={<FinishEmailVerification />} />
+        {/* --- 1. 公开路由（无需身份验证） --- */}
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<LoginPage isRegister={true} />} />
         <Route path="/reset" element={<ResetPage />} />
-        {/* 需要登录的路由 */}
-        <Route
+        <Route path="/verify-email" element={<FinishEmailVerification />} />
+        <Route path="/play/:funnelId" element={<QuizPlayer />} />
+
+        {/* --- 2. 私有路由 (处理身份验证和加载状态) --- */}
+        
+         <Route
           path="/"
           element={
-            !user
-              ? <LoginPage />
-              : <>
-                  <div style={{ marginBottom: 20, paddingBottom: 20, borderBottom: '1px solid #ccc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span>
-                      Welcome, <strong>{user.email}</strong>!
-                      {isAdmin && <span style={{color: 'red', marginLeft: '10px', fontWeight: 'bold'}}>(Admin)</span>}
-                    </span>
-                    <button onClick={() => signOut(getAuth())} style={{ padding: '8px 15px' }}>Logout</button>
-                  </div>
-                  <FunnelDashboard
-                    db={db}
-                    user={user}
-                    isAdmin={isAdmin}
-                    funnels={funnels}
-                    setFunnels={setFunnels}
-                    createFunnel={createFunnel}
-                    deleteFunnel={deleteFunnel}
-                  />
-                </>
-          }
-        />
-        <Route
-          path="/edit/:funnelId"
-          element={
-            !user
-              ? <LoginPage />
-              : <>
-                  <div style={{ marginBottom: 20, paddingBottom: 20, borderBottom: '1px solid #ccc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span>
-                      Welcome, <strong>{user.email}</strong>!
-                      {isAdmin && <span style={{color: 'red', marginLeft: '10px', fontWeight: 'bold'}}>(Admin)</span>}
-                    </span>
-                    <button onClick={() => signOut(getAuth())} style={{ padding: '8px 15px' }}>Logout</button>
-                  </div>
-                  <FunnelEditor db={db} updateFunnelData={updateFunnelData} />
-                </>
+            isLoading
+              ? <div style={{ textAlign: 'center', marginTop: '50px' }}>Verifying user status...</div>
+              : !user
+                ? <LoginPage />
+                : <>
+                    {/* 已登录时渲染头部和 Dashboard */}
+                    <AuthHeader user={user} isAdmin={isAdmin} />
+                    <FunnelDashboard
+                      db={db}
+                      user={user}
+                      isAdmin={isAdmin}
+                      funnels={funnels}
+                      setFunnels={setFunnels}
+                      createFunnel={createFunnel}
+                      deleteFunnel={deleteFunnel}
+                    />
+                  </>
           }
         />
         
+        {/* 编辑页 /edit/:funnelId -> Funnel Editor */}
+        <Route
+          path="/edit/:funnelId"
+          element={
+            isLoading
+              ? <div style={{ textAlign: 'center', marginTop: '50px' }}>Verifying user status...</div>
+              : !user
+                ? <LoginPage />
+                : <>
+                    {/* 已登录时渲染头部和 Editor */}
+                    <AuthHeader user={user} isAdmin={isAdmin} />
+                    <FunnelEditor db={db} updateFunnelData={updateFunnelData} />
+                  </>
+          }
+        />
+
         <Route path="*" element={<h2>404 Not Found</h2>} />
       </Routes>
-      {notification.visible && (
-        <div className={`custom-notification ${notification.type}`}>
-          <div className="notification-content">
-            {notification.message}
-          </div>
-        </div>
-      )}
+      <NotificationComponent />
     </div>
   );
-}
+};
+
+const AuthHeader: React.FC<{ user: User, isAdmin: boolean }> = ({ user, isAdmin }) => (
+    <div style={{ marginBottom: 20, paddingBottom: 20, borderBottom: '1px solid #ccc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span>
+            Welcome, <strong>{user.email}</strong>!
+            {isAdmin && <span style={{color: 'red', marginLeft: '10px', fontWeight: 'bold'}}>(Admin)</span>}
+        </span>
+        <button onClick={() => signOut(getAuth())} style={{ padding: '8px 15px' }}>Logout</button>
+    </div>
+);
 
 
 interface FunnelDashboardProps {
