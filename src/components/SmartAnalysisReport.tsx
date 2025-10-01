@@ -28,43 +28,74 @@ const SmartAnalysisReport: React.FC<SmartAnalysisReportProps> = ({ questions, fi
     engagement: { score: 0, suggestions: [] as string[] },
     clarity: { score: 0, suggestions: [] as string[] },
   };
+  
   if (questions.length === 0) return report;
 
-  // --- 变现潜力分析 (核心升级) ---
-  const totalClicks = questions.reduce((total, q) => 
-    total + (Object.values(q.answers).reduce((answerTotal, a) => answerTotal + (a.clickCount || 0), 0)), 
-  0);
+  // --- 1. 变现潜力分析 (优化为对比分析) ---
+  let totalLinksFound = 0;
+  let totalClicks = 0;
+  let maxClicks = 0; // 用于对比的基准
+  
+  // 遍历所有问题和答案，收集数据
+  questions.forEach((q) => {
+    Object.values(q.answers).forEach((a, aIndex) => {
+      const isLinked = q.data?.affiliateLinks?.[aIndex] && q.data.affiliateLinks[aIndex].trim() !== '';
+      const clicks = a.clickCount || 0;
+      
+      if (isLinked) {
+        totalLinksFound++;
+        totalClicks += clicks;
+        if (clicks > maxClicks) {
+          maxClicks = clicks; // 更新最高点击数
+        }
+      }
+    });
+  });
 
-  const totalAnswersWithLinks = questions.reduce((acc, q) => 
-      acc + (q.data?.affiliateLinks?.filter(link => link && link.trim() !== '').length || 0), 
-  0);
+  // A. 变现评分逻辑：如果最高点击数大于 10，则以最高点击数作为优化潜力基准，否则以设置的链接数计算。
+  if (totalClicks > 0 && maxClicks > 0) {
+    // 评分：基于最高点击率 vs 平均点击率（最高点击数越多，证明变现潜力越大）
+    const avgClicks = totalClicks / totalLinksFound;
+    // 使用对比度公式：最高点击数是平均点击数的多少倍，作为评分因子
+    const contrastFactor = maxClicks / (avgClicks || 1);
+    report.monetization.score = Math.min(100, Math.round(50 + contrastFactor * 10)); // 基础 50 分 + 对比度奖励
+  } else if (totalLinksFound > 0) {
+     // 如果设置了链接但没有点击，得分 50
+    report.monetization.score = 50;
+  } else {
+    // 没设置链接，0 分
+    report.monetization.score = 0;
+  }
 
-  // 新的评分标准：基于平均点击数。假设每个带链接的答案平均获得5次点击算满分。
-  const averageClicks = totalAnswersWithLinks > 0 ? totalClicks / totalAnswersWithLinks : 0;
-  report.monetization.score = Math.min(100, Math.round((averageClicks / 5) * 100)); // 最高100分
-
-  // 提供基于真实点击数据的建议
-  if (totalClicks === 0) {
-    report.monetization.suggestions.push("Note: Your funnel doesn't have any clickthrough data yet. Share your funnel link to start collecting user feedback!");
+  // B. 变现建议逻辑：找出低于平均值 50% 的答案，建议优化
+  const avgClicks = totalLinksFound > 0 ? totalClicks / totalLinksFound : 0;
+  
+  if (totalClicks === 0 && totalLinksFound > 0) {
+    report.monetization.suggestions.push("⚠️ 警告：您的漏斗已设置链接，但总点击次数为 0。请确保您的 Cloud Run 服务 (track-click) 已正确部署，并且权限无误。");
+  } else if (totalLinksFound === 0) {
+    report.monetization.suggestions.push("❌ 严重：没有为任何答案设置联盟链接。您需要至少设置一个链接才能追踪变现潜力。");
   } else {
     questions.forEach((q, qIndex) => {
       Object.values(q.answers).forEach((a, aIndex) => {
-        const hasLink = q.data?.affiliateLinks?.[aIndex]?.trim();
-        if (hasLink && (a.clickCount || 0) > 5) {
-          report.monetization.suggestions.push(`Outstanding performance: Question ${qIndex + 1} The answer"${a.text}" Obtained ${a.clickCount} Clicks, very popular!`);
-        }
-        if (hasLink && (a.clickCount || 0) === 0) {
-          report.monetization.suggestions.push(`Optimization suggestion: Problem ${qIndex + 1} The answer"${a.text}" If there is a link but 0 clicks, you can try to optimize the copy or offer.`);
+        const isLinked = q.data?.affiliateLinks?.[aIndex] && q.data.affiliateLinks[aIndex].trim() !== '';
+        const clicks = a.clickCount || 0;
+        
+        if (isLinked && clicks < avgClicks * 0.5 && avgClicks > 0.5) {
+          report.monetization.suggestions.push(`优化机会：问题 ${qIndex + 1} 的答案 "${a.text}" 点击数 (${clicks}) 远低于平均值 (${avgClicks.toFixed(1)})。考虑优化文案或提供更诱人的报价。`);
+        } else if (isLinked && clicks === 0 && avgClicks > 0) {
+          report.monetization.suggestions.push(`重点优化：问题 ${qIndex + 1} 的答案 "${a.text}" 存在链接但点击数为 0。这是当前变现链中的一个弱点。`);
         }
       });
     });
-  }
-  if (report.monetization.suggestions.length === 0) {
-    report.monetization.suggestions.push("Your monetization setup looks great and you've already received some clicks!");
+    if (report.monetization.suggestions.length === 0) {
+        report.monetization.suggestions.push(`✅ 变现设置看起来很棒，并且您已经获得了 ${totalClicks} 次总点击。请继续推广！`);
+    }
   }
 
 
-  // --- 用户参与度和内容清晰度分析 (保持不变) ---
+  // --- 2. 用户参与度和内容清晰度分析 (Content Clarity 增加关键检查) ---
+  
+  // 参与度（保持大部分逻辑）
   let engagementScore = 100;
   if (questions.length < 3 || questions.length > 6) engagementScore -= 25;
   const repetitiveStarts = questions.filter(q => q.title.toLowerCase().startsWith("what's your")).length;
@@ -73,22 +104,40 @@ const SmartAnalysisReport: React.FC<SmartAnalysisReportProps> = ({ questions, fi
     report.engagement.suggestions.push("TIP: Multiple questions start with similar phrases. Try to vary your wording to keep users engaged.");
   }
   report.engagement.score = Math.max(0, engagementScore);
+  if (report.engagement.suggestions.length === 0 && questions.length > 0) {
+       report.engagement.suggestions.push("✅ 测验长度和措辞多样性表现优秀。");
+  }
+
+  // 清晰度 (增加强制链接检查)
   let clarityScore = 100;
   questions.forEach((q, index) => {
     if (q.title.split(' ').length > 15) {
       clarityScore -= 10;
-      report.clarity.suggestions.push(`Question ${index + 1}'s title is very long. Consider simplifying it.`);
+      report.clarity.suggestions.push(`问题 ${index + 1}'s title is very long. Consider simplifying it.`);
     }
      if (Object.values(q.answers).some(a => a.text.split(' ').length > 7)) {
       clarityScore -= 5;
       report.clarity.suggestions.push(`Some answers in Question ${index + 1} are a bit wordy. Shorter answers are easier to read.`);
     }
   });
+
+  // ↓↓↓ 关键检查：强制要求设置最终重定向链接 ↓↓↓
   if (!finalRedirectLink || finalRedirectLink.trim() === '') {
       clarityScore -= 50;
-      report.clarity.suggestions.push("CRITICAL: You haven't set a final redirect link. The user journey is incomplete.");
+      report.clarity.suggestions.push("❌ CRITICAL: You haven't set a final redirect link. The user journey is incomplete.");
   }
+  // ↑↑↑ 关键检查 ↑↑↑
+  
+  if (totalLinksFound === 0) {
+      clarityScore -= 30; // 如果没有设置任何联盟链接，降低清晰度得分
+      report.clarity.suggestions.push("⚠️ 警告：没有在任何答案中设置联盟链接。这意味着用户完成测验后，转化路径是缺失的。");
+  }
+
   report.clarity.score = Math.max(0, clarityScore);
+  if (report.clarity.suggestions.length === 0) {
+      report.clarity.suggestions.push("✅ 内容和转化终点设置清晰明确。");
+  }
+
   return report;
 };
 
