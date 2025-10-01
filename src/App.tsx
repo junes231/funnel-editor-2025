@@ -802,11 +802,8 @@ const handleImportQuestions = (importedQuestions: Question[]) => {
               setCurrentSubView('quizEditorList');
             }}
           
-            onCancel={() => {
-        // 移除 setSelectedQuestionIndex(null);
-        setCurrentSubView('quizEditorList');
-      }}
-      onDelete={handleDeleteQuestion} // handleDeleteQuestion 必须被修改为使用 urlIndex
+             onCancel={handleCancel}
+            onDelete={handleDeleteQuestion}
        />
        );
       case 'linkSettings':
