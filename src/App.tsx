@@ -201,7 +201,7 @@ useEffect(() => {
          <Route
   path="/"
   element={
-    <AuthRouteWrapper user={user} isLoading={isLoading} isAdmin={isAdmin} db={db} {.../* 传递 FunnelDashboard 需要的所有 props */}>
+    <AuthRouteWrapper user={user} isLoading={isLoading} isAdmin={isAdmin} db={db}>
         <FunnelDashboard
             db={db}
             user={user}
@@ -219,7 +219,7 @@ useEffect(() => {
         <Route
   path="/edit/:funnelId"
   element={
-    <AuthRouteWrapper user={user} isLoading={isLoading} isAdmin={isAdmin} db={db} {.../* 传递 FunnelEditor 需要的所有 props */}>
+    <AuthRouteWrapper user={user} isLoading={isLoading} isAdmin={isAdmin} db={db}>
         <FunnelEditor db={db} updateFunnelData={updateFunnelData} />
     </AuthRouteWrapper>
   }
