@@ -46,8 +46,9 @@ const defaultFunnelData: FunnelData = { questions: [] };
   // [中文注释] 从数据库加载漏斗数据... (这部分逻辑保持不变)
   useEffect(() => {
     const getFunnelForPlay = async () => {
-      if (!funnelId || typeof funnelId !== 'string' || funnelId.trim().length === 0) {
-        setError('Invalid Funnel ID found in URL parameters.');
+      if (!funnelId || funnelId.trim() === '') {
+        // 修改错误提示，使其更具指导性
+        setError('No valid Funnel ID found in the URL. Please ensure the link is correct.');
         setIsLoading(false);
         return;
       }
