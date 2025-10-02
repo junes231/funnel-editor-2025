@@ -458,26 +458,25 @@ const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData }) => 
   const [textColor, setTextColor] = useState(defaultFunnelData.textColor);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
- const [templateFiles, setTemplateFiles] = useState<string[]>([]);
+  
+  const [templateFiles, setTemplateFiles] = useState<string[]>([]);
   const [debugLinkValue, setDebugLinkValue] = useState('Debug: N/A');
    const urlParams = new URLSearchParams(location.search);
-  const currentSubView = urlParams.get('view') || 'mainEditorDashboard';
+   const currentSubView = urlParams.get('view') || 'mainEditorDashboard';
   const urlIndex = urlParams.get('index');
 // 如果 view 是 questionForm，则解析 index，否则设为 null
 const selectedQuestionIndex = (currentSubView === 'questionForm' && urlIndex !== null) ? parseInt(urlIndex) : null;
   const questionToEdit = selectedQuestionIndex !== null ? questions[selectedQuestionIndex] : undefined;
 
-  // 3. 修复后的状态设置函数：仅操作 URL 参数
-  const setCurrentSubView = useCallback((newView: string, index: number | null = null) => {
+  // 3. 驱动路由跳转的函数：仅操作 URL 参数
+  const setCurrentSubView = useCallback((newView: string, index: number | null = null) => { // 【修改点 2：修复 setCurrentSubView 逻辑】
     const newParams = new URLSearchParams();
-    
-    // 确保只有非默认视图才设置 'view' 参数
-    if (newView !== 'mainEditorDashboard') {
-        newParams.set('view', newView);
+  if (newView !== 'mainEditorDashboard') {
+        newParams.set('view', newView); // 确保只有非默认视图才设置 'view' 参数
     }
     
-    // 如果有索引，也设置 'index' 参数
-    if (index !== null) {
+    // 如果是编辑问题，设置 'index' 参数
+    if (newView === 'questionForm' && index !== null) {
         newParams.set('index', String(index));
     }
     
@@ -489,14 +488,7 @@ const selectedQuestionIndex = (currentSubView === 'questionForm' && urlIndex !==
 
   }, [location.pathname, navigate]);
 
-  useEffect(() => {
-    const newView = new URLSearchParams(location.search).get('view') || 'mainEditorDashboard';
-    if (newView !== _currentSubView) {
-        _setCurrentSubView(newView); 
-    }
-  }, [location.search, _currentSubView]); 
- 
-  useEffect(() => {
+   useEffect(() => {
   // Hardcode the list of available template files.
   // This avoids the need for a server-side call on a static site.
   const availableTemplates = [
@@ -690,10 +682,10 @@ const handleSelectTemplate = async (templateName: string) => {
     };
     setQuestions([...questions, newQuestion]);
     
-    setCurrentSubView('questionForm?index=' + questions.length);
+    setCurrentSubView('questionForm', questions.length);
   };
 
-  const handleEditQuestion = (index: number) => {
+  const handleEditQuestion = (index: number) => { // 【修改点 5：修复 handleEditQuestion 的调用】
     setCurrentSubView('questionForm', index);
   };
 
@@ -771,7 +763,7 @@ const handleImportQuestions = (importedQuestions: Question[]) => {
   }
 };
   const renderEditorContent = () => {
-    switch (_currentSubView) {
+    switch (currentSubView) {
       case 'quizEditorList':
         return (
           <QuizEditorComponent
