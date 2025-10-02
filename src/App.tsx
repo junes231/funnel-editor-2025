@@ -800,11 +800,11 @@ const handleImportQuestions = (importedQuestions: Question[]) => {
           if (button) {
               button.classList.add('animate-out');
               setTimeout(() => {
-                  setCurrentSubView('funnelList'); // <-- 这个 'funnelList' 也是旧代码的错误残留，应该改为 'quizEditorList'
+                  setCurrentSubView('mainEditorDashboard'); // <-- 这个 'funnelList' 也是旧代码的错误残留，应该改为 'quizEditorList'
               }, 1000);
           } else {
               // 确保在没有动画元素时也能跳转
-              setCurrentSubView('funnelList'); // <-- 应该改为 'quizEditorList'
+              setCurrentSubView('mainEditorDashboard'); // <-- 应该改为 'quizEditorList'
           }
           }}
              onDelete={handleDeleteQuestion}
