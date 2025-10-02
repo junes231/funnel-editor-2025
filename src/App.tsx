@@ -795,18 +795,20 @@ const handleImportQuestions = (importedQuestions: Question[]) => {
               setCurrentSubView('quizEditorList');
             }}
             onCancel={() => {
-          // 动画逻辑，然后返回到问题列表页
+          // ↓↓↓ 关键设置：返回应用首页 (Funnel List) ↓↓↓
+          // 使用 navigate('/') 完成跳转到首页的要求
           const button = document.querySelector('.cancel-button');
           if (button) {
               button.classList.add('animate-out');
               setTimeout(() => {
-                  setCurrentSubView('mainEditorDashboard'); // <-- 这个 'funnelList' 也是旧代码的错误残留，应该改为 'quizEditorList'
+                  // 跳转到根路径 /，即 Funnel List Page
+                  navigate('/'); 
               }, 1000);
           } else {
               // 确保在没有动画元素时也能跳转
-              setCurrentSubView('mainEditorDashboard'); // <-- 应该改为 'quizEditorList'
+              navigate('/');
           }
-          }}
+      }}
              onDelete={handleDeleteQuestion}
             />
            );
