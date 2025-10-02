@@ -371,9 +371,10 @@ const FunnelDashboard: React.FC<FunnelDashboardProps> = ({ db, user, isAdmin, fu
   };
   
   const handleCopyLink = (funnelId: string) => {
-  // 验证 funnelId
-  if (!funnelId || typeof funnelId !== 'string') {
-    showNotification('Invalid funnel ID', 'error');
+  // 【修复点 1：在复制前验证 ID 是否存在】
+  if (!funnelId || funnelId.trim() === '') {
+    
+   // alert('Funnel ID missing! Please ensure the funnel saved correctly.');
     return;
   }
 
