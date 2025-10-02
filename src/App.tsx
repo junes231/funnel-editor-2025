@@ -220,7 +220,9 @@ useEffect(() => {
   path="/edit/:funnelId"
   element={
     <AuthRouteWrapper user={user} isLoading={isLoading} isAdmin={isAdmin} db={db}>
-        <FunnelEditor db={db} updateFunnelData={updateFunnelData} />
+        <FunnelEditor db={db} updateFunnelData={updateFunnelData}
+          showNotification={showNotification}
+          />
     </AuthRouteWrapper>
   }
 />
@@ -442,9 +444,10 @@ const FunnelDashboard: React.FC<FunnelDashboardProps> = ({ db, user, isAdmin, fu
 interface FunnelEditorProps {
   db: Firestore;
   updateFunnelData: (funnelId: string, newData: FunnelData) => Promise<void>;
+showNotification: (message: string, type?: 'success' | 'error') => void;
 }
 
-const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData }) => {
+const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData, showNotification }) => {
   const { funnelId } = useParams<{ funnelId: string }>();
   const navigate = useNavigate();
   const location = useLocation(); 
