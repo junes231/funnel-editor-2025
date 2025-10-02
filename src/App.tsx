@@ -459,40 +459,40 @@ const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData }) => 
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const initialSubView = new URLSearchParams(location.search).get('view') || 'mainEditorDashboard';
-  const [currentSubView, _setCurrentSubView] = useState(initialSubView);
+  const [currentSubView, _setCurrentSubView] = useState(urlView);
   const [templateFiles, setTemplateFiles] = useState<string[]>([]);
   const [debugLinkValue, setDebugLinkValue] = useState('Debug: N/A');
    const urlParams = new URLSearchParams(location.search);
 const urlIndex = urlParams.get('index');
 // 如果 view 是 questionForm，则解析 index，否则设为 null
-const selectedQuestionIndex = (currentSubView === 'questionForm' && urlIndex !== null) ? parseInt(urlIndex) : null;
+const selectedQuestionIndex = (urlView === 'questionForm' && urlIndex !== null) 
+    ? parseInt(urlIndex) : null;
 const questionToEdit = selectedQuestionIndex !== null ? questions[selectedQuestionIndex] : undefined;
-  const setCurrentSubView = useCallback((newView: string) => {
-    _setCurrentSubView(newView); // 1. 更新内部状态
-    
-    // 2. 更新 URL query parameter
-    const newParams = new URLSearchParams(location.search);
-    if (newView === 'mainEditorDashboard') {
-        newParams.delete('view'); // 默认视图，移除 URL 参数，保持 URL 干净
-    } else {
-        newParams.set('view', newView);
-    }
+  const setCurrentSubView = useCallback((newView: string, index: number | null = null) => {
+    const newParams = new URLSearchParams();
+      if (newView !== 'mainEditorDashboard') {
+          newParams.set('view', newView);
+      }
+      if (index !== null) {
+          newParams.set('index', String(index));
+      }
     
     // 3. 使用 navigate 更新 URL，保持在 /edit/:funnelId 路径上，并将新 URL 替换历史记录中的当前条目
     navigate({
-        pathname: location.pathname,
-        search: newParams.toString()
-    }, { replace: true });
+          pathname: location.pathname,
+          search: newParams.toString()
+      }, { replace: true });
+
+      // 3. 立即更新内部状态，以确保即使 URL 更新缓慢，UI 也能响应
+      _setCurrentSubView(newView);
   }, [location, navigate]);
 
   useEffect(() => {
-    const urlView = new URLSearchParams(location.search).get('view') || 'mainEditorDashboard';
-    if (urlView !== currentSubView) {
-        // 如果 URL 中的视图与当前内部状态不一致，则更新内部状态
-        _setCurrentSubView(urlView); 
+    const newView = new URLSearchParams(location.search).get('view') || 'mainEditorDashboard';
+    if (newView !== _currentSubView) {
+        _setCurrentSubView(newView); 
     }
-  // 依赖 location.search，只在 URL 参数变化时执行
-  }, [location.search]); 
+  }, [location.search, _currentSubView]); 
  
   useEffect(() => {
   // Hardcode the list of available template files.
@@ -692,7 +692,8 @@ const handleSelectTemplate = async (templateName: string) => {
   };
 
   const handleEditQuestion = (index: number) => {
-    setCurrentSubView('questionForm?index=' + index); 
+    // 调用修复后的 setCurrentSubView，传入 view 名称和 index
+    setCurrentSubView('questionForm', index); 
   };
 
   const handleDeleteQuestion = () => {
@@ -769,7 +770,7 @@ const handleImportQuestions = (importedQuestions: Question[]) => {
   }
 };
   const renderEditorContent = () => {
-    switch (currentSubView) {
+    switch (_currentSubView) {
       case 'quizEditorList':
         return (
           <QuizEditorComponent
@@ -808,11 +809,11 @@ const handleImportQuestions = (importedQuestions: Question[]) => {
           if (button) {
               button.classList.add('animate-out');
               setTimeout(() => {
-                  setCurrentSubView('funnelList'); 
+                  setCurrentSubView('quizEditorList'); 
               }, 1000);
           } else {
               // 确保在没有动画元素时也能跳转
-              setCurrentSubView('funnelList');
+              setCurrentSubView('quizEditorList');
           }
       }}
          onDelete={handleDeleteQuestion}
