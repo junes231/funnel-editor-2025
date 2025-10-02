@@ -12,20 +12,13 @@ interface Question {
   text: string;
   answers: { [key: string]: Answer };
   data?: { affiliateLinks?: string[] };
-  title?: string;
 }
 
 interface FunnelData {
   questions: Question[];
   finalRedirectLink?: string;
-  primaryColor?: string; // 【中文注释：从 App.tsx 补充颜色属性】
-  buttonColor?: string;
-  backgroundColor?: string;
-  textColor?: string;
 }
- interface Funnel {
-  data: FunnelData;
-}
+
 interface QuizPlayerProps {
   db: any;
 }
@@ -45,18 +38,12 @@ const defaultFunnelData: FunnelData = { questions: [] };
 
   // [中文注释] 从数据库加载漏斗数据... (这部分逻辑保持不变)
   useEffect(() => {
-     const getFunnelForPlay = async () => {
-      if (!funnelId || typeof funnelId !== 'string' || funnelId.trim() === '' || /[\/]/.test(funnelId)) {
-        setError('Invalid Funnel ID in the URL. Ensure it is a valid string without slashes.');
+    const getFunnelForPlay = async () => {
+      if (!funnelId) {
+        setError('No funnel ID provided!');
         setIsLoading(false);
         return;
       }
-      if (!db || typeof db !== 'object') {
-        setError('Firestore is not initialized. Check your Firebase configuration.');
-        setIsLoading(false);
-        return;
-      }
-
       setIsLoading(true);
       setError(null);
       try {
@@ -64,46 +51,40 @@ const defaultFunnelData: FunnelData = { questions: [] };
         const funnelDoc = await getDoc(funnelDocRef);
         if (funnelDoc.exists()) {
           const funnel = funnelDoc.data() as Funnel;
-          const compatibleFunnelData: FunnelData = {
-            ...defaultFunnelData,
-            ...(funnel.data || {}),
-            questions: (funnel.data?.questions && Array.isArray(funnel.data.questions) ? funnel.data.questions : []).map(question => {
+          
+          // Add backward compatibility: convert answers from array to object if needed
+          const compatibleFunnelData = { ...defaultFunnelData, ...funnel.data };
+          if (compatibleFunnelData.questions) {
+            compatibleFunnelData.questions = compatibleFunnelData.questions.map(question => {
               if (Array.isArray(question.answers)) {
+                // Convert legacy array format to object format
                 const answersObj: { [answerId: string]: Answer } = {};
                 question.answers.forEach((answer: Answer) => {
-                  if (answer?.id) {
-                    answersObj[answer.id] = answer;
-                  }
+                  answersObj[answer.id] = answer;
                 });
                 return { ...question, answers: answersObj };
               }
-              return question;
-            }),
-          };
+              return question; // Already in object format
+            });
+          }
+          
           setFunnelData(compatibleFunnelData);
         } else {
-          setError(`Funnel not found for ID: ${funnelId}. It may have been deleted.`);
+          setError('Funnel not found!');
         }
-      } catch (err: any) {
-        console.error('Error loading funnel for play:', err, { funnelId, errorCode: err?.code, errorMessage: err?.message });
-        const firebaseError = err?.code || err?.name || 'unknown';
-        let friendlyMessage = 'Failed to load quiz. ';
-        if (firebaseError === 'invalid-argument') {
-          friendlyMessage += 'The funnel ID or database reference is invalid. Check the URL or Firebase configuration.';
-        } else if (firebaseError === 'permission-denied') {
-          friendlyMessage += 'Access denied. Check Firestore security rules.';
-        } else {
-          friendlyMessage += `Unexpected error (${firebaseError}).`;
-        }
-        setError(friendlyMessage);
+      } catch (err) {
+        console.error('Error loading funnel for play:', err);
+        setError('Failed to load quiz.');
       } finally {
         setIsLoading(false);
       }
     };
     getFunnelForPlay();
-  }, [funnelId]);
+  }, [funnelId, db]);
 
-    const handleAnswerClick = async (answerIndex: number, answerId: string) => {
+  // [中文注释] 关键升级：这是新的 handleAnswerClick 函数
+  
+const handleAnswerClick = async (answerIndex: number, answerId: string) => {
   if (isAnimating || !funnelData) return;
 
   setIsAnimating(true);
@@ -173,10 +154,8 @@ const defaultFunnelData: FunnelData = { questions: [] };
   if (error || !funnelData || funnelData.questions.length === 0) {
     return (
       <div className="quiz-player-container">
-        <h2>Error Loading Quiz</h2>
-        {/* 【修复点 3：显示具体错误，避免只显示默认的 "Failed to load quiz"】 */}
-        <p style={{color: '#dc3545', fontWeight: 'bold'}}>{error || 'This funnel has no questions configured.'}</p>
-        <p>If you are the editor, please check the Funnel ID in the URL and ensure Firestore security rules allow public read access to the 'funnels' collection.</p>
+        <h2>{error ? 'Error Loading Quiz' : 'Quiz Not Ready'}</h2>
+        <p>{error || 'This funnel has no questions configured.'}</p>
       </div>
     );
   }
@@ -199,13 +178,10 @@ const defaultFunnelData: FunnelData = { questions: [] };
   ).sort((a, b) => a.text.localeCompare(b.text));
 
   const quizPlayerContainerStyle = {
-    // 【修复点 4：确保颜色变量有默认值，避免 NaN 或 undefined 导致样式错误】
-    '--primary-color': funnelData.primaryColor || '#007bff',
-    '--button-color': funnelData.buttonColor || '#28a745',
-    '--background-color': funnelData.backgroundColor || '#f8f9fa',
-    '--text-color': funnelData.textColor || '#333333',
-    backgroundColor: funnelData.backgroundColor || '#f8f9fa',
-    color: funnelData.textColor || '#333333',
+    '--primary-color': funnelData.primaryColor,
+    '--button-color': funnelData.buttonColor,
+    '--background-color': funnelData.backgroundColor,
+    '--text-color': funnelData.textColor,
   } as React.CSSProperties;
     
   return (
