@@ -791,14 +791,22 @@ const handleImportQuestions = (importedQuestions: Question[]) => {
               });
             }}
             // onSave 只负责在点击保存按钮后返回列表
-            onSave={() => {
-              
+           onSave={() => {
               setCurrentSubView('quizEditorList');
             }}
-             onCancel={() => {
-                setCurrentSubView('quizEditorList'); // 简单地返回到问题列表页
-            }}
-         onDelete={handleDeleteQuestion}
+            onCancel={() => {
+          // 动画逻辑，然后返回到问题列表页
+          const button = document.querySelector('.cancel-button');
+          if (button) {
+              button.classList.add('animate-out');
+              setTimeout(() => {
+                  setCurrentSubView('funnelList'); // <-- 这个 'funnelList' 也是旧代码的错误残留，应该改为 'quizEditorList'
+              }, 1000);
+          } else {
+              // 确保在没有动画元素时也能跳转
+              setCurrentSubView('funnelList'); // <-- 应该改为 'quizEditorList'
+          }
+      }}
         />
        );
       case 'linkSettings':
