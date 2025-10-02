@@ -802,9 +802,21 @@ const handleImportQuestions = (importedQuestions: Question[]) => {
               setCurrentSubView('quizEditorList');
             }}
           
-             onCancel={handleCancel}
-            onDelete={handleDeleteQuestion}
-       />
+             onCancel={() => {
+          // 动画逻辑，然后返回到问题列表页
+          const button = document.querySelector('.cancel-button');
+          if (button) {
+              button.classList.add('animate-out');
+              setTimeout(() => {
+                  setCurrentSubView('funnelList'); 
+              }, 1000);
+          } else {
+              // 确保在没有动画元素时也能跳转
+              setCurrentSubView('funnelList');
+          }
+      }}
+         onDelete={handleDeleteQuestion}
+        />
        );
       case 'linkSettings':
         return (
@@ -1287,15 +1299,7 @@ const handleSave = async () => {
   };
   
   // --- UNCHANGED: Cancel and Delete logic remains the same ---
-  const handleCancel = () => {
-        const button = document.querySelector('.cancel-button');
-    if (button) {
-      button.classList.add('animate-out');
-      setTimeout(() => {
-        navigate('/');
-      }, 1000);
-    }
-  };
+  
   // --- 恢复您设计的 Delete 按钮动画和跳转逻辑 ---
    const handleDelete = () => {
   setIsDeleting(true);
