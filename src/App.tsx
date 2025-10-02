@@ -470,24 +470,26 @@ const selectedQuestionIndex = (currentSubView === 'questionForm' && urlIndex !==
   const questionToEdit = selectedQuestionIndex !== null ? questions[selectedQuestionIndex] : undefined;
 
   // 3. 驱动路由跳转的函数：仅操作 URL 参数
-  const setCurrentSubView = useCallback((newView: string, index: number | null = null) => { // 【修改点 2：修复 setCurrentSubView 逻辑】
-    const newParams = new URLSearchParams();
-  if (newView !== 'mainEditorDashboard') {
-        newParams.set('view', newView); // 确保只有非默认视图才设置 'view' 参数
-    }
-    
-    // 如果是编辑问题，设置 'index' 参数
-    if (newView === 'questionForm' && index !== null) {
-        newParams.set('index', String(index));
-    }
-    
-    // 3. 使用 navigate 更新 URL，保持在 /edit/:funnelId 路径上，并将新 URL 替换历史记录中的当前条目
-    navigate({
-        pathname: location.pathname,
-        search: newParams.toString()
-    }, { replace: true });
+  const setCurrentSubView = useCallback((newView: string, index: number | null = null) => {
+  const newParams = new URLSearchParams(location.search);
 
-  }, [location.pathname, navigate]);
+  if (newView !== 'mainEditorDashboard') {
+    newParams.set('view', newView);
+  } else {
+    newParams.delete('view'); // 避免冗余参数
+  }
+
+  if (newView === 'questionForm' && index !== null) {
+    newParams.set('index', String(index));
+  } else {
+    newParams.delete('index');
+  }
+
+  navigate(
+    { pathname: location.pathname, search: newParams.toString() },
+    { replace: true }
+  );
+}, [location.pathname, location.search, navigate]);
 
    useEffect(() => {
   // Hardcode the list of available template files.
