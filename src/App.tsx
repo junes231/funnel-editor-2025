@@ -308,7 +308,7 @@ const FunnelDashboard: React.FC<FunnelDashboardProps> = ({ db, user, isAdmin, fu
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
-
+  const [copyingId, setCopyingId] = useState<string | null>(null);
   useEffect(() => {
     const fetchFunnels = async () => {
       if (!user || !db) {
@@ -371,30 +371,40 @@ const FunnelDashboard: React.FC<FunnelDashboardProps> = ({ db, user, isAdmin, fu
   };
   
   const handleCopyLink = (funnelId: string) => {
-  // 【修复点 1：在复制前验证 ID 是否存在】
+  setCopyingId(funnelId);
   if (!funnelId || funnelId.trim() === '') {
-    
-   // alert('Funnel ID missing! Please ensure the funnel saved correctly.');
-    return;
-  }
+    // 错误通知
+    showNotification('Funnel ID missing! Please ensure the funnel is saved.', 'error');
+  } else {
+    // 使用 package.json homepage 路径构建完整的 URL
+    const basePath = "/funnel-editor-2025/";
+    const fullUrl = `${window.location.origin}${basePath}#/play/${funnelId}`;
 
-  // 使用 window.location.origin 构建基础 URL
-  const basePath = "/funnel-editor-2025/"; 
-  const fullUrl = `${window.location.origin}${basePath}#/play/${funnelId}`;
-
-  // 使用 clipboard API
-  navigator.clipboard
-    .writeText(fullUrl)
-    .then(() => {
-      // 自定义通知
-      showNotification('Funnel link copied to clipboard!');
-    })
-    .catch((err) => {
+    try {
+      // 使用 clipboard API 复制链接
+      await navigator.clipboard.writeText(fullUrl);
+      
+      // 成功通知（注意：Copied! 文本切换在 JSX 中通过 copyingId 状态实现）
+      // showNotification('Funnel link copied to clipboard!'); // 动画结束后再通知，体验更好
+      
+    } catch (err: any) {
       console.error('Failed to copy:', err);
       showNotification('Failed to copy link', 'error');
       // Fallback: 提示用户手动复制
       prompt('Copy this link manually:', fullUrl);
-    });
+    }
+  }
+
+  // 2. 等待动画持续时间（0.6秒）
+  await new Promise(resolve => setTimeout(resolve, 600));
+
+  // 3. 重置动画状态，按钮类切换回 'copy-primary'
+  setCopyingId(null);
+  
+  // 4. 动画结束后发送成功通知（仅在成功时发送，否则错误已在 catch 块中处理）
+  if (funnelId && funnelId.trim() !== '') {
+      showNotification('Funnel link copied to clipboard!', 'success');
+  }
 };
 
   
@@ -428,7 +438,14 @@ const FunnelDashboard: React.FC<FunnelDashboardProps> = ({ db, user, isAdmin, fu
                <div className="funnel-actions">
                 <button className="funnel-action-btn" onClick={() => navigate(`/edit/${funnel.id}`)}>Edit</button>
                 <button className="funnel-action-btn" onClick={() => navigate(`/play/${funnel.id}`)}>Play</button>
-                <button className="funnel-action-btn" onClick={() => handleCopyLink(funnel.id)}>Copy Link</button>
+                <button 
+    // 根据状态切换类名：正在复制时为 copy-success，否则为 copy-primary
+    className={`funnel-action-btn ${copyingId === funnel.id ? 'copy-success' : 'copy-primary'}`} 
+    onClick={() => handleCopyLink(funnel.id)}
+  >
+    {/* 根据状态切换按钮文本 */}
+    {copyingId === funnel.id ? 'Copied!' : 'Copy Link'}
+  </button>
                 <button className="funnel-action-btn delete" onClick={() => handleDeleteFunnel(funnel.id)}>Delete</button>
               </div>
             </li>
