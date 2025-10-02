@@ -795,20 +795,9 @@ const handleImportQuestions = (importedQuestions: Question[]) => {
               
               setCurrentSubView('quizEditorList');
             }}
-          
              onCancel={() => {
-          // 动画逻辑，然后返回到问题列表页
-          const button = document.querySelector('.cancel-button');
-          if (button) {
-              button.classList.add('animate-out');
-              setTimeout(() => {
-                  setCurrentSubView('quizEditorList'); 
-              }, 1000);
-          } else {
-              // 确保在没有动画元素时也能跳转
-              setCurrentSubView('quizEditorList');
-          }
-      }}
+                setCurrentSubView('quizEditorList'); // 简单地返回到问题列表页
+            }}
          onDelete={handleDeleteQuestion}
         />
        );
@@ -1362,7 +1351,7 @@ const handleSave = async () => {
         <button className="save-button" onClick={handleSave}>
           <span role="img" aria-label="save">💾</span> Save Question
         </button>
-        <button className="cancel-button" onClick={handleCancel}>
+        <button className="cancel-button" onClick={onCancel}>
           <span role="img" aria-label="cancel">←</span> Back to List
         </button>
         {questionIndex !== null && (
