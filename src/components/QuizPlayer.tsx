@@ -12,13 +12,20 @@ interface Question {
   text: string;
   answers: { [key: string]: Answer };
   data?: { affiliateLinks?: string[] };
+  title?: string;
 }
 
 interface FunnelData {
   questions: Question[];
   finalRedirectLink?: string;
+  primaryColor?: string; // 【中文注释：从 App.tsx 补充颜色属性】
+  buttonColor?: string;
+  backgroundColor?: string;
+  textColor?: string;
 }
-
+ interface Funnel {
+  data: FunnelData;
+}
 interface QuizPlayerProps {
   db: any;
 }
@@ -39,8 +46,8 @@ const defaultFunnelData: FunnelData = { questions: [] };
   // [中文注释] 从数据库加载漏斗数据... (这部分逻辑保持不变)
   useEffect(() => {
     const getFunnelForPlay = async () => {
-      if (!funnelId) {
-        setError('No funnel ID provided!');
+      if (!funnelId || typeof funnelId !== 'string' || funnelId.trim().length === 0) {
+        setError('Invalid Funnel ID found in URL parameters.');
         setIsLoading(false);
         return;
       }
@@ -53,38 +60,49 @@ const defaultFunnelData: FunnelData = { questions: [] };
           const funnel = funnelDoc.data() as Funnel;
           
           // Add backward compatibility: convert answers from array to object if needed
-          const compatibleFunnelData = { ...defaultFunnelData, ...funnel.data };
-          if (compatibleFunnelData.questions) {
-            compatibleFunnelData.questions = compatibleFunnelData.questions.map(question => {
+          const compatibleFunnelData: FunnelData = { 
+            // 确保合并时不会丢失任何数据
+            ...defaultFunnelData, 
+            ...(funnel.data || {}),
+            questions: (funnel.data?.questions || []).map(question => {
               if (Array.isArray(question.answers)) {
-                // Convert legacy array format to object format
                 const answersObj: { [answerId: string]: Answer } = {};
                 question.answers.forEach((answer: Answer) => {
                   answersObj[answer.id] = answer;
                 });
                 return { ...question, answers: answersObj };
               }
-              return question; // Already in object format
-            });
-          }
+              return question;
+            })
+          };
           
           setFunnelData(compatibleFunnelData);
         } else {
-          setError('Funnel not found!');
+          setError(`Funnel not found for ID: ${funnelId}. It may have been deleted.`);
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error('Error loading funnel for play:', err);
-        setError('Failed to load quiz.');
+        
+        // 【修复点 2：显示更明确的错误信息，帮助排查】
+        const firebaseError = err?.code || err?.name || 'unknown';
+        let friendlyMessage = 'Failed to load quiz. ';
+        if (firebaseError === 'invalid-argument') {
+             friendlyMessage += 'The funnel ID in the URL is malformed.';
+        } else if (firebaseError === 'permission-denied') {
+             friendlyMessage += 'Access denied. Check Firestore security rules.';
+        } else {
+             friendlyMessage += `Error code (${firebaseError}).`;
+        }
+        setError(friendlyMessage);
+        
       } finally {
         setIsLoading(false);
       }
     };
     getFunnelForPlay();
-  }, [funnelId, db]);
+  }, [funnelId, db]); 
 
-  // [中文注释] 关键升级：这是新的 handleAnswerClick 函数
-  
-const handleAnswerClick = async (answerIndex: number, answerId: string) => {
+    const handleAnswerClick = async (answerIndex: number, answerId: string) => {
   if (isAnimating || !funnelData) return;
 
   setIsAnimating(true);
@@ -154,8 +172,10 @@ const handleAnswerClick = async (answerIndex: number, answerId: string) => {
   if (error || !funnelData || funnelData.questions.length === 0) {
     return (
       <div className="quiz-player-container">
-        <h2>{error ? 'Error Loading Quiz' : 'Quiz Not Ready'}</h2>
-        <p>{error || 'This funnel has no questions configured.'}</p>
+        <h2>Error Loading Quiz</h2>
+        {/* 【修复点 3：显示具体错误，避免只显示默认的 "Failed to load quiz"】 */}
+        <p style={{color: '#dc3545', fontWeight: 'bold'}}>{error || 'This funnel has no questions configured.'}</p>
+        <p>If you are the editor, please check the Funnel ID in the URL and ensure Firestore security rules allow public read access to the 'funnels' collection.</p>
       </div>
     );
   }
@@ -178,10 +198,13 @@ const handleAnswerClick = async (answerIndex: number, answerId: string) => {
   ).sort((a, b) => a.text.localeCompare(b.text));
 
   const quizPlayerContainerStyle = {
-    '--primary-color': funnelData.primaryColor,
-    '--button-color': funnelData.buttonColor,
-    '--background-color': funnelData.backgroundColor,
-    '--text-color': funnelData.textColor,
+    // 【修复点 4：确保颜色变量有默认值，避免 NaN 或 undefined 导致样式错误】
+    '--primary-color': funnelData.primaryColor || '#007bff',
+    '--button-color': funnelData.buttonColor || '#28a745',
+    '--background-color': funnelData.backgroundColor || '#f8f9fa',
+    '--text-color': funnelData.textColor || '#333333',
+    backgroundColor: funnelData.backgroundColor || '#f8f9fa',
+    color: funnelData.textColor || '#333333',
   } as React.CSSProperties;
     
   return (
