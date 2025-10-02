@@ -806,7 +806,8 @@ const handleImportQuestions = (importedQuestions: Question[]) => {
               // 确保在没有动画元素时也能跳转
               setCurrentSubView('funnelList'); // <-- 应该改为 'quizEditorList'
           }
-      }}
+            onDelete={handleDeleteQuestion}
+            }}
         />
        );
       case 'linkSettings':
