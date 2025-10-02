@@ -45,13 +45,18 @@ const defaultFunnelData: FunnelData = { questions: [] };
 
   // [中文注释] 从数据库加载漏斗数据... (这部分逻辑保持不变)
   useEffect(() => {
-    const getFunnelForPlay = async () => {
-      if (!funnelId || funnelId.trim() === '') {
-        // 修改错误提示，使其更具指导性
-        setError('No valid Funnel ID found in the URL. Please ensure the link is correct.');
+     const getFunnelForPlay = async () => {
+      if (!funnelId || typeof funnelId !== 'string' || funnelId.trim() === '' || /[\/]/.test(funnelId)) {
+        setError('Invalid Funnel ID in the URL. Ensure it is a valid string without slashes.');
         setIsLoading(false);
         return;
       }
+      if (!db || typeof db !== 'object') {
+        setError('Firestore is not initialized. Check your Firebase configuration.');
+        setIsLoading(false);
+        return;
+      }
+
       setIsLoading(true);
       setError(null);
       try {
@@ -59,49 +64,44 @@ const defaultFunnelData: FunnelData = { questions: [] };
         const funnelDoc = await getDoc(funnelDocRef);
         if (funnelDoc.exists()) {
           const funnel = funnelDoc.data() as Funnel;
-          
-          // Add backward compatibility: convert answers from array to object if needed
-          const compatibleFunnelData: FunnelData = { 
-            // 确保合并时不会丢失任何数据
-            ...defaultFunnelData, 
+          const compatibleFunnelData: FunnelData = {
+            ...defaultFunnelData,
             ...(funnel.data || {}),
-            questions: (funnel.data?.questions || []).map(question => {
+            questions: (funnel.data?.questions && Array.isArray(funnel.data.questions) ? funnel.data.questions : []).map(question => {
               if (Array.isArray(question.answers)) {
                 const answersObj: { [answerId: string]: Answer } = {};
                 question.answers.forEach((answer: Answer) => {
-                  answersObj[answer.id] = answer;
+                  if (answer?.id) {
+                    answersObj[answer.id] = answer;
+                  }
                 });
                 return { ...question, answers: answersObj };
               }
               return question;
-            })
+            }),
           };
-          
           setFunnelData(compatibleFunnelData);
         } else {
           setError(`Funnel not found for ID: ${funnelId}. It may have been deleted.`);
         }
       } catch (err: any) {
-        console.error('Error loading funnel for play:', err);
-        
-        // 【修复点 2：显示更明确的错误信息，帮助排查】
+        console.error('Error loading funnel for play:', err, { funnelId, errorCode: err?.code, errorMessage: err?.message });
         const firebaseError = err?.code || err?.name || 'unknown';
         let friendlyMessage = 'Failed to load quiz. ';
         if (firebaseError === 'invalid-argument') {
-             friendlyMessage += 'The funnel ID in the URL is malformed.';
+          friendlyMessage += 'The funnel ID or database reference is invalid. Check the URL or Firebase configuration.';
         } else if (firebaseError === 'permission-denied') {
-             friendlyMessage += 'Access denied. Check Firestore security rules.';
+          friendlyMessage += 'Access denied. Check Firestore security rules.';
         } else {
-             friendlyMessage += `Error code (${firebaseError}).`;
+          friendlyMessage += `Unexpected error (${firebaseError}).`;
         }
         setError(friendlyMessage);
-        
       } finally {
         setIsLoading(false);
       }
     };
     getFunnelForPlay();
-  }, [funnelId, db]); 
+  }, [funnelId]);
 
     const handleAnswerClick = async (answerIndex: number, answerId: string) => {
   if (isAnimating || !funnelData) return;
