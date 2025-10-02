@@ -220,9 +220,7 @@ useEffect(() => {
   path="/edit/:funnelId"
   element={
     <AuthRouteWrapper user={user} isLoading={isLoading} isAdmin={isAdmin} db={db}>
-        <FunnelEditor db={db} updateFunnelData={updateFunnelData}
-          showNotification={showNotification}
-          />
+        <FunnelEditor db={db} updateFunnelData={updateFunnelData} />
     </AuthRouteWrapper>
   }
 />
@@ -373,10 +371,9 @@ const FunnelDashboard: React.FC<FunnelDashboardProps> = ({ db, user, isAdmin, fu
   };
   
   const handleCopyLink = (funnelId: string) => {
-  // 【修复点 1：在复制前验证 ID 是否存在】
-  if (!funnelId || funnelId.trim() === '') {
-    
-   // alert('Funnel ID missing! Please ensure the funnel saved correctly.');
+  // 验证 funnelId
+  if (!funnelId || typeof funnelId !== 'string') {
+    showNotification('Invalid funnel ID', 'error');
     return;
   }
 
@@ -444,10 +441,9 @@ const FunnelDashboard: React.FC<FunnelDashboardProps> = ({ db, user, isAdmin, fu
 interface FunnelEditorProps {
   db: Firestore;
   updateFunnelData: (funnelId: string, newData: FunnelData) => Promise<void>;
-showNotification: (message: string, type?: 'success' | 'error') => void;
 }
 
-const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData, showNotification }) => {
+const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData }) => {
   const { funnelId } = useParams<{ funnelId: string }>();
   const navigate = useNavigate();
   const location = useLocation(); 
@@ -461,40 +457,41 @@ const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData, showN
   const [backgroundColor, setBackgroundColor] = useState(defaultFunnelData.backgroundColor);
   const [textColor, setTextColor] = useState(defaultFunnelData.textColor);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
+  const [selectedQuestionIndex, setSelectedQuestionIndex] = useState<number | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  
+   const initialSubView = new URLSearchParams(location.search).get('view') || 'mainEditorDashboard';
+  const [currentSubView, _setCurrentSubView] = useState(initialSubView);
   const [templateFiles, setTemplateFiles] = useState<string[]>([]);
   const [debugLinkValue, setDebugLinkValue] = useState('Debug: N/A');
-   const urlParams = new URLSearchParams(location.search);
-   const currentSubView = urlParams.get('view') || 'mainEditorDashboard';
-  const urlIndex = urlParams.get('index');
-// 如果 view 是 questionForm，则解析 index，否则设为 null
-const selectedQuestionIndex = (currentSubView === 'questionForm' && urlIndex !== null) ? parseInt(urlIndex) : null;
-  const questionToEdit = selectedQuestionIndex !== null ? questions[selectedQuestionIndex] : undefined;
+ 
+  const setCurrentSubView = useCallback((newView: string) => {
+    _setCurrentSubView(newView); // 1. 更新内部状态
+    
+    // 2. 更新 URL query parameter
+    const newParams = new URLSearchParams(location.search);
+    if (newView === 'mainEditorDashboard') {
+        newParams.delete('view'); // 默认视图，移除 URL 参数，保持 URL 干净
+    } else {
+        newParams.set('view', newView);
+    }
+    
+    // 3. 使用 navigate 更新 URL，保持在 /edit/:funnelId 路径上，并将新 URL 替换历史记录中的当前条目
+    navigate({
+        pathname: location.pathname,
+        search: newParams.toString()
+    }, { replace: true });
+  }, [location, navigate]);
 
-  // 3. 驱动路由跳转的函数：仅操作 URL 参数
-  const setCurrentSubView = useCallback((newView: string, index: number | null = null) => {
-  const newParams = new URLSearchParams(location.search);
-
-  if (newView !== 'mainEditorDashboard') {
-    newParams.set('view', newView);
-  } else {
-    newParams.delete('view'); // 避免冗余参数
-  }
-
-  if (newView === 'questionForm' && index !== null) {
-    newParams.set('index', String(index));
-  } else {
-    newParams.delete('index');
-  }
-
-  navigate(
-    { pathname: location.pathname, search: newParams.toString() },
-    { replace: true }
-  );
-}, [location.pathname, location.search, navigate]);
-
-   useEffect(() => {
+  useEffect(() => {
+    const urlView = new URLSearchParams(location.search).get('view') || 'mainEditorDashboard';
+    if (urlView !== currentSubView) {
+        // 如果 URL 中的视图与当前内部状态不一致，则更新内部状态
+        _setCurrentSubView(urlView); 
+    }
+  // 依赖 location.search，只在 URL 参数变化时执行
+  }, [location.search]); 
+ 
+  useEffect(() => {
   // Hardcode the list of available template files.
   // This avoids the need for a server-side call on a static site.
   const availableTemplates = [
@@ -687,12 +684,13 @@ const handleSelectTemplate = async (templateName: string) => {
         .map((_, i) => ({ id: `option-${Date.now()}-${i}`, text: `Option ${String.fromCharCode(65 + i)}` })),
     };
     setQuestions([...questions, newQuestion]);
-    
-    setCurrentSubView('questionForm', questions.length);
+    setSelectedQuestionIndex(questions.length);
+    setCurrentSubView('questionForm');
   };
 
-  const handleEditQuestion = (index: number) => { // 【修改点 5：修复 handleEditQuestion 的调用】
-    setCurrentSubView('questionForm', index);
+  const handleEditQuestion = (index: number) => {
+    setSelectedQuestionIndex(index);
+    setCurrentSubView('questionForm');
   };
 
   const handleDeleteQuestion = () => {
@@ -711,7 +709,7 @@ const handleSelectTemplate = async (templateName: string) => {
   }
 };
  const handleCancel = () => {
-    
+    setSelectedQuestionIndex(null);
     setCurrentSubView('mainEditorDashboard');// 返回漏斗编辑页
   };
 const handleImportQuestions = (importedQuestions: Question[]) => {
@@ -783,7 +781,7 @@ const handleImportQuestions = (importedQuestions: Question[]) => {
             />
         );
       case 'questionForm':
-        
+        const questionToEdit = selectedQuestionIndex !== null ? questions[selectedQuestionIndex] : undefined;
         return (
           <QuestionFormComponent
             question={questionToEdit}
@@ -797,27 +795,14 @@ const handleImportQuestions = (importedQuestions: Question[]) => {
               });
             }}
             // onSave 只负责在点击保存按钮后返回列表
-           onSave={() => {
+            onSave={() => {
+              setSelectedQuestionIndex(null);
               setCurrentSubView('quizEditorList');
             }}
-            onCancel={() => {
-          // ↓↓↓ 关键设置：返回应用首页 (Funnel List) ↓↓↓
-          // 使用 navigate('/') 完成跳转到首页的要求
-          const button = document.querySelector('.cancel-button');
-          if (button) {
-              button.classList.add('animate-out');
-              setTimeout(() => {
-                  // 跳转到根路径 /，即 Funnel List Page
-                  navigate('/'); 
-              }, 1000);
-          } else {
-              // 确保在没有动画元素时也能跳转
-              navigate('/');
-          }
-      }}
-             onDelete={handleDeleteQuestion}
-            />
-           );
+            onCancel={handleCancel}
+            onDelete={handleDeleteQuestion}
+          />
+        );
       case 'linkSettings':
         return (
           <LinkSettingsComponent
@@ -1299,7 +1284,15 @@ const handleSave = async () => {
   };
   
   // --- UNCHANGED: Cancel and Delete logic remains the same ---
-  
+  const handleCancel = () => {
+        const button = document.querySelector('.cancel-button');
+    if (button) {
+      button.classList.add('animate-out');
+      setTimeout(() => {
+        navigate('/');
+      }, 1000);
+    }
+  };
   // --- 恢复您设计的 Delete 按钮动画和跳转逻辑 ---
    const handleDelete = () => {
   setIsDeleting(true);
@@ -1331,15 +1324,15 @@ const handleSave = async () => {
         <label>Question Title:</label>
         <input
           type="text"
-          value={question?.title || ''} 
-    onChange={(e) => handleTitleChange(e.target.value)}
-    placeholder="e.g., What's your biggest health concern?"
+          value={question.title}
+          onChange={(e) => handleTitleChange(e.target.value)}
+          placeholder="e.g., What's your biggest health concern?"
         />
       </div>
       <div className="form-group">
         <label>Question Type:</label>
-        <select value={question?.type || 'single-choice'} onChange={() => {}} disabled>
-    <option>Single Choice</option>
+        <select value="single-choice" onChange={() => {}} disabled>
+          <option>Single Choice</option>
           <option>Multiple Choice (Coming Soon)</option>
           <option>Text Input (Coming Soon)</option>
         </select>
@@ -1349,7 +1342,7 @@ const handleSave = async () => {
         {/* Use the stable sortedAnswers array for rendering */}
         {stableAnswers.map((answer, index) => (
           <div key={answer.id} className="answer-input-group">
-    <input type="text" value={answer.text || ''}  onChange={(e) => handleAnswerTextChange(answer.id, e.target.value)} />
+    <input type="text" value={answer.text} onChange={(e) => handleAnswerTextChange(answer.id, e.target.value)} />
     <input type="url" value={affiliateLinks[index] || ''} onChange={(e) => handleLinkChange(index, e.target.value)} placeholder="Affiliate link (optional)" />
             <div style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -1368,7 +1361,7 @@ const handleSave = async () => {
         <button className="save-button" onClick={handleSave}>
           <span role="img" aria-label="save">💾</span> Save Question
         </button>
-        <button className="cancel-button" onClick={onCancel}>
+        <button className="cancel-button" onClick={handleCancel}>
           <span role="img" aria-label="cancel">←</span> Back to List
         </button>
         {questionIndex !== null && (
@@ -1512,7 +1505,7 @@ const ColorCustomizerComponent: React.FC<ColorCustomizerComponentProps> = ({
     <span role="img" aria-label="save">💾</span> Apply & Return to Editor
   </BackButton>
   
-  {/* 移除功能冗余的 Back to Editor 按钮 */}
+  
 </div>
     </div>
   );
