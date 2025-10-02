@@ -458,34 +458,36 @@ const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData }) => 
   const [textColor, setTextColor] = useState(defaultFunnelData.textColor);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const initialSubView = new URLSearchParams(location.search).get('view') || 'mainEditorDashboard';
-  const [currentSubView, _setCurrentSubView] = useState(urlView);
-  const [templateFiles, setTemplateFiles] = useState<string[]>([]);
+ const [templateFiles, setTemplateFiles] = useState<string[]>([]);
   const [debugLinkValue, setDebugLinkValue] = useState('Debug: N/A');
    const urlParams = new URLSearchParams(location.search);
-const urlIndex = urlParams.get('index');
+  const currentSubView = urlParams.get('view') || 'mainEditorDashboard';
+  const urlIndex = urlParams.get('index');
 // 如果 view 是 questionForm，则解析 index，否则设为 null
-const selectedQuestionIndex = (urlView === 'questionForm' && urlIndex !== null) 
-    ? parseInt(urlIndex) : null;
-const questionToEdit = selectedQuestionIndex !== null ? questions[selectedQuestionIndex] : undefined;
+const selectedQuestionIndex = (currentSubView === 'questionForm' && urlIndex !== null) ? parseInt(urlIndex) : null;
+  const questionToEdit = selectedQuestionIndex !== null ? questions[selectedQuestionIndex] : undefined;
+
+  // 3. 修复后的状态设置函数：仅操作 URL 参数
   const setCurrentSubView = useCallback((newView: string, index: number | null = null) => {
     const newParams = new URLSearchParams();
-      if (newView !== 'mainEditorDashboard') {
-          newParams.set('view', newView);
-      }
-      if (index !== null) {
-          newParams.set('index', String(index));
-      }
+    
+    // 确保只有非默认视图才设置 'view' 参数
+    if (newView !== 'mainEditorDashboard') {
+        newParams.set('view', newView);
+    }
+    
+    // 如果有索引，也设置 'index' 参数
+    if (index !== null) {
+        newParams.set('index', String(index));
+    }
     
     // 3. 使用 navigate 更新 URL，保持在 /edit/:funnelId 路径上，并将新 URL 替换历史记录中的当前条目
     navigate({
-          pathname: location.pathname,
-          search: newParams.toString()
-      }, { replace: true });
+        pathname: location.pathname,
+        search: newParams.toString()
+    }, { replace: true });
 
-      // 3. 立即更新内部状态，以确保即使 URL 更新缓慢，UI 也能响应
-      _setCurrentSubView(newView);
-  }, [location, navigate]);
+  }, [location.pathname, navigate]);
 
   useEffect(() => {
     const newView = new URLSearchParams(location.search).get('view') || 'mainEditorDashboard';
@@ -692,8 +694,7 @@ const handleSelectTemplate = async (templateName: string) => {
   };
 
   const handleEditQuestion = (index: number) => {
-    // 调用修复后的 setCurrentSubView，传入 view 名称和 index
-    setCurrentSubView('questionForm', index); 
+    setCurrentSubView('questionForm', index);
   };
 
   const handleDeleteQuestion = () => {
