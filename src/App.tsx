@@ -194,7 +194,7 @@ useEffect(() => {
         <Route path="/register" element={<LoginPage isRegister={true} />} />
         <Route path="/reset" element={<ResetPage />} />
         <Route path="/verify-email" element={<FinishEmailVerification />} />
-        <Route path="/play/:funnelId" element={<QuizPlayer />} />
+        <Route path="/play/:funnelId" element={<QuizPlayer db={db} />} />
 
         {/* --- 2. 私有路由 (处理身份验证和加载状态) --- */}
         
@@ -379,9 +379,8 @@ const FunnelDashboard: React.FC<FunnelDashboardProps> = ({ db, user, isAdmin, fu
   }
 
   // 使用 window.location.origin 构建基础 URL
-  const baseUrl = window.location.origin;
-  // 结合 homepage 路径（假设已设为 /funnel-editor-2025/）
-  const fullUrl = `${baseUrl}/funnel-editor-2025/#/play/${funnelId}`;
+  const basePath = "/funnel-editor-2025/"; 
+  const fullUrl = `${window.location.origin}${basePath}#/play/${funnelId}`;
 
   // 使用 clipboard API
   navigator.clipboard
