@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, ChangeEvent } from 'react';
 import { getAuth, onAuthStateChanged, User, signOut } from 'firebase/auth';
+import debounce from 'lodash.debounce'; 
 import QuizPlayer from './components/QuizPlayer.tsx';
 import ResetPage from './pages/reset.tsx';
 import LoginPage from "./pages/Login.tsx";
@@ -574,14 +575,25 @@ const selectedQuestionIndex = (currentSubView === 'questionForm' && urlIndex !==
   };
 }, [funnelId, db, navigate]);
 
-  const saveFunnelToFirestore = useCallback(() => {
+  const performSave = (currentData: FunnelData) => {
   if (!funnelId) return;
+  // 使用传入的最新数据对象进行保存
+  updateFunnelData(funnelId, currentData);
+  console.log('✅ Auto-Save triggered.');
+ 
+};
+const debouncedSave = useCallback( 
+  debounce(performSave, 300), 
+  [funnelId, updateFunnelData] 
+);
 
-  // ↓↓↓ 增强防御性检查：在保存前确保 questions 是一个数组 ↓↓↓
-  const questionsToSave = Array.isArray(questions) ? questions : [];
+// 3. 监听状态变化并调用防抖保存的 useEffect (替代原有的 unoptimized useEffect)
+useEffect(() => {
+  if (!isDataLoaded) return;
 
-  const newData: FunnelData = {
-    questions: questionsToSave, // 使用安全的数组
+  // 每次依赖项变化时，构造最新的数据对象
+  const latestData: FunnelData = {
+    questions: Array.isArray(questions) ? questions : [],
     finalRedirectLink,
     tracking,
     conversionGoal,
@@ -591,35 +603,27 @@ const selectedQuestionIndex = (currentSubView === 'questionForm' && urlIndex !==
     textColor,
   };
   
-  // 检查关键数据：如果问题列表为空且我们正在加载模板，则跳过此次自动保存
-  // 避免在数据加载过程中，Firestore 自动监听器将中间的空状态写回去
-  if (questionsToSave.length === 0 && isDataLoaded) {
-      console.log('Skipping auto-save: Question list is empty.');
-      return;
-  }
-  // ↑↑↑ 增强防御性检查 ↑↑↑
+  // 调用防抖动的保存函数，传入最新数据
+  debouncedSave(latestData);
 
-  updateFunnelData(funnelId, newData);
-}, [funnelId, questions, finalRedirectLink, tracking, conversionGoal, primaryColor, buttonColor, backgroundColor, textColor, updateFunnelData, isDataLoaded]); 
-
-  useEffect(() => {
-    if (!isDataLoaded) return;
-    const handler = setTimeout(() => {
-      saveFunnelToFirestore();
-    }, 500);
-    return () => clearTimeout(handler);
-  }, [
-    questions,
-    finalRedirectLink,
-    tracking,
-    conversionGoal,
-    primaryColor,
-    buttonColor,
-    backgroundColor,
-    textColor,
-    saveFunnelToFirestore,
-  ]);
-  // 在 FunnelEditor 组件内部，可以放在 saveFunnelToFirestore 函数的下面
+  // 在组件卸载或依赖项改变时，取消所有待处理的防抖动调用
+  return () => {
+    // 强制取消任何待执行的 debouncedSave
+    debouncedSave.cancel(); 
+  };
+}, [
+  questions,
+  finalRedirectLink,
+  tracking,
+  conversionGoal,
+  primaryColor,
+  buttonColor,
+  backgroundColor,
+  textColor,
+  isDataLoaded,
+  debouncedSave 
+]);
+  
    useEffect(() => {
     setDebugLinkValue(`<strong>DEBUG:</strong> <br /> ${finalRedirectLink || 'N/A'}`);
 }, [finalRedirectLink]);
