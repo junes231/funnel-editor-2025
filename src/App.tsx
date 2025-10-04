@@ -612,7 +612,8 @@ useEffect(() => {
     backgroundColor,
     textColor,
   };
-  
+   (window as any).__funnelData = latestData;
+
   // 调用防抖动的保存函数，传入最新数据
   debouncedSave(latestData);
 
