@@ -465,8 +465,6 @@ interface FunnelEditorProps {
   updateFunnelData: (funnelId: string, newData: FunnelData) => Promise<void>;
 }
 
-// 文件路径: src/App.tsx (替换完整的 FunnelEditor 组件)
-
 const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData }) => {
   const { funnelId } = useParams<{ funnelId: string }>();
   const navigate = useNavigate();
@@ -480,7 +478,7 @@ const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData }) => 
   const [buttonColor, setButtonColor] = useState(defaultFunnelData.buttonColor);
   const [backgroundColor, setBackgroundColor] = useState(defaultFunnelData.backgroundColor);
   const [textColor, setTextColor] = useState(defaultFunnelData.textColor);
-  const [isDataLoaded, setIsDataLoaded] = useState(false); // <--- 加载状态
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   
   const [templateFiles, setTemplateFiles] = useState<string[]>([]);
@@ -526,8 +524,7 @@ const selectedQuestionIndex = (currentSubView === 'questionForm' && urlIndex !==
   ];
   setTemplateFiles(availableTemplates);
 }, []);
-  
-useEffect(() => {
+  useEffect(() => {
   if (!funnelId) return;
   const funnelDocRef = doc(db, 'funnels', funnelId);
 
@@ -538,41 +535,38 @@ useEffect(() => {
       let compatibleQuestions = Array.isArray(funnel.data.questions) ? funnel.data.questions : [];
       compatibleQuestions = compatibleQuestions.map(question => {
         if (Array.isArray(question.answers)) {
-          // 确保答案总是对象形式，以便 QuizPlayer 和 QuestionFormComponent 正确读取 clickCount
           const answersObj: { [answerId: string]: Answer } = {};
           question.answers.forEach((answer: Answer) => {
-            // 如果旧数据没有 ID，为其生成一个
-            answersObj[answer.id || `answer-${Date.now()}-${Math.random()}`] = answer;
+            answersObj[answer.id] = answer;
           });
           return { ...question, answers: answersObj };
         }
-        return question; // 已经是对象格式
+        return question;
       });
 
+      // ✅ 移除 if (compatibleQuestions.length > 0) 检查，总是加载
+      // 这能防止初始空数据时阻塞
       setFunnelName(funnel.name);
       setQuestions(compatibleQuestions);
-      setFinalRedirectLink(funnel.data.finalRedirectLink || '');
+      const loadedLink = funnel.data.finalRedirectLink || '';
+      setFinalRedirectLink(loadedLink);
       setTracking(funnel.data.tracking || '');
       setConversionGoal(funnel.data.conversionGoal || 'Product Purchase');
       setPrimaryColor(funnel.data.primaryColor || defaultFunnelData.primaryColor);
       setButtonColor(funnel.data.buttonColor || defaultFunnelData.buttonColor);
       setBackgroundColor(funnel.data.backgroundColor || defaultFunnelData.backgroundColor);
       setTextColor(funnel.data.textColor || defaultFunnelData.textColor);
-      setIsDataLoaded(true); // <-- 数据加载成功时设置为 true
-      setDebugLinkValue(`<strong>DEBUG:</strong> <br /> ${funnel.data.finalRedirectLink || 'N/A'}`);
+      setIsDataLoaded(true);  // 总是设置为true，确保保存能触发
+      setDebugLinkValue(`<strong>DEBUG:</strong> <br /> ${loadedLink || 'N/A'}`);
       console.log('✅ Firestore data loaded and state updated. Questions length:', compatibleQuestions.length);
       
     } else {
       console.log('未找到该漏斗!');
-      // 如果文档不存在，也应该停止加载状态并跳转
-      setIsDataLoaded(true); 
       navigate('/');
     }
   }, (error) => {
     console.error("监听漏斗数据变化时出错:", error);
-    // ✅ 关键修复：加载失败也应该停止加载状态
-    setIsDataLoaded(true); 
-    console.error('Failed to load funnel data.', 'error');
+    console.error('Failed to load funnel data.', 'error');  // ✅ 添加通知
     navigate('/');
   });
 
@@ -595,8 +589,8 @@ const debouncedSave = useCallback(
 
 // 3. 监听状态变化并调用防抖保存的 useEffect (替代原有的 unoptimized useEffect)
 useEffect(() => {
-  if (!isDataLoaded) return; // <-- 确保加载完成后才开始自动保存
-    // ... 保持这个 useEffect 不变 ...
+  if (!isDataLoaded) return;
+
   // 每次依赖项变化时，构造最新的数据对象
   const latestData: FunnelData = {
     questions: Array.isArray(questions) ? questions : [],
@@ -637,7 +631,7 @@ const handleSelectTemplate = async (templateName: string) => {
   console.log(`[LOG] handleSelectTemplate called with: ${templateName}`);
   
   if (questions.length >= 6) {
-    //  ... 保持模板选择逻辑不变 ...
+    setNotification({ message: 'Cannot add from template, the 6-question limit has been reached.', type: 'error' });
     return;
   }
 
@@ -664,8 +658,7 @@ const handleSelectTemplate = async (templateName: string) => {
         q.answers.forEach((answer: any, answerIndex: number) => {
           // 确保答案文本存在且为字符串
           if (answer && typeof answer.text === 'string') {
-            // 使用更可靠的 ID 生成，以避免冲突
-            const answerId = `answer-${questionId}-${answerIndex}`; 
+            const answerId = `answer-${Date.now()}-${questionIndex}-${answerIndex}`;
             answersObj[answerId] = {
               id: answerId,
               text: answer.text.trim(),
@@ -687,17 +680,20 @@ const handleSelectTemplate = async (templateName: string) => {
 
     // 检查合并后是否超出限制
     if (questions.length + newQuestionsWithIds.length > 6) {
-      // ...
+      setNotification({ message: `Cannot add all questions from template, it would exceed the 6-question limit.`, type: 'error' });
       return;
     }
 
     setQuestions(prevQuestions => [...prevQuestions, ...newQuestionsWithIds]);
-    // ...
+    setNotification({ message: `Template "${templateName}" loaded successfully!`, type: 'success' });
+
   } catch (error) {
-    // ...
+    console.error('Error loading template:', error);
+    // 强制类型转换以访问 message 属性
+    const errorMessage = (error as Error).message || 'Failed to load the template.';
+    setNotification({ message: errorMessage, type: 'error' });
   }
 };
-
   const handleAddQuestion = () => {
     if (questions.length >= 6) {
     //  alert('You can only have up to 6 questions for this quiz.');
@@ -707,14 +703,9 @@ const handleSelectTemplate = async (templateName: string) => {
       id: Date.now().toString(),
       title: `New Question ${questions.length + 1}`,
       type: 'single-choice',
-      // 确保答案初始化为对象格式，包含 ID
       answers: Array(4)
         .fill(null)
-        .reduce((acc, _, i) => {
-          const answerId = `option-${Date.now()}-${i}`;
-          acc[answerId] = { id: answerId, text: `Option ${String.fromCharCode(65 + i)}`, clickCount: 0 };
-          return acc;
-        }, {} as { [answerId: string]: Answer }), // 初始化为对象字面量
+        .map((_, i) => ({ id: `option-${Date.now()}-${i}`, text: `Option ${String.fromCharCode(65 + i)}` })),
     };
     setQuestions([...questions, newQuestion]);
     
@@ -730,33 +721,43 @@ const handleSelectTemplate = async (templateName: string) => {
     setIsDeleting(true); // 开始动画
     const updatedQuestions = questions.filter((_, i) => i !== selectedQuestionIndex);
     setQuestions(updatedQuestions);
-    // 不再设置 setSelectedQuestionIndex(null);
+    setSelectedQuestionIndex(null);
     setCurrentSubView('quizEditorList');
-    // ...
+    setNotification({ message: 'Question deleted.', type: 'success' });
+
     setTimeout(() => {
       setIsDeleting(false); // 3秒后恢复
+      // 这里可做跳转或其它操作
     }, 1000);
   }
 };
-
+ const handleCancel = () => {
+    
+    setCurrentSubView('mainEditorDashboard');// 返回漏斗编辑页
+  };
 const handleImportQuestions = (importedQuestions: Question[]) => {
   try {
-    // ... 导入逻辑保持不变
     if (questions.length + importedQuestions.length > 6) {
-      // ...
+      setNotification({
+        show: true,
+        message: `Cannot import. This funnel already has ${questions.length} questions. Importing ${importedQuestions.length} more would exceed the 6-question limit.`,
+        type: 'error',
+      });
       return;
     }
 
     const validImportedQuestions = importedQuestions.filter(
       (q) => {
-        // ... 导入验证逻辑保持不变
+        // 检查 title 是否有效
         const hasValidTitle = q.title && typeof q.title === 'string' && q.title.trim() !== '';
         
+        // 检查 answers 是否为非空对象
         const hasValidAnswersObject = 
             typeof q.answers === 'object' && 
             q.answers !== null && 
             Object.keys(q.answers).length > 0;
 
+        // 如果答案是对象，则检查每个答案的文本是否有效
         const allAnswersHaveText = hasValidAnswersObject 
             ? Object.values(q.answers).every((a) => a.text && typeof a.text === 'string' && a.text.trim() !== '')
             : false;
@@ -766,18 +767,28 @@ const handleImportQuestions = (importedQuestions: Question[]) => {
     );
 
     if (validImportedQuestions.length === 0) {
-      // ...
+      setNotification({
+        show: true,
+        message: 'No valid questions found in the imported file. Please check the file format (title and answer text are required)',
+        type: 'error',
+      });
       return;
     }
 
     setQuestions((prevQuestions) => [...prevQuestions, ...validImportedQuestions]);
-    // ...
+    setNotification({
+      show: true,
+      message: `Successfully imported ${validImportedQuestions.length} questions!`,
+      type: 'success',
+    });
   } catch (err) {
-    // ...
+    setNotification({
+      show: true,
+      message: 'Error reading or parsing JSON file. Please check file format.',
+      type: 'error',
+    });　
   }
 };
-
-
   const renderEditorContent = () => {
     switch (currentSubView) {
       case 'quizEditorList':
@@ -793,12 +804,6 @@ const handleImportQuestions = (importedQuestions: Question[]) => {
             />
         );
       case 'questionForm':
-        // 关键检查：确保 questionToEdit 存在，否则返回列表
-        if (!questionToEdit && selectedQuestionIndex !== null) {
-            console.error('Question to edit not found, redirecting to list.');
-            setCurrentSubView('quizEditorList');
-            return null; // 避免渲染错误
-        }
         
         return (
           <QuestionFormComponent
@@ -844,7 +849,6 @@ const handleImportQuestions = (importedQuestions: Question[]) => {
             conversionGoal={conversionGoal}
             setConversionGoal={setConversionGoal}
             onBack={() => setCurrentSubView('mainEditorDashboard')}
-            showNotification={() => {}} // 占位符，不使用
           />
         );
       case 'colorCustomizer':
@@ -859,7 +863,6 @@ const handleImportQuestions = (importedQuestions: Question[]) => {
             textColor={textColor}
             setTextColor={setTextColor}
             onBack={() => setCurrentSubView('mainEditorDashboard')}
-            showNotification={() => {}} // 占位符，不使用
           />
         );
         // ...
@@ -941,25 +944,8 @@ case 'analytics':
             }
            };
 
-           // ↓↓↓ 关键修复：只有在数据加载完毕后，才渲染编辑器内容 ↓↓↓
-           if (!funnelId) {
-                return (
-                    <p className="loading-message">
-                        <span className="loading-spinner"></span> Missing Funnel ID...
-                    </p>
-                );
-            }
-           
-           if (!isDataLoaded) {
-               return (
-                  <p className="loading-message">
-                      <span className="loading-spinner"></span> Loading Funnel Data...
-                  </p>
-               );
-           }
-           
            return <div className="App">{renderEditorContent()}</div>;
-         };
+           };
 
 
 interface QuizEditorComponentProps {
@@ -1205,11 +1191,12 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
   onSave: onSaveAndClose,
   onCancel,
   onDelete,
-  onUpdate, // <-- 这个函数现在会被立即调用
+  onUpdate, 
 }) => {
   const navigate = useNavigate();
   
-  // 1. 仅将 affiliateLinks 保持为本地状态，因为它与核心的 questions 文本内容相互独立。
+  // 1. 引入本地状态来管理所有表单输入，以确保输入流畅
+  const [localQuestion, setLocalQuestion] = useState<Question | undefined>(question);
   const [affiliateLinks, setAffiliateLinks] = useState<string[]>(
     question?.data?.affiliateLinks || []
   );
@@ -1217,51 +1204,65 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   
-  // 2. 确保在切换编辑对象时，本地状态能与传入的 prop 同步
+  // 2. 当父组件的 question 属性改变时，同步到本地状态 (即切换问题时)
   useEffect(() => {
+    setLocalQuestion(question);
     setAffiliateLinks(question?.data?.affiliateLinks || []);
   }, [question]);
 
-
-  // 3. 输入事件处理函数：**立即**更新父组件状态，以确保输入框的流畅度。
-  const handleTitleChange = (newTitle: string) => {
-    if (question) {
-      // 创建新的 Question 对象，并立即传给父组件
-      const updatedQuestion: Question = { ...question, title: newTitle };
-      onUpdate(updatedQuestion); 
-    }
-  };
-
-  // 4. 答案文本输入事件处理函数：**立即**更新父组件状态。
-  const handleAnswerTextChange = (answerId: string, newText: string) => {
-    if (question) {
-      const updatedAnswers = {
-        ...question.answers,
-        [answerId]: { ...question.answers[answerId], text: newText },
+  // 3. 定义一个**防抖函数**来调用父组件的 onUpdate
+  // 这样只有在用户停止输入 300 毫秒后，才会触发 FunnelEditor 的状态更新和随后的 Firestore 自动保存
+  const debouncedOnUpdate = React.useCallback(
+    debounce((updatedQuestion: Question, updatedLinks: string[]) => {
+      // 合并本地的 affiliateLinks 到 question.data 结构中
+      const finalUpdate = { 
+          ...updatedQuestion, 
+          data: { 
+              ...updatedQuestion.data, 
+              affiliateLinks: updatedLinks 
+          } 
       };
-      const updatedQuestion: Question = { ...question, answers: updatedAnswers };
-      onUpdate(updatedQuestion);
+      onUpdate(finalUpdate);
+    }, 300), 
+    [onUpdate]
+  );
+  
+  // 4. 输入事件处理函数：更新本地状态，并触发防抖的父组件更新
+  const handleTitleChange = (newTitle: string) => {
+    if (localQuestion) {
+      const updated = { ...localQuestion, title: newTitle };
+      setLocalQuestion(updated); // 立即更新本地状态 (UI流畅)
+      debouncedOnUpdate(updated, affiliateLinks); // 延迟通知父组件
     }
   };
 
-  // 5. 联盟链接处理函数：更新本地状态，并触发一次父组件更新（FunnelEditor 的 debouncedSave 会处理持久化）。
-  const handleLinkChange = (index: number, value: string) => {
-      if (!question) return;
+  const handleAnswerTextChange = (answerId: string, newText: string) => {
+    if (localQuestion) {
+      const updatedAnswers = {
+        ...localQuestion.answers,
+        [answerId]: { ...localQuestion.answers[answerId], text: newText },
+      };
+      const updated = { ...localQuestion, answers: updatedAnswers };
+      setLocalQuestion(updated); // 立即更新本地状态 (UI流畅)
+      debouncedOnUpdate(updated, affiliateLinks); // 延迟通知父组件
+    }
+  };
 
-      // 1. 更新本地 UI 状态 (affiliateLinks)
-      const newLinks = [...affiliateLinks];
-      newLinks[index] = value;
-      setAffiliateLinks(newLinks);
-      
-      // 2. 立即更新父组件，将新的 links 数据嵌入到 data 字段
-       onUpdate({
-            ...question,
-            data: { ...question.data, affiliateLinks: newLinks } 
-       });
+  const handleLinkChange = (index: number, value: string) => {
+    if (!localQuestion) return;
+
+    // 仅更新本地的 affiliateLinks 数组状态
+    const newLinks = [...affiliateLinks];
+    newLinks[index] = value;
+    setAffiliateLinks(newLinks);
+    
+    // 延迟通知父组件，并将当前的 localQuestion 状态传递过去
+    debouncedOnUpdate(localQuestion, newLinks);
   };
   
+  // 5. handleSave 现在使用本地状态，并直接（非防抖）调用 onUpdate
   const handleSave = async () => {
-    if (!question) return;
+    if (!localQuestion) return;
 
     setIsSaving(true);
     try {
@@ -1269,11 +1270,12 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
       const newAnswersMap: { [answerId: string]: Answer } = {};
       let hasValidAnswer = false;
       
-      // 使用当前最新的 question prop (它包含了最新的 title/text)
-      Object.values(question.answers).forEach((answer) => {
+      // 1. 迭代 localQuestion 的答案
+      Object.values(localQuestion.answers).forEach((answer) => {
           const currentText = answer.text.trim();
           
           if (currentText !== "") {
+              // 2. 关键修复：将完整的 Answer 对象（包括 clickCount）传播到新的 Map 中
               newAnswersMap[answer.id] = {
                   ...answer, 
                   text: currentText, 
@@ -1282,7 +1284,8 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
           }
       });
       
-      if (!question.title.trim()) {
+      // 检查标题和答案数量...
+      if (!localQuestion.title.trim()) {
         console.error("Question title cannot be empty!");
         setIsSaving(false);
         return;
@@ -1294,14 +1297,14 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
         return;
       }
 
-      // 使用本地最新的 affiliateLinks
+      // Preserve affiliate links logic
       const cleanAffiliateLinks = Array.from({ length: 4 }).map((_, index) => affiliateLinks[index] || '');
       
       await new Promise((resolve) => setTimeout(resolve, 1000));
       
-      // 最终同步更新
+      // The final object is passed up to the parent component (非防抖，强制立即更新)
       onUpdate({
-        ...question,
+        ...localQuestion,
         answers: newAnswersMap, 
         data: { affiliateLinks: cleanAffiliateLinks },
       });
@@ -1314,28 +1317,34 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
       setIsSaving(false);
     }
   };
-  
+
+  // 6. 清理函数：在组件卸载时取消任何待执行的 debouncedOnUpdate
+  React.useEffect(() => {
+    return () => {
+      debouncedOnUpdate.cancel();
+    };
+  }, [debouncedOnUpdate]);
+
   const handleDelete = () => {
-    setIsDeleting(true);
-    const button = document.querySelector('.delete-button');
-    if (button) {
-        button.classList.add('animate-out');
-    }
-    setTimeout(() => {
-        onDelete();
-    }, 1000);
-  };
-  
-  // Defensive check: If for some reason no question is provided, render nothing.
-  if (!question) {
+  setIsDeleting(true);
+  const button = document.querySelector('.delete-button');
+  if (button) {
+    button.classList.add('animate-out');
+  }
+  setTimeout(() => {
+    onDelete();
+  }, 1000);
+};
+
+  // 防御性检查: 如果没有本地 question，则显示加载中
+  if (!localQuestion) {
     return <div>Loading question...</div>;
   }
 
-  // 渲染时直接使用传入的 prop
+  // 7. JSX 渲染现在使用 localQuestion
   const stableAnswers = React.useMemo(() => {
-      // 保证渲染顺序稳定
-      return Object.values(question.answers).sort((a, b) => a.id.localeCompare(b.id));
-    }, [question]); 
+      return Object.values(localQuestion.answers).sort((a, b) => a.id.localeCompare(b.id));
+    }, [localQuestion]); // 仅在 localQuestion 改变时重新计算
 
   return (
     <div className="question-form-container">
@@ -1351,15 +1360,14 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
         <label>Question Title:</label>
         <input
           type="text"
-          // 直接使用 question prop 的值
-          value={question.title || ''} 
+          value={localQuestion.title || ''} 
           onChange={(e) => handleTitleChange(e.target.value)}
           placeholder="e.g., What's your biggest health concern?"
         />
       </div>
       <div className="form-group">
         <label>Question Type:</label>
-        <select value={question.type || 'single-choice'} onChange={() => {}} disabled>
+        <select value={localQuestion.type || 'single-choice'} onChange={() => {}} disabled>
           <option>Single Choice</option>
           <option>Multiple Choice (Coming Soon)</option>
           <option>Text Input (Coming Soon)</option>
@@ -1371,13 +1379,11 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
           <div key={answer.id} className="answer-input-group">
             <input 
               type="text" 
-              // 直接使用 answer.text 的值
               value={answer.text || ''}  
               onChange={(e) => handleAnswerTextChange(answer.id, e.target.value)} 
             />
             <input 
               type="url" 
-              // 使用本地 affiliateLinks 状态
               value={affiliateLinks[index] || ''} 
               onChange={(e) => handleLinkChange(index, e.target.value)} 
               placeholder="Affiliate link (optional)" 
