@@ -808,12 +808,8 @@ const handleImportQuestions = (importedQuestions: Question[]) => {
   const renderEditorContent = () => {
      switch (currentSubView) {
       // ... (quizEditorList, linkSettings, colorCustomizer, analytics 保持不变)
-      case 'questionForm':
-        // 【中文注释：防止在数据加载失败或 question 不存在时渲染表单】
-        if (!questionToEdit && selectedQuestionIndex !== null) {
-            console.error('Question to edit not found, redirecting to list.');
-            setCurrentSubView('quizEditorList');
-            return null; // 避免渲染错误
+      case 'quizEditorList':
+        
         }
         return (
           <QuizEditorComponent
@@ -827,7 +823,10 @@ const handleImportQuestions = (importedQuestions: Question[]) => {
             />
         );
       case 'questionForm':
-        
+        if (!questionToEdit && selectedQuestionIndex !== null) {
+            console.error('Question to edit not found, redirecting to list.');
+            setCurrentSubView('quizEditorList');
+            return null;
         return (
           <QuestionFormComponent
             question={questionToEdit}
@@ -845,9 +844,7 @@ const handleImportQuestions = (importedQuestions: Question[]) => {
               setCurrentSubView('quizEditorList');
             }}
             onCancel={() => {
-          // ↓↓↓ 关键设置：返回应用首页 (Funnel List) ↓↓↓
-          // 使用 navigate('/') 完成跳转到首页的要求
-          const button = document.querySelector('.cancel-button');
+           const button = document.querySelector('.cancel-button');
           if (button) {
               button.classList.add('animate-out');
               setTimeout(() => {
