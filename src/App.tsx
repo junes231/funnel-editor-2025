@@ -672,7 +672,7 @@ const handleSelectTemplate = async (templateName: string) => {
             answersObj[answerId] = {
               id: answerId,
               text: answer.text.trim(),
-              clickCount: 0 // 初始化点击次数
+              clickCount: 0 
             };
           }
         });
@@ -807,11 +807,8 @@ const handleImportQuestions = (importedQuestions: Question[]) => {
 };
   const renderEditorContent = () => {
      switch (currentSubView) {
-      // ... (quizEditorList, linkSettings, colorCustomizer, analytics 保持不变)
-      case 'quizEditorList':
-        
-        }
-        return (
+       case 'quizEditorList':
+       return (
           <QuizEditorComponent
             questions={questions}
             onAddQuestion={handleAddQuestion}
@@ -827,7 +824,8 @@ const handleImportQuestions = (importedQuestions: Question[]) => {
             console.error('Question to edit not found, redirecting to list.');
             setCurrentSubView('quizEditorList');
             return null;
-        return (
+             }
+          return (
           <QuestionFormComponent
             question={questionToEdit}
             questionIndex={selectedQuestionIndex}
