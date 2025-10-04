@@ -486,10 +486,6 @@ logToPanel('info',['Ultimate Debugger Ready.']);
         console.warn('[UI-Monitor] Debug 按钮丢失，调试器可能被卸载');
       }
 
-      const backButton = document.querySelector('button[data-role="back"]');
-      if (!backButton) {
-        console.warn('[UI-Monitor] 返回按钮未找到');
-      }
     }, 5000);
   }
 
