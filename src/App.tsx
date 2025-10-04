@@ -83,10 +83,19 @@ interface DebouncedInputProps {
   onChange: (value: string) => void;
   placeholder?: string;
   type?: 'text' | 'url';
+  className?: string; 
+  style?: React.CSSProperties;
 }
 
 // 专用于解决输入滞后问题的隔离组件
-const DebouncedInput: React.FC<DebouncedInputProps> = ({ value, onChange, placeholder, type = 'text' }) => {
+const DebouncedInput: React.FC<DebouncedInputProps> = ({ 
+  value, 
+  onChange, 
+  placeholder, 
+  type = 'text',
+  className,
+  style
+}) => {
   // 1. 使用本地状态 (localValue) 来即时控制输入框的显示
   const [localValue, setLocalValue] = useState(value);
 
@@ -109,7 +118,7 @@ const DebouncedInput: React.FC<DebouncedInputProps> = ({ value, onChange, placeh
     debouncedChange(nextValue);
   };
   
-  // 4. 确保组件初次加载或外部 value 变化时，本地状态保持同步
+  // 4. 确保组件初次加载或外部 value 变化时（例如：用户切换编辑的问题），本地状态保持同步
   useEffect(() => {
     setLocalValue(value);
   }, [value]);
@@ -126,6 +135,8 @@ const DebouncedInput: React.FC<DebouncedInputProps> = ({ value, onChange, placeh
       value={localValue} 
       onChange={handleChange} 
       placeholder={placeholder}
+      className={className}
+      style={style}
     />
   );
 };
@@ -1401,13 +1412,13 @@ const handleSave = async () => {
           ? `Editing Question ${questionIndex + 1} of 6`
           : 'Adding New Question'}
       </p>
+        {/* ... */}
       <div className="form-group">
         <label>Question Title:</label>
-        <input
-          type="text"
+        <DebouncedInput // ← 使用 DebouncedInput
           value={question?.title || ''} 
-    onChange={(e) => handleTitleChange(e.target.value)}
-    placeholder="e.g., What's your biggest health concern?"
+          onChange={handleTitleChange} // DebouncedInput 会延迟调用 handleTitleChange
+          placeholder="e.g., What's your biggest health concern?"
         />
       </div>
       <div className="form-group">
@@ -1423,8 +1434,8 @@ const handleSave = async () => {
         {/* Use the stable sortedAnswers array for rendering */}
         {stableAnswers.map((answer, index) => (
           <div key={answer.id} className="answer-input-group">
-    <input type="text" value={answer.text || ''}  onChange={(e) => handleAnswerTextChange(answer.id, e.target.value)} />
-    <input type="url" value={affiliateLinks[index] || ''} onChange={(e) => handleLinkChange(index, e.target.value)} placeholder="Affiliate link (optional)" />
+    <DebouncedInput value={answer.text || ''}  onChange={(newText) => handleAnswerTextChange(answer.id, newText)} />
+    <DebouncedInput type="url" value={affiliateLinks[index] || ''} onChange={(newValue) => handleLinkChange(index, newValue)} placeholder="Affiliate link (optional)" />
             <div style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               padding: '8px 12px', backgroundColor: '#f0f0f0', borderRadius: '6px',
@@ -1476,7 +1487,7 @@ const LinkSettingsComponent: React.FC<LinkSettingsComponentProps> = ({
   conversionGoal,
   setConversionGoal,
   onBack,
-  
+  showNotification
 }) => {
    return (
     <div className="link-settings-container">
