@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, ChangeEvent } from 'react';
 import { getAuth, onAuthStateChanged, User, signOut } from 'firebase/auth';
-import debounce from 'lodash.debounce'; 
 import QuizPlayer from './components/QuizPlayer.tsx';
 import ResetPage from './pages/reset.tsx';
 import LoginPage from "./pages/Login.tsx";
@@ -24,7 +23,7 @@ import {
   where,
   getDoc
 } from 'firebase/firestore';
-
+import debounce from 'lodash.debounce'; 
 import Login from './components/Login.tsx';
 import './App.css';
 
