@@ -1490,7 +1490,7 @@ const LinkSettingsComponent: React.FC<LinkSettingsComponentProps> = ({
         <label>Optional: Tracking Parameters:</label>
         <input
           type="text"
-          value={localTracking｝ // 绑定到本地状态
+          value={localTracking｝ 
           onChange={handleTrackingChange}
           placeholder="utm_source=funnel&utm_campaign=..."
         />
