@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, ChangeEvent } from 'react';
 import { getAuth, onAuthStateChanged, User, signOut } from 'firebase/auth';
+import debounce from 'lodash.debounce'; 
 import QuizPlayer from './components/QuizPlayer.tsx';
 import ResetPage from './pages/reset.tsx';
 import LoginPage from "./pages/Login.tsx";
@@ -23,7 +24,7 @@ import {
   where,
   getDoc
 } from 'firebase/firestore';
-import debounce from 'lodash.debounce'; 
+
 import Login from './components/Login.tsx';
 import './App.css';
 
@@ -74,70 +75,6 @@ const defaultFunnelData: FunnelData = {
   buttonColor: '#28a745',
   backgroundColor: '#f8f9fa',
   textColor: '#333333',
-};
-// 文件: src/App.tsx (添加到文件顶部)
-
-interface DebouncedInputProps {
-  value: string;
-  onChange: (value: string) => void;
-  placeholder?: string;
-  type?: 'text' | 'url';
-  className?: string; 
-  style?: React.CSSProperties;
-}
-
-// 专用于解决输入滞后问题的隔离组件
-const DebouncedInput: React.FC<DebouncedInputProps> = ({ 
-  value, 
-  onChange, 
-  placeholder, 
-  type = 'text',
-  className,
-  style
-}) => {
-  // 1. 使用本地状态 (localValue) 来即时控制输入框的显示
-  const [localValue, setLocalValue] = useState(value);
-
-  // 2. 使用 useRef 来存储 Debounce 函数，确保它不会在每次渲染时重新创建
-  const debouncedChange = useRef(
-    debounce((nextValue: string) => {
-      // 只有 Debounce 计时结束，才调用外部的 onChange (向上同步)
-      onChange(nextValue);
-    }, 300)
-  ).current;
-
-  // 3. 实时更新本地状态，并触发 Debounce
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const nextValue = e.target.value;
-    
-    // a. 立即更新本地状态 (确保输入框流畅)
-    setLocalValue(nextValue);
-    
-    // b. 触发 Debounce，延迟向上传播
-    debouncedChange(nextValue);
-  };
-  
-  // 4. 确保组件初次加载或外部 value 变化时（例如：用户切换编辑的问题），本地状态保持同步
-  useEffect(() => {
-    setLocalValue(value);
-  }, [value]);
-  
-  // 5. 组件卸载时，取消任何待执行的 Debounce 调用
-  useEffect(() => {
-    return () => debouncedChange.cancel();
-  }, [debouncedChange]);
-
-
-  return (
-    <input
-      type={type}
-      value={localValue} 
-      onChange={handleChange} 
-      placeholder={placeholder}
-      className={className}
-      style={style}
-    />
-  );
 };
 // REPLACE your old App function with this new one
 export default function App({ db }: AppProps) {
@@ -1411,13 +1348,13 @@ const handleSave = async () => {
           ? `Editing Question ${questionIndex + 1} of 6`
           : 'Adding New Question'}
       </p>
-        {/* ... */}
       <div className="form-group">
         <label>Question Title:</label>
-        <DebouncedInput // ← 使用 DebouncedInput
+        <input
+          type="text"
           value={question?.title || ''} 
-          onChange={handleTitleChange} // DebouncedInput 会延迟调用 handleTitleChange
-          placeholder="e.g., What's your biggest health concern?"
+    onChange={(e) => handleTitleChange(e.target.value)}
+    placeholder="e.g., What's your biggest health concern?"
         />
       </div>
       <div className="form-group">
@@ -1433,8 +1370,8 @@ const handleSave = async () => {
         {/* Use the stable sortedAnswers array for rendering */}
         {stableAnswers.map((answer, index) => (
           <div key={answer.id} className="answer-input-group">
-    <DebouncedInput value={answer.text || ''}  onChange={(newText) => handleAnswerTextChange(answer.id, newText)} />
-    <DebouncedInput type="url" value={affiliateLinks[index] || ''} onChange={(newValue) => handleLinkChange(index, newValue)} placeholder="Affiliate link (optional)" />
+    <input type="text" value={answer.text || ''}  onChange={(e) => handleAnswerTextChange(answer.id, e.target.value)} />
+    <input type="url" value={affiliateLinks[index] || ''} onChange={(e) => handleLinkChange(index, e.target.value)} placeholder="Affiliate link (optional)" />
             <div style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               padding: '8px 12px', backgroundColor: '#f0f0f0', borderRadius: '6px',
@@ -1488,7 +1425,50 @@ const LinkSettingsComponent: React.FC<LinkSettingsComponentProps> = ({
   onBack,
   showNotification
 }) => {
-   return (
+ 
+    const [localLink, setLocalLink] = useState(finalRedirectLink);
+    const [localTracking, setLocalTracking] = useState(tracking);
+
+  
+  // 核心修复 2: 当父组件的 finalRedirectLink 变化时（例如：初次加载或从其他视图返回），同步到本地状态
+  useEffect(() => {
+    setLocalLink(finalRedirectLink);
+    setLocalTracking(tracking);
+  }, [finalRedirectLink, tracking]);
+  
+  // 核心修复 3: 使用 useCallback 和 debounce 创建一个延迟通知父组件的函数
+  const debouncedSetState = useCallback(
+    debounce((linkValue: string, trackingValue: string) => {
+      setFinalRedirectLink(linkValue);
+      setTracking(trackingValue);
+    }, 300),
+    [setFinalRedirectLink, setTracking] // 依赖项只包括外部更新函数
+  );
+
+  // 核心修复 4: 销毁时清除 debouncer
+  useEffect(() => {
+    return () => {
+      debouncedSetState.cancel();
+    };
+  }, [debouncedSetState]);
+
+   const handleLinkChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    // 立即更新本地状态 (保证输入框流畅)
+    setLocalLink(value);
+    // 延迟通知父组件
+    debouncedSetState(value, localTracking);
+  };
+  
+  // 处理追踪参数输入变化
+  const handleTrackingChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    // 立即更新本地状态
+    setLocalTracking(value);
+    // 延迟通知父组件
+    debouncedSetState(localLink, value);
+  };
+  return (
     <div className="link-settings-container">
       <h2>
         <span role="img" aria-label="link">
@@ -1497,31 +1477,26 @@ const LinkSettingsComponent: React.FC<LinkSettingsComponentProps> = ({
         Final Redirect Link Settings
       </h2>
       <p>This is the custom link where users will be redirected after completing the quiz.</p>
-      
-      {/* ↓↓↓ 修复 1: 使用 DebouncedInput 替换 Custom Final Redirect Link 的 input ↓↓↓ */}
       <div className="form-group">
         <label>Custom Final Redirect Link:</label>
-        <DebouncedInput
-          value={finalRedirectLink}
-          onChange={setFinalRedirectLink} 
+        <input
+          type="text"
+          value={localLink}
+          onChange={handleLinkChange}
           placeholder="https://your-custom-product-page.com"
-          type="url"
         />
       </div>
-      
-      {/* ↓↓↓ 修复 2: 使用 DebouncedInput 替换 Tracking Parameters 的 input ↓↓↓ */}
       <div className="form-group">
         <label>Optional: Tracking Parameters:</label>
-        <DebouncedInput
-          value={tracking}
-          onChange={setTracking} 
+        <input
+          type="text"
+          value={localTracking} 
+          onChange={handleTrackingChange}
           placeholder="utm_source=funnel&utm_campaign=..."
         />
       </div>
-      
       <div className="form-group">
         <label>Conversion Goal:</label>
-        {/* Select 框操作不频繁，不需要 Debounce，保持原样 */}
         <select value={conversionGoal} onChange={(e) => setConversionGoal(e.target.value)}>
           <option>Product Purchase</option>
           <option>Email Subscription</option>
@@ -1529,13 +1504,15 @@ const LinkSettingsComponent: React.FC<LinkSettingsComponentProps> = ({
         </select>
       </div>
       <div className="form-actions">
-        <BackButton 
-            onClick={onBack} 
-            className="save-button"
-        >
-          <span role="img" aria-label="save">💾</span> Apply & Return to Editor
-        </BackButton>
-      </div>
+  {/* 新增的按钮：使用 BackButton 来获得动画，使用 className 继承蓝色样式 */}
+  <BackButton 
+      onClick={onBack} 
+      className="save-button" // 继承蓝色样式
+  >
+    <span role="img" aria-label="save">💾</span> Apply & Return to Editor
+  </BackButton>
+  
+  </div>
     </div>
   );
 };
