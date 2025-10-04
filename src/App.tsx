@@ -961,21 +961,7 @@ case 'analytics':
            );
             }
            };
-            if (!funnelId) {
-        return (
-            <p className="loading-message">
-                <span className="loading-spinner"></span> Missing Funnel ID...
-            </p>
-        );
-    }
-   
-   if (!isDataLoaded) {
-       return (
-          <p className="loading-message">
-              <span className="loading-spinner"></span> Loading Funnel Data...
-          </p>
-       );
-   }
+
            return <div className="App">{renderEditorContent()}</div>;
            };
 
