@@ -32,7 +32,7 @@ const EditorPage: React.FC = () => {
     switch (type) {
       case 'quiz':
         return {
-          question: "What's your biggest challenge?",
+          title: "What's your biggest challenge?",
           answers: ['Option A', 'Option B', 'Option C', 'Option D'],
           buttonColor: '#007bff',
           backgroundColor: '#ffffff',
