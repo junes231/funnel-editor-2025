@@ -79,8 +79,8 @@ const PropertyPanel: React.FC<PropertyPanelProps> = ({
               <div className="form-group">
                 <label>Question:</label>
                 <textarea
-                  value={selectedComponent.data.question}
-                  onChange={(e) => updateData('question', e.target.value)}
+                  value={selectedComponent.data.title}
+                  onChange={(e) => updateData('title', e.target.value)}
                   placeholder="Enter your question"
                 />
               </div>
