@@ -7,15 +7,23 @@ interface Answer {
   text: string;
 }
 
-interface Question {
+interface FunnelStep {
   id: string;
-  text: string;
-  answers: { [key: string]: Answer };
+  type: 'quiz' | 'form'; 
+  // 问答属性
+  title?: string; 
+  answers?: { [key: string]: Answer };
   data?: { affiliateLinks?: string[] };
+  // 表单属性
+  formTitle?: string;
+  formFields?: { type: 'text' | 'email'; label: string; placeholder: string }[];
+  webhookUrl?: string;
+  redirectAfterSubmit?: string;
+  submitButtonText?: string;
 }
 
 interface FunnelData {
-  questions: Question[];
+  questions: FunnelStep[];
   finalRedirectLink?: string;
   primaryColor?: string;
   buttonColor?: string;
@@ -86,7 +94,11 @@ const defaultFunnelData: FunnelData = { questions: [] };
     getFunnelForPlay();
   }, [funnelId, db]);
 
-  // [中文注释] 关键升级：这是新的 handleAnswerClick 函数
+    const handleFinalRedirect = (redirectUrl: string) => {
+    // 使用 window.location.href 确保跳转到外部链接
+    window.location.href = redirectUrl;
+  };
+    // [中文注释] 关键升级：这是新的 handleAnswerClick 函数
   
 const handleAnswerClick = async (answerIndex: number, answerId: string) => {
   if (isAnimating || !funnelData) return;
@@ -163,7 +175,16 @@ const handleAnswerClick = async (answerIndex: number, answerId: string) => {
       </div>
     );
   }
+    const currentStep = funnelData.questions[currentQuestionIndex];
 
+  // 2. 增加一个防御性检查：如果 currentStep 因为某种原因不存在，就显示加载状态
+  if (!currentStep) {
+    return (
+      <div className="quiz-player-container">
+        <p>Loading next step...</p>
+      </div>
+    );
+  }
    const currentQuestion = funnelData.questions[currentQuestionIndex];
 
   // 2. 增加一个防御性检查：如果 currentQuestion 因为某种原因不存在，就显示加载状态
@@ -197,29 +218,154 @@ const handleAnswerClick = async (answerIndex: number, answerId: string) => {
          ...quizPlayerContainerStyle 
        } as React.CSSProperties}
     >
-      <h3 style={{ color: 'var(--text-color)' }}>{currentQuestion?.title || 'Loading question...'}</h3>
-      <div className="quiz-answers-container">
- {sortedAnswers.map((answer, index) => {
-  const match = answer.text.match(/^([A-Z]\.)\s*(.*)$/);
-  const prefix = match ? match[1] : "";
-  const content = match ? match[2] : answer.text;
+      {currentStep.type === 'form' ? (
+        <FormComponentRenderer 
+          step={currentStep}
+          onSuccess={handleFinalRedirect}
+          primaryColor={funnelData.primaryColor || '#007bff'}
+          buttonColor={funnelData.buttonColor || '#28a745'}
+          textColor={funnelData.textColor || '#333333'}
+        />
+      ) : (
+        
+        <>
+          <h3 className="quiz-question-title">{currentStep.title || 'Loading question...'}</h3>
+          <div className="quiz-answers-container">
+            {/* ... (原有的答案渲染 Map 逻辑保持不变，但使用 currentStep.answers) ... */}
+            {Object.values(currentStep.answers || {}).sort((a, b) => a.text.localeCompare(b.text)).map((answer, index) => {
+              const match = answer.text.match(/^([A-Z]\.)\s*(.*)$/);
+              const prefix = match ? match[1] : "";
+              const content = match ? match[2] : answer.text;
+
+              return (
+                <button
+                  key={answer.id}
+                  className={`quiz-answer-button ${clickedAnswerIndex === index ? 'selected-answer animating' : ''}`}
+                  onClick={() => handleAnswerClick(index, answer.id)}
+                  disabled={isAnimating}
+                  style={{ backgroundColor: 'var(--button-color)', color: 'var(--text-color)', borderColor: 'var(--primary-color)' }}
+                  >
+                  <span className="answer-prefix">{prefix}</span>
+                  <span className="answer-content">{content}</span>
+                </button>
+                     );
+                    })}
+                  </div>
+                   </>
+                  )}
+               </div>
+               );
+             };
+
+
+
+interface FormComponentRendererProps {
+  step: FunnelStep;
+  onSuccess: (redirectUrl: string) => void;
+  primaryColor: string;
+  buttonColor: string;
+  textColor: string;
+}
+
+const FormComponentRenderer: React.FC<FormComponentRendererProps> = ({ step, onSuccess, buttonColor, textColor }) => {
+  // 【中文注释：使用本地状态捕获表单输入】
+  const [formData, setFormData] = useState<Record<string, string>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
+    });
+  };
+
+  const handleFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitError(null);
+    setIsSubmitting(true);
+
+    const { webhookUrl, redirectAfterSubmit, formFields } = step;
+
+    // 基础验证：确保所有必填字段（我们假设所有字段都是必填的）不为空
+    const missingField = formFields?.find(f => !formData[f.label.toLowerCase().replace(/\s/g, '')]);
+    if (missingField) {
+      setSubmitError(`Please fill out the ${missingField.label} field.`);
+      setIsSubmitting(false);
+      return;
+    }
+
+    // 1. 整理发送给 Webhook 的数据
+    const payload: Record<string, string> = {};
+    formFields?.forEach(f => {
+      payload[f.label.toLowerCase().replace(/\s/g, '')] = formData[f.label.toLowerCase().replace(/\s/g, '')];
+    });
+
+    try {
+      // 2. 发送数据到 Webhook
+      if (webhookUrl) {
+        await fetch(webhookUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+      }
+
+      // 3. 成功后重定向 (调用 QuizPlayer 的 onSuccess)
+      const finalRedirect = redirectAfterSubmit || '/';
+      onSuccess(finalRedirect);
+
+    } catch (e) {
+      console.error('Form submission failed:', e);
+      setSubmitError('Submission failed. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+  
+  // 【中文注释：将字段标签转换为一个安全的 name 属性，用于输入捕获】
+  const getFieldName = (label: string) => label.toLowerCase().replace(/\s/g, '');
 
   return (
-    <button
-      key={answer.id}
-      className={`quiz-answer-button ${clickedAnswerIndex === index ? 'selected-answer animating' : ''}`}
-      onClick={() => handleAnswerClick(index, answer.id)}
-      disabled={isAnimating}
-      style={{ backgroundColor: 'var(--button-color)', color: 'var(--text-color)', borderColor: 'var(--primary-color)' }}
-      >
-      <span className="answer-prefix">{prefix}</span>
-      <span className="answer-content">{content}</span>
-    </button>
-  );
-})}
-      </div>
+    <div className="quiz-player-container-inner" style={{color: textColor}}>
+      <h3 className="quiz-question-title">{step.formTitle || 'Lead Form'}</h3>
+      
+      {submitError && <div style={{color: '#d32f2f', marginBottom: 15}}>{submitError}</div>}
+
+      <form onSubmit={handleFormSubmit} className="quiz-answers-container">
+        {(step.formFields || []).map((field, index) => (
+          <div key={index} className="form-field-group">
+            <input
+              type={field.type}
+              name={getFieldName(field.label)} // 用于 state 键和提交 payload
+              placeholder={field.placeholder || field.label}
+              value={formData[getFieldName(field.label)] || ''}
+              onChange={handleInputChange}
+              required
+              className="quiz-answer-button" // 复用按钮样式以保持外观一致
+              style={{
+                backgroundColor: '#f8f9fa', // 表单背景色区别于按钮
+                color: textColor,
+                textAlign: 'left'
+              }}
+            />
+          </div>
+        ))}
+
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="quiz-answer-button"
+          style={{
+            backgroundColor: buttonColor,
+            color: step.data?.buttonTextColor || '#ffffff',
+            marginTop: '20px'
+          }}
+        >
+          {isSubmitting ? 'Submitting...' : step.submitButtonText || 'Submit'}
+        </button>
+      </form>
     </div>
   );
 };
-
 export default QuizPlayer;
