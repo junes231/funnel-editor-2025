@@ -1,7 +1,8 @@
 import React from 'react';
 import { useDrop } from 'react-dnd';
-import QuizComponent from './components/QuizComponent';
-import { FunnelComponent } from '../../types/funnel';
+import QuizComponent from './components/QuizComponent.tsx';
+import FormComponent from './components/FormComponent.tsx'; 
+import { FunnelComponent } from '../../types/funnel.ts';
 import './Canvas.css';
 
 interface CanvasProps {
@@ -42,6 +43,16 @@ const Canvas: React.FC<CanvasProps> = ({
       case 'quiz':
         return (
           <QuizComponent
+            key={component.id}
+            component={component}
+            isSelected={selectedComponent?.id === component.id}
+            onSelect={() => onSelectComponent(component)}
+            onUpdate={(updates) => onUpdateComponent(component.id, updates)}
+          />
+        );
+          case 'form':
+        return (
+          <FormComponent
             key={component.id}
             component={component}
             isSelected={selectedComponent?.id === component.id}
