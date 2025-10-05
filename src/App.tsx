@@ -465,6 +465,37 @@ interface FunnelEditorProps {
   updateFunnelData: (funnelId: string, newData: FunnelData) => Promise<void>;
 }
 
+const getDefaultData = (type: string) => {
+    switch (type) {
+      case 'quiz':
+        return {
+          title: "What's your biggest challenge?", // 【中文注释：确保使用 title 字段】
+          answers: ['Option A', 'Option B', 'Option C', 'Option D'],
+          buttonColor: '#007bff',
+          backgroundColor: '#ffffff',
+          textColor: '#333333',
+          buttonTextColor: '#ffffff',
+          affiliateLinks: ['', '', '', '']
+        };
+      case 'form':
+        return {
+          formTitle: "Get Your Custom Plan!",
+          formFields: [
+            { type: 'text', label: 'Name', placeholder: 'Enter your name' },
+            { type: 'email', label: 'Email', placeholder: 'Enter your best email' },
+          ],
+          buttonColor: '#28a745',
+          backgroundColor: '#ffffff',
+          textColor: '#333333',
+          buttonTextColor: '#ffffff',
+          submitButtonText: 'Download Now',
+          webhookUrl: '',
+          redirectAfterSubmit: '',
+        };
+      default:
+        return {};
+    }
+  };
 const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData }) => {
   const { funnelId } = useParams<{ funnelId: string }>();
   const navigate = useNavigate();
