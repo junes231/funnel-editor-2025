@@ -73,10 +73,16 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ db }) => {
           const funnel = funnelDoc.data() as any; // 【中文注释：使用 any 避免未定义 Funnel 接口的报错】
           
           // Add backward compatibility: convert answers from array to object if needed
-            const compatibleFunnelData = { ...defaultFunnelData, ...funnel.data };
+             const compatibleFunnelData = { ...defaultFunnelData, ...funnel.data };
           if (compatibleFunnelData.questions) {
             compatibleFunnelData.questions = compatibleFunnelData.questions.map((question: FunnelStep) => {
-              // ... (兼容性修复：将答案数组转换为对象格式，保持不变)
+              
+              // 【中文注释：核心修复：如果 type 字段缺失，强制设定为 'quiz'，以确保后续渲染逻辑可以进行】
+              if (!question.type) {
+                  question.type = 'quiz';
+              }
+
+              // 【中文注释：兼容性修复：如果当前步骤是 Quiz 并且 answers 是数组，则转换为对象格式】
               if (question.type === 'quiz' && Array.isArray(question.answers)) {
                 const answersObj: { [answerId: string]: Answer } = {};
                 (question.answers as Answer[]).forEach((answer: Answer) => {
@@ -85,7 +91,7 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ db }) => {
                 question.answers = answersObj;
               }
               
-              // 【中文注释：新增兼容性修复：如果旧数据中存在 'question' 字段但没有 'title' 字段，则进行映射】
+              // 【中文注释：兼容性修复：处理旧数据结构中将问题文本存储在 'question' 字段的情况】
               if (question.type === 'quiz' && !question.title && (question as any).question) {
                   question.title = (question as any).question;
               }
