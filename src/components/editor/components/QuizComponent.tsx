@@ -1,5 +1,5 @@
 import React from 'react';
-import { FunnelComponent } from '../../../types/funnel';
+import { FunnelComponent } from '../../../types/funnel.ts';
 import './QuizComponent.css';
 
 // Helper function to handle both array and object formats for answers
@@ -38,7 +38,7 @@ const QuizComponent: React.FC<QuizComponentProps> = ({
       onClick={onSelect}
     >
       <div className="quiz-preview">
-        <h3 className="quiz-question">{data.question}</h3>
+        <h3 className="quiz-question">{data.title}</h3>
         
         <div className="quiz-answers">
           {getAnswersAsArray(data.answers).map((answer: { id: string; text: string; }, index: number) => (
