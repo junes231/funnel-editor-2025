@@ -28,7 +28,7 @@ const EditorPage: React.FC = () => {
     );
   }, []);
 
-  const getDefaultData = (type: string) => {
+   const getDefaultData = (type: string) => {
     switch (type) {
       case 'quiz':
         return {
@@ -39,6 +39,22 @@ const EditorPage: React.FC = () => {
           textColor: '#333333',
           buttonTextColor: '#ffffff',
           affiliateLinks: ['', '', '', '']
+        };
+      // 【中文注释：新增表单组件的默认数据】
+      case 'form':
+        return {
+          formTitle: "Get Your Custom Plan!",
+          formFields: [
+            { type: 'text', label: 'Name', placeholder: 'Enter your name' },
+            { type: 'email', label: 'Email', placeholder: 'Enter your best email' },
+          ],
+          buttonColor: '#28a745',
+          backgroundColor: '#ffffff',
+          textColor: '#333333',
+          buttonTextColor: '#ffffff',
+          submitButtonText: 'Download Now',
+          webhookUrl: '',
+          redirectAfterSubmit: '',
         };
       default:
         return {};
