@@ -708,24 +708,37 @@ const handleSelectTemplate = async (templateName: string) => {
   const handleAddQuestion = () => {
     if (questions.length >= 6) {
     //  alert('You can only have up to 6 questions for this quiz.');
+      const defaultFormData = getDefaultData('form');
+      
+      const newFormComponent: FunnelStep = {
+        id: Date.now().toString(),
+        type: 'form', // 【中文注释：类型设置为 form】
+        title: defaultFormData.formTitle,
+        answers: {}, // 表单没有答案
+        ...defaultFormData
+      };
+      
+      setQuestions([...questions, newFormComponent]);
+      // 【中文注释：跳转到表单编辑页面 (假设该页面与 questionForm 使用相同的路由参数 index)】
+      setCurrentSubView('questionForm', questions.length); 
       return;
     }
-     const newQuestion: Question = {
+      const newQuestion: Question = {
       id: Date.now().toString(),
-      title: `New Question ${questions.length + 1}`,
+      title: `New Question ${questions.length + 1}`, // 【中文注释：使用 title 字段】
       type: 'single-choice',
-      // 【中文注释：确保答案初始化为对象格式，包含 ID 和 clickCount】
+      // ... (answers 初始化逻辑保持不变)
       answers: Array(4)
         .fill(null)
         .reduce((acc, _, i) => {
           const answerId = `option-${Date.now()}-${i}`;
-          // 确保 Answer 接口的字段完整
           acc[answerId] = { id: answerId, text: `Option ${String.fromCharCode(65 + i)}`, clickCount: 0 }; 
           return acc;
         }, {} as { [answerId: string]: Answer }),
     };
     setQuestions([...questions, newQuestion]);
     
+    // 【中文注释：跳转到问题编辑页面】
     setCurrentSubView('questionForm', questions.length);
   };
 
