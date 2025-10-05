@@ -37,6 +37,7 @@ interface QuizPlayerProps {
 
 const defaultFunnelData: FunnelData = { questions: [] };
 
+// 【中文注释：新组件接口：处理表单的渲染和提交逻辑】
 interface FormComponentRendererProps {
   step: FunnelStep;
   onSuccess: (redirectUrl: string) => void;
@@ -55,7 +56,7 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ db }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // 【中文注释：从数据库加载漏斗数据... (逻辑保持不变)】
+  // 【中文注释：从数据库加载漏斗数据】
   useEffect(() => {
     const getFunnelForPlay = async () => {
       if (!funnelId) {
@@ -67,22 +68,25 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ db }) => {
       setError(null);
       try {
         const funnelDocRef = doc(db, 'funnels', funnelId);
-        // 【中文注释：注意：这里引用了 Funnel，但 Funnel 接口未在此文件定义，假设它在其他地方已全局可用，或应导入 Funnel 接口】
         const funnelDoc = await getDoc(funnelDocRef); 
         if (funnelDoc.exists()) {
-          const funnel = funnelDoc.data() as any; // 【中文注释：使用 any 避免未定义 Funnel 接口的报错】
+          const funnel = funnelDoc.data() as any; 
           
-          // Add backward compatibility: convert answers from array to object if needed
-             const compatibleFunnelData = { ...defaultFunnelData, ...funnel.data };
+          const compatibleFunnelData = { ...defaultFunnelData, ...funnel.data };
           if (compatibleFunnelData.questions) {
             compatibleFunnelData.questions = compatibleFunnelData.questions.map((question: FunnelStep) => {
               
-              // 【中文注释：核心修复：如果 type 字段缺失，强制设定为 'quiz'，以确保后续渲染逻辑可以进行】
+              // 【中文注释：核心兼容性修复 1: 如果 type 字段缺失，强制设定为 'quiz'】
               if (!question.type) {
                   question.type = 'quiz';
               }
+              
+              // 【中文注释：核心兼容性修复 2: 确保 answers 属性存在，即使是空的也初始化为一个空对象，防止 Object.values 失败】
+              if (question.type === 'quiz' && !question.answers) {
+                  question.answers = {};
+              }
 
-              // 【中文注释：兼容性修复：如果当前步骤是 Quiz 并且 answers 是数组，则转换为对象格式】
+              // 【中文注释：兼容性修复 3: 处理旧数据结构中将答案数组转换为对象格式】
               if (question.type === 'quiz' && Array.isArray(question.answers)) {
                 const answersObj: { [answerId: string]: Answer } = {};
                 (question.answers as Answer[]).forEach((answer: Answer) => {
@@ -91,7 +95,7 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ db }) => {
                 question.answers = answersObj;
               }
               
-              // 【中文注释：兼容性修复：处理旧数据结构中将问题文本存储在 'question' 字段的情况】
+              // 【中文注释：兼容性修复 4: 处理旧数据结构中将问题文本存储在 'question' 字段的情况】
               if (question.type === 'quiz' && !question.title && (question as any).question) {
                   question.title = (question as any).question;
               }
@@ -100,7 +104,6 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ db }) => {
             });
           }
           
-          // 【中文注释：如果 firestore 返回的颜色字段是可选的，这里需要设置默认值，以确保样式生效】
           setFunnelData({
             ...compatibleFunnelData,
             primaryColor: compatibleFunnelData.primaryColor || '#007bff',
@@ -123,13 +126,11 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ db }) => {
   }, [funnelId, db]);
 
   const handleFinalRedirect = (redirectUrl: string) => {
-    // 使用 window.location.href 确保跳转到外部链接
     window.location.href = redirectUrl;
   };
     
   // [中文注释] 关键升级：这是新的 handleAnswerClick 函数
   const handleAnswerClick = async (answerIndex: number, answerId: string) => {
-    // 【中文注释：统一使用 currentStep 变量，而不是 currentQuestion】
     const currentStep = funnelData?.questions[currentQuestionIndex];
 
     if (isAnimating || !funnelData || !currentStep || currentStep.type !== 'quiz') return;
@@ -137,12 +138,12 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ db }) => {
     setIsAnimating(true);
     setClickedAnswerIndex(answerIndex);
 
-    // 【中文注释：确保 answers 属性以数组形式存在，以便安全访问 affiliateLinks】
-    const answerValues = Object.values(currentStep.answers || {});
+    // 【中文注释：确保答案以数组形式存在以便安全访问 affiliateLinks】
     const affiliateLink = currentStep.data?.affiliateLinks?.[answerIndex];
 
     if (funnelId && currentStep.id && answerId) {
       const trackClickEndpoint = "https://api-track-click-jgett3ucqq-uc.a.run.app/trackClick";
+      // ... (fetch tracking code remains unchanged)
       fetch(trackClickEndpoint, {
         method: "POST",
         mode: "cors",
@@ -187,7 +188,7 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ db }) => {
   };
 
 
-  // [中文注释：组件的 JSX 渲染部分]
+  // [中文注释] 组件的 JSX 渲染部分
   if (isLoading) {
     return (
       <div className="quiz-player-container" style={{ textAlign: 'center', marginTop: '80px' }}>
@@ -207,11 +208,8 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ db }) => {
     );
   }
 
-  // 【中文注释：统一使用 currentStep，避免重复定义和逻辑混乱】
   const currentStep = funnelData.questions[currentQuestionIndex];
 
-  // 【中文注释：移除冗余的防御性检查】
-  
   if (!currentStep) {
     return (
       <div className="quiz-player-container">
@@ -221,7 +219,6 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ db }) => {
   }
 
   // 3. 现在可以安全地使用 currentStep 了
-  // 【中文注释：如果当前步骤是 Quiz，则计算排序后的答案】
   const sortedAnswers = currentStep.type === 'quiz' ? 
     (Object.values(currentStep.answers || {}) as Answer[]).sort((a, b) => a.text.localeCompare(b.text)) : 
     [];
@@ -237,7 +234,6 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ db }) => {
     <div 
       className="quiz-player-container" 
       style={{
-         // 【中文注释：修复：直接应用背景色和文字颜色，确保其优先级高于外部 CSS 默认值。】
          backgroundColor: funnelData.backgroundColor, 
          color: funnelData.textColor,
          ...quizPlayerContainerStyle 
@@ -249,34 +245,41 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ db }) => {
         <FormComponentRenderer 
           step={currentStep}
           onSuccess={handleFinalRedirect}
-          // 【中文注释：将颜色属性传递给 FormComponentRenderer】
           buttonColor={funnelData.buttonColor || '#28a745'}
           textColor={funnelData.textColor || '#333333'}
         />
       ) : (
         // 【中文注释：问答渲染逻辑（原有的逻辑）】
         <>
-          <h3 className="quiz-question-title">{currentStep.title || 'Loading question...'}</h3>
+          {/* 【中文注释：确保 Quiz 步骤有 title 属性才能显示】 */}
+          {currentStep.title && (
+             <h3 className="quiz-question-title">{currentStep.title}</h3>
+          )}
+          
           <div className="quiz-answers-container">
-            {sortedAnswers.map((answer, index) => {
-              const match = answer.text.match(/^([A-Z]\.)\s*(.*)$/);
-              const prefix = match ? match[1] : "";
-              const content = match ? match[2] : answer.text;
+            {sortedAnswers.length > 0 ? (
+                sortedAnswers.map((answer, index) => {
+                    const match = answer.text.match(/^([A-Z]\.)\s*(.*)$/);
+                    const prefix = match ? match[1] : "";
+                    const content = match ? match[2] : answer.text;
 
-              return (
-                <button
-                  key={answer.id}
-                  className={`quiz-answer-button ${clickedAnswerIndex === index ? 'selected-answer animating' : ''}`}
-                  // 【中文注释：确保只在 Quiz 步骤中调用 handleAnswerClick】
-                  onClick={() => currentStep.type === 'quiz' && handleAnswerClick(index, answer.id)}
-                  disabled={isAnimating}
-                  style={{ backgroundColor: 'var(--button-color)', color: 'var(--text-color)', borderColor: 'var(--primary-color)' }}
-                  >
-                  <span className="answer-prefix">{prefix}</span>
-                  <span className="answer-content">{content}</span>
-                </button>
-              );
-            })}
+                    return (
+                        <button
+                          key={answer.id}
+                          className={`quiz-answer-button ${clickedAnswerIndex === index ? 'selected-answer animating' : ''}`}
+                          onClick={() => currentStep.type === 'quiz' && handleAnswerClick(index, answer.id)}
+                          disabled={isAnimating}
+                          style={{ backgroundColor: 'var(--button-color)', color: 'var(--text-color)', borderColor: 'var(--primary-color)' }}
+                          >
+                          <span className="answer-prefix">{prefix}</span>
+                          <span className="answer-content">{content}</span>
+                        </button>
+                    );
+                })
+            ) : (
+                 // 【中文注释：如果答案列表为空，显示提示信息，方便调试】
+                <p style={{textAlign: 'center', color: 'gray'}}>No answers configured for this step.</p>
+            )}
           </div>
         </>
       )}
@@ -284,6 +287,7 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ db }) => {
   );
 };
 
+// 【中文注释：FormComponentRenderer 组件定义放在 QuizPlayer 外部】
 const FormComponentRenderer: React.FC<FormComponentRendererProps> = ({ step, onSuccess, buttonColor, textColor }) => {
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -373,7 +377,7 @@ const FormComponentRenderer: React.FC<FormComponentRendererProps> = ({ step, onS
           className="quiz-answer-button"
           style={{
             backgroundColor: buttonColor,
-            color: step.data?.buttonTextColor || '#ffffff',
+            color: textColor || '#ffffff',
             marginTop: '20px'
           }}
         >
