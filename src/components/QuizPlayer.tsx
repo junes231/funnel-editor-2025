@@ -17,6 +17,10 @@ interface Question {
 interface FunnelData {
   questions: Question[];
   finalRedirectLink?: string;
+  primaryColor?: string;
+  buttonColor?: string;
+  backgroundColor?: string;
+  textColor?: string;
 }
 
 interface QuizPlayerProps {
@@ -185,8 +189,14 @@ const handleAnswerClick = async (answerIndex: number, answerId: string) => {
   } as React.CSSProperties;
     
   return (
-    <div className="quiz-player-container" style={quizPlayerContainerStyle}>
-      {/* --- 安全性增强：在访问 title 之前也检查 currentQuestion --- */}
+    <div className="quiz-player-container" 
+     style={{
+         // 【中文注释：修复：直接应用背景色和文字颜色，确保其优先级高于外部 CSS 默认值。】
+         backgroundColor: funnelData.backgroundColor, 
+         color: funnelData.textColor,
+         ...quizPlayerContainerStyle 
+       } as React.CSSProperties}
+    >
       <h3 style={{ color: 'var(--text-color)' }}>{currentQuestion?.title || 'Loading question...'}</h3>
       <div className="quiz-answers-container">
  {sortedAnswers.map((answer, index) => {
