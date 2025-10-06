@@ -190,12 +190,15 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ db }) => {
       const webhookUrl = funnelData?.leadCaptureWebhookUrl;
       const finalRedirectLink = funnelData?.finalRedirectLink || '/';
 
-      if (webhookUrl && webhookUrl.trim() !== '') {
-          // 【中文注释：发送 Webhook】
+       if (webhookUrl && webhookUrl.trim() !== '') {
+          // 【中文注释：将 JSON 数据转换为 URL 编码格式，以模拟传统的表单提交 (application/x-www-form-urlencoded) 】
+          const formBody = new URLSearchParams(data).toString();
+
           await fetch(webhookUrl, {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(data), // 发送姓名和邮箱
+              // 【中文注释：关键修复：更改 Content-Type 为 URL 编码，以避免 Zapier 跳过数据】
+              headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, 
+              body: formBody, // 【中文注释：发送 URL 编码后的数据】
           });
       }
       
