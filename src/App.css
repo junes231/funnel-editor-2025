@@ -1154,3 +1154,18 @@ p {
   50% { transform: scale(1.05); background-color: #218838; }
   100% { transform: scale(1); background-color: #007bff; } /* 动画结束后回到常驻蓝色 */
 }
+
+
+
+/* 针对 Lead Capture Form 中的输入框进行修复 */
+.quiz-player-container form input.quiz-answer-button {
+    /* 【中文注释：减小输入框的左右内边距，为文本留出更多空间】 */
+    padding-left: 15px !important; 
+    padding-right: 15px !important;
+    /* 【中文注释：确保文本能换行，但在单行情况下能显示更多字符】 */
+    white-space: nowrap; 
+    overflow: hidden;
+    text-overflow: ellipsis; /* 可选：超出显示省略号 */
+    /* 【中文注释：将最小宽度设置为 100% 以适应容器，防止被固定宽度限制】 */
+    min-width: 100%;
+}
