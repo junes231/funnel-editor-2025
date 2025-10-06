@@ -1478,18 +1478,17 @@ const LinkSettingsComponent: React.FC<LinkSettingsComponentProps> = ({
   setTracking,
   conversionGoal,
   setConversionGoal,
-   leadCaptureEnabled,
+  leadCaptureEnabled,
   setLeadCaptureEnabled,
   leadCaptureWebhookUrl,
   setLeadCaptureWebhookUrl,
-  triggerSave,
   onBack,
   showNotification
 }) => {
  
     const [localLink, setLocalLink] = useState(finalRedirectLink);
     const [localTracking, setLocalTracking] = useState(tracking);
-
+    const [localWebhookUrl, setLocalWebhookUrl] = useState(leadCaptureWebhookUrl); 
   
   // 核心修复 2: 当父组件的 finalRedirectLink 变化时（例如：初次加载或从其他视图返回），同步到本地状态
   useEffect(() => {
@@ -1583,9 +1582,11 @@ const LinkSettingsComponent: React.FC<LinkSettingsComponentProps> = ({
           <input
             type="checkbox"
             checked={leadCaptureEnabled}
-            onChange={handleCheckboxChange}
-                
-             style={{width: 'auto'}}
+            onChange={(e) => {
+                setLeadCaptureEnabled(e.target.checked);
+               
+            }}
+            style={{width: 'auto'}}
           />
         </label>
         <p style={{fontSize: '0.8em', color: '#888', marginTop: '5px'}}>If enabled, users will be asked to enter their name and email address at the end of the quiz.</p>
