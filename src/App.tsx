@@ -1582,7 +1582,7 @@ const LinkSettingsComponent: React.FC<LinkSettingsComponentProps> = ({
             style={{width: 'auto'}}
           />
         </label>
-        <p style={{fontSize: '0.8em', color: '#888', marginTop: '5px'}}>如果启用，测验结束时将要求用户输入姓名和邮箱。</p>
+        <p style={{fontSize: '0.8em', color: '#888', marginTop: '5px'}}>If enabled, users will be asked to enter their name and email address at the end of the quiz.</p>
       </div>
       
       {leadCaptureEnabled && (
