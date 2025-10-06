@@ -40,7 +40,7 @@ interface Question {
   title: string;
   type: 'single-choice' | 'text-input';
   answers: { [answerId: string]: Answer }; // Changed from Answer[] to object/Map
- data?: { // <-- 添加这个可选的 'data' 字段
+ data?: { 
     affiliateLinks?: string[];
   };
 }
@@ -54,6 +54,8 @@ interface FunnelData {
   buttonColor: string;
   backgroundColor: string;
   textColor: string;
+  enableLeadCapture?: boolean;
+  leadCaptureWebhookUrl?: string;
 }
 
 interface Funnel {
@@ -75,7 +77,25 @@ const defaultFunnelData: FunnelData = {
   buttonColor: '#28a745',
   backgroundColor: '#f8f9fa',
   textColor: '#333333',
+  enableLeadCapture: false, 
+  leadCaptureWebhookUrl: '',
 };
+const getDefaultData = (type: string) => {
+    switch (type) {
+      case 'quiz':
+        return {
+          title: "New Question Title", // 使用 title 字段
+          answers: ['Option A', 'Option B', 'Option C', 'Option D'],
+          buttonColor: '#007bff',
+          backgroundColor: '#ffffff',
+          textColor: '#333333',
+          buttonTextColor: '#ffffff',
+          affiliateLinks: ['', '', '', '']
+        };
+      default:
+        return {};
+         }
+          };
 // REPLACE your old App function with this new one
 export default function App({ db }: AppProps) {
   const navigate = useNavigate();
@@ -85,6 +105,7 @@ export default function App({ db }: AppProps) {
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [funnels, setFunnels] = useState<Funnel[]>([]);
+  
   // 在现有的 state 声明附近添加
 const [notification, setNotification] = useState<{
   message: string;
@@ -465,37 +486,7 @@ interface FunnelEditorProps {
   updateFunnelData: (funnelId: string, newData: FunnelData) => Promise<void>;
 }
 
-const getDefaultData = (type: string) => {
-    switch (type) {
-      case 'quiz':
-        return {
-          title: "What's your biggest challenge?", // 【中文注释：确保使用 title 字段】
-          answers: ['Option A', 'Option B', 'Option C', 'Option D'],
-          buttonColor: '#007bff',
-          backgroundColor: '#ffffff',
-          textColor: '#333333',
-          buttonTextColor: '#ffffff',
-          affiliateLinks: ['', '', '', '']
-        };
-      case 'form':
-        return {
-          formTitle: "Get Your Custom Plan!",
-          formFields: [
-            { type: 'text', label: 'Name', placeholder: 'Enter your name' },
-            { type: 'email', label: 'Email', placeholder: 'Enter your best email' },
-          ],
-          buttonColor: '#28a745',
-          backgroundColor: '#ffffff',
-          textColor: '#333333',
-          buttonTextColor: '#ffffff',
-          submitButtonText: 'Download Now',
-          webhookUrl: '',
-          redirectAfterSubmit: '',
-        };
-      default:
-        return {};
-    }
-  };
+
 const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData }) => {
   const { funnelId } = useParams<{ funnelId: string }>();
   const navigate = useNavigate();
@@ -511,6 +502,8 @@ const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData }) => 
   const [textColor, setTextColor] = useState(defaultFunnelData.textColor);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [leadCaptureEnabled, setLeadCaptureEnabled] = useState(false);
+  const [leadCaptureWebhookUrl, setLeadCaptureWebhookUrl] = useState('');
   
   const [templateFiles, setTemplateFiles] = useState<string[]>([]);
   const [debugLinkValue, setDebugLinkValue] = useState('Debug: N/A');
@@ -593,6 +586,8 @@ const selectedQuestionIndex = (currentSubView === 'questionForm' && urlIndex !==
       setButtonColor(funnel.data.buttonColor || defaultFunnelData.buttonColor);
       setBackgroundColor(funnel.data.backgroundColor || defaultFunnelData.backgroundColor);
       setTextColor(funnel.data.textColor || defaultFunnelData.textColor);
+      setLeadCaptureEnabled(funnel.data.enableLeadCapture || false); 
+      setLeadCaptureWebhookUrl(funnel.data.leadCaptureWebhookUrl || '');
       setIsDataLoaded(true);  // 总是设置为true，确保保存能触发
       setDebugLinkValue(`<strong>DEBUG:</strong> <br /> ${loadedLink || 'N/A'}`);
       console.log('✅ Firestore data loaded and state updated. Questions length:', compatibleQuestions.length);
@@ -618,10 +613,13 @@ const selectedQuestionIndex = (currentSubView === 'questionForm' && urlIndex !==
 
   const performSave = (currentData: FunnelData) => {
   if (!funnelId) return;
-  // 使用传入的最新数据对象进行保存
-  updateFunnelData(funnelId, currentData);
+  const dataToSave: FunnelData = {
+    ...currentData,
+    enableLeadCapture: leadCaptureEnabled, // 【中文注释：保存 Lead Capture 状态】
+    leadCaptureWebhookUrl: leadCaptureWebhookUrl, // 【中文注释：保存 Webhook URL 状态】
+  };
+  updateFunnelData(funnelId, dataToSave);
   console.log('✅ Auto-Save triggered.');
- 
 };
 const debouncedSave = useCallback( 
   debounce(performSave, 300), 
@@ -736,22 +734,10 @@ const handleSelectTemplate = async (templateName: string) => {
     setNotification({ message: errorMessage, type: 'error' });
   }
 };
-  const handleAddQuestion = () => {
+    const handleAddQuestion = () => {
+    // 【中文注释：修改：移除 form 逻辑，只保留 quiz 逻辑，限制在 6 个问题】
     if (questions.length >= 6) {
-    //  alert('You can only have up to 6 questions for this quiz.');
-      const defaultFormData = getDefaultData('form');
-      
-      const newFormComponent: FunnelStep = {
-        id: Date.now().toString(),
-        type: 'form', // 【中文注释：类型设置为 form】
-        title: defaultFormData.formTitle,
-        answers: {}, // 表单没有答案
-        ...defaultFormData
-      };
-      
-      setQuestions([...questions, newFormComponent]);
-      // 【中文注释：跳转到表单编辑页面 (假设该页面与 questionForm 使用相同的路由参数 index)】
-      setCurrentSubView('questionForm', questions.length); 
+     // alert('You can only have up to 6 questions for this quiz.');
       return;
     }
       const newQuestion: Question = {
@@ -768,8 +754,6 @@ const handleSelectTemplate = async (templateName: string) => {
         }, {} as { [answerId: string]: Answer }),
     };
     setQuestions([...questions, newQuestion]);
-    
-    // 【中文注释：跳转到问题编辑页面】
     setCurrentSubView('questionForm', questions.length);
   };
 
@@ -911,6 +895,10 @@ const handleImportQuestions = (importedQuestions: Question[]) => {
             setTracking={setTracking}
             conversionGoal={conversionGoal}
             setConversionGoal={setConversionGoal}
+            leadCaptureEnabled={leadCaptureEnabled}
+            setLeadCaptureEnabled={setLeadCaptureEnabled}
+            leadCaptureWebhookUrl={leadCaptureWebhookUrl}
+            setLeadCaptureWebhookUrl={setLeadCaptureWebhookUrl}
             onBack={() => setCurrentSubView('mainEditorDashboard')}
           />
         );
@@ -1473,6 +1461,10 @@ interface LinkSettingsComponentProps {
   setTracking: React.Dispatch<React.SetStateAction<string>>;
   conversionGoal: string;
   setConversionGoal: React.Dispatch<React.SetStateAction<string>>;
+  leadCaptureEnabled: boolean;
+  setLeadCaptureEnabled: React.Dispatch<React.SetStateAction<boolean>>;
+  leadCaptureWebhookUrl: string;
+  setLeadCaptureWebhookUrl: React.Dispatch<React.SetStateAction<string>>;
   onBack: (event: React.MouseEvent<HTMLButtonElement>) => void;
   showNotification: (message: string, type?: 'success' | 'error') => void;
 }
@@ -1485,6 +1477,10 @@ const LinkSettingsComponent: React.FC<LinkSettingsComponentProps> = ({
   setTracking,
   conversionGoal,
   setConversionGoal,
+   leadCaptureEnabled,
+  setLeadCaptureEnabled,
+  leadCaptureWebhookUrl,
+  setLeadCaptureWebhookUrl,
   onBack,
   showNotification
 }) => {
@@ -1501,11 +1497,13 @@ const LinkSettingsComponent: React.FC<LinkSettingsComponentProps> = ({
   
   // 核心修复 3: 使用 useCallback 和 debounce 创建一个延迟通知父组件的函数
   const debouncedSetState = useCallback(
-    debounce((linkValue: string, trackingValue: string) => {
+    debounce((linkValue: string, trackingValue: string, webhookUrlValue: string, captureEnabled: boolean) => {
       setFinalRedirectLink(linkValue);
       setTracking(trackingValue);
+      setLeadCaptureWebhookUrl(webhookUrlValue);
+      setLeadCaptureEnabled(captureEnabled);
     }, 300),
-    [setFinalRedirectLink, setTracking] // 依赖项只包括外部更新函数
+    [setFinalRedirectLink, setTracking, setLeadCaptureWebhookUrl, setLeadCaptureEnabled] 
   );
 
   // 核心修复 4: 销毁时清除 debouncer
@@ -1530,6 +1528,11 @@ const LinkSettingsComponent: React.FC<LinkSettingsComponentProps> = ({
     setLocalTracking(value);
     // 延迟通知父组件
     debouncedSetState(localLink, value);
+  };
+  const handleWebhookChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setLocalWebhookUrl(value);
+    debouncedSetState(localLink, localTracking, value, leadCaptureEnabled);
   };
   return (
     <div className="link-settings-container">
@@ -1566,6 +1569,33 @@ const LinkSettingsComponent: React.FC<LinkSettingsComponentProps> = ({
           <option>Free Trial</option>
         </select>
       </div>
+      <div className="form-group" style={{marginTop: '30px', borderTop: '1px solid #eee', paddingTop: '20px'}}>
+        <label style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
+          <span>📧 Enable Name & Email Capture (Before Redirect)</span>
+          <input
+            type="checkbox"
+            checked={leadCaptureEnabled}
+            onChange={(e) => {
+                setLeadCaptureEnabled(e.target.checked);
+                debouncedSetState(localLink, localTracking, localWebhookUrl, e.target.checked); // 【中文注释：触发保存】
+            }}
+            style={{width: 'auto'}}
+          />
+        </label>
+        <p style={{fontSize: '0.8em', color: '#888', marginTop: '5px'}}>如果启用，测验结束时将要求用户输入姓名和邮箱。</p>
+      </div>
+      
+      {leadCaptureEnabled && (
+          <div className="form-group">
+            <label>Webhook URL (Data Destination):</label>
+            <input
+              type="url"
+              value={localWebhookUrl}
+              onChange={handleWebhookChange}
+              placeholder="https://your-crm-webhook.com/endpoint"
+            />
+          </div>
+          )}
       <div className="form-actions">
   {/* 新增的按钮：使用 BackButton 来获得动画，使用 className 继承蓝色样式 */}
   <BackButton 
