@@ -899,6 +899,7 @@ const handleImportQuestions = (importedQuestions: Question[]) => {
             setLeadCaptureEnabled={setLeadCaptureEnabled}
             leadCaptureWebhookUrl={leadCaptureWebhookUrl}
             setLeadCaptureWebhookUrl={setLeadCaptureWebhookUrl}
+             debouncedSetState={debouncedSave} 
             onBack={() => setCurrentSubView('mainEditorDashboard')}
           />
         );
@@ -1481,6 +1482,7 @@ const LinkSettingsComponent: React.FC<LinkSettingsComponentProps> = ({
   setLeadCaptureEnabled,
   leadCaptureWebhookUrl,
   setLeadCaptureWebhookUrl,
+  triggerSave,
   onBack,
   showNotification
 }) => {
@@ -1529,6 +1531,12 @@ const LinkSettingsComponent: React.FC<LinkSettingsComponentProps> = ({
     // 延迟通知父组件
     debouncedSetState(localLink, value);
   };
+  const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const checked = e.target.checked;
+      setLeadCaptureEnabled(checked);
+      // 【中文注释：修复：调用父组件传入的保存函数，并传入所有最新状态】
+      triggerSave(finalRedirectLink, tracking, leadCaptureWebhookUrl, checked); 
+  };
   const handleWebhookChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setLocalWebhookUrl(value);
@@ -1575,11 +1583,9 @@ const LinkSettingsComponent: React.FC<LinkSettingsComponentProps> = ({
           <input
             type="checkbox"
             checked={leadCaptureEnabled}
-            onChange={(e) => {
-                setLeadCaptureEnabled(e.target.checked);
-                debouncedSetState(localLink, localTracking, localWebhookUrl, e.target.checked); // 【中文注释：触发保存】
-            }}
-            style={{width: 'auto'}}
+            onChange={handleCheckboxChange}
+                
+             style={{width: 'auto'}}
           />
         </label>
         <p style={{fontSize: '0.8em', color: '#888', marginTop: '5px'}}>If enabled, users will be asked to enter their name and email address at the end of the quiz.</p>
