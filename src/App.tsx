@@ -1498,7 +1498,8 @@ const LinkSettingsComponent: React.FC<LinkSettingsComponentProps> = ({
   useEffect(() => {
     setLocalLink(finalRedirectLink);
     setLocalTracking(tracking);
-  }, [finalRedirectLink, tracking]);
+  setLocalWebhookUrl(leadCaptureWebhookUrl); 
+  }, [finalRedirectLink, tracking, leadCaptureWebhookUrl]);
   
   // 核心修复 3: 使用 useCallback 和 debounce 创建一个延迟通知父组件的函数
   const debouncedSetState = useCallback(
