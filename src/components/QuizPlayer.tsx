@@ -198,18 +198,17 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ db }) => {
       const webhookUrl = funnelData?.leadCaptureWebhookUrl;
       const finalRedirectLink = funnelData?.finalRedirectLink || '/';
 
-       if (webhookUrl && webhookUrl.trim() !== '') {
-          // 【中文注释：将 JSON 数据转换为 URL 编码格式，以模拟传统的表单提交 (application/x-www-form-urlencoded) 】
-          const formBody = new URLSearchParams(data).toString();
+         if (webhookUrl && webhookUrl.trim() !== '') {
+            // 将数据对象转换为 URL 编码格式的字符串
+            const formBody = new URLSearchParams(data).toString();
 
-           await fetch(webhookUrl, {
-              method: 'POST',
-              // ✅ 关键：设置正确的 Content-Type 为 JSON
-              headers: { 'Content-Type': 'application/json' }, 
-              // ✅ 关键：发送 JSON.stringify 后的数据
-              body: JSON.stringify(data), 
-          });
-      }
+            await fetch(webhookUrl, {
+                method: 'POST',
+                // 【中文注释：关键修复：Content-Type 必须设置为 URL 编码，避免浏览器发送预检请求】
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, 
+                body: formBody, // 发送 URL 编码后的数据
+            });
+        }
       
       // 【中文注释：重定向到最终链接】
       handleFinalRedirect(finalRedirectLink);
