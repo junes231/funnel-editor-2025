@@ -623,7 +623,7 @@ const selectedQuestionIndex = (currentSubView === 'questionForm' && urlIndex !==
 };
 const debouncedSave = useCallback( 
   debounce(performSave, 300), 
-  [funnelId, updateFunnelData] 
+[funnelId, updateFunnelData, leadCaptureEnabled, leadCaptureWebhookUrl]
 );
 
 // 3. 监听状态变化并调用防抖保存的 useEffect (替代原有的 unoptimized useEffect)
@@ -640,6 +640,8 @@ useEffect(() => {
     buttonColor,
     backgroundColor,
     textColor,
+   enableLeadCapture: leadCaptureEnabled, 
+    leadCaptureWebhookUrl: leadCaptureWebhookUrl, 
   };
    (window as any).__funnelData = latestData;
 
@@ -660,6 +662,8 @@ useEffect(() => {
   buttonColor,
   backgroundColor,
   textColor,
+  leadCaptureEnabled, 
+  leadCaptureWebhookUrl,
   isDataLoaded,
   debouncedSave 
 ]);
