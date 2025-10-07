@@ -194,11 +194,12 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ db }) => {
           // 【中文注释：将 JSON 数据转换为 URL 编码格式，以模拟传统的表单提交 (application/x-www-form-urlencoded) 】
           const formBody = new URLSearchParams(data).toString();
 
-          await fetch(webhookUrl, {
+           await fetch(webhookUrl, {
               method: 'POST',
-              // 【中文注释：关键修复：更改 Content-Type 为 URL 编码，以避免 Zapier 跳过数据】
-              headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, 
-              body: formBody, // 【中文注释：发送 URL 编码后的数据】
+              // ✅ 关键：设置正确的 Content-Type 为 JSON
+              headers: { 'Content-Type': 'application/json' }, 
+              // ✅ 关键：发送 JSON.stringify 后的数据
+              body: JSON.stringify(data), 
           });
       }
       
