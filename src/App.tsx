@@ -1209,16 +1209,17 @@ const QuizEditorComponent: React.FC<QuizEditorComponentProps> = ({
       ) : (
           <ul className="question-list">
           {questions.map((q, index) => (
-            <li key={q.id} className="question-item" onClick={() => onEditQuestion(index)}>
-              {/* 【中文注释：问题标题】 */}
+             <li key={q.id} className="question-item" onClick={() => onEditQuestion(index)}>
+              
+              {/* 【中文注释：Question 标题和编号在同一行】 */}
               <strong>Question {index + 1}:</strong> {q.title}
               
-              {/* 【中文注释：核心修改：ID 标签。使用 style 确保 ID 显示在标题下方】 */}
+              {/* 【中文注释：ID 标签，强制换行到下一行】 */}
               <span style={{
                    fontSize: '0.8em', 
                    color: '#888', 
-                   display: 'block', /* 强制换行 */
-                   marginTop: '5px' /* 增加顶部间距，与标题分开 */
+                   display: 'block', 
+                   marginTop: '5px' 
                 }}>
                   (ID: {q.id.substring(0, 8)}...)
               </span>
