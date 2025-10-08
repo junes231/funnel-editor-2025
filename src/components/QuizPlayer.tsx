@@ -251,11 +251,26 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ db }) => {
       window.open(affiliateLink, "_blank");
     }
 
+    const answerValues = Object.values(currentStep.answers || {}) as Answer[];
+    const selectedAnswer = answerValues.find(a => a.id === answerId);
+    
+    // 【中文注释：获取下一个步骤的索引或 ID】
+    const nextStepId = selectedAnswer?.nextStepId?.trim();
     setTimeout(() => {
       setIsAnimating(false);
       setClickedAnswerIndex(null);
       if (!funnelData) return;
 
+        if (nextStepId) {
+            // 【中文注释：如果设置了 nextStepId，查找目标问题的索引并跳转】
+            const nextIndex = funnelData.questions.findIndex((q: any) => q.id === nextStepId);
+            if (nextIndex !== -1) {
+                setCurrentQuestionIndex(nextIndex);
+                return; // 【中文注释：执行跳转并返回】
+            }
+            // 【中文注释：如果找不到 ID，程序将继续执行默认的线性流程】
+            console.error(`Error: Destination ID ${nextStepId} not found. Proceeding linearly.`);
+            }
       const isLastStep = currentQuestionIndex >= funnelData.questions.length - 1;
 
       if (isLastStep) {
