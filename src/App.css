@@ -233,7 +233,7 @@ p {
     font-weight: 500; 
     /* 【中文注释：增加字母间距，提升美感】 */
     letter-spacing: -0.5px;
-    font-size: 1.8em;
+    font-size: 1.5em;
     margin-bottom: 30px;
     color: #34495e;
     line-height: 1.4; /* 确保行高合适 */
