@@ -230,13 +230,13 @@ p {
 }
 .quiz-question-title {
     /* 【中文注释：适当减小字重，使标题不那么沉重】 */
-    font-weight: 500; 
+    font-weight: 600; 
     /* 【中文注释：增加字母间距，提升美感】 */
     letter-spacing: -0.5px;
-    font-size: 1.3em;
+    font-size: 1.4em;
     margin-bottom: 30px;
     color: #34495e;
-    line-height: 1.4; /* 确保行高合适 */
+    line-height: 1.3; /* 确保行高合适 */
 }
 
 .quiz-answers-container {
@@ -855,8 +855,8 @@ p {
      display: block; 
      
      /* 【核心修复：确保 ID 占据独立一行，与标题分离】 */
-     margin-top: 8px; 
-     margin-left: 0;
+     margin-top: 5px; 
+     
      
      /* 【最终修复：强制文本在任何字符处断开，防止 ID 溢出】 */
      word-break: break-all;
