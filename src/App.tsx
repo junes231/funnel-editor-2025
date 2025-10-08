@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, ChangeEvent } from 'react';
 import { getAuth, onAuthStateChanged, User, signOut } from 'firebase/auth';
-import { FunnelData, FunnelComponent, Answer, Question } from './types /funnel.ts'; 
+import { FunnelData, FunnelComponent, Answer, Question } from './types/funnel.ts'; 
 import debounce from 'lodash.debounce'; 
 import QuizPlayer from './components/QuizPlayer.tsx';
 import ResetPage from './pages/reset.tsx';
