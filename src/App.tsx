@@ -1210,20 +1210,21 @@ const QuizEditorComponent: React.FC<QuizEditorComponentProps> = ({
           <ul className="question-list">
           {questions.map((q, index) => (
              <li key={q.id} className="question-item" onClick={() => onEditQuestion(index)}>
-              
-              {/* 【中文注释：Question 标题和编号在同一行】 */}
-              <strong>Question {index + 1}:</strong> {q.title}
-              
-              {/* 【中文注释：ID 标签，强制换行到下一行】 */}
-              <span style={{
-                   fontSize: '0.8em', 
-                   color: '#888', 
-                   display: 'block', 
-                   marginTop: '5px' 
-                }}>
-                  (ID: {q.id.substring(0, 8)}...)
-              </span>
-            </li>
+    
+    <div style={{fontWeight: 600}}> {/* 【中文注释：将标题和编号组合成一个不可分割的整体】 */}
+        <strong>Question {index + 1}:</strong> {q.title}
+    </div>
+    
+    {/* 【中文注释：ID 标签 - 成为第二个 Flex 子项，确保它在下一行】 */}
+    <span style={{
+         fontSize: '0.8em', 
+         color: '#888', 
+         display: 'block', 
+         marginTop: '5px' 
+      }}>
+        (ID: {q.id.substring(0, 8)}...)
+    </span>
+      </li>
           ))}
         </ul>
       )}
