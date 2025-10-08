@@ -1,5 +1,5 @@
 .App {
-  font-family: Arial, sans-serif;
+  font-family: 'Inter', 'Roboto', 'Helvetica Neue', Arial, sans-serif; 
   text-align: center;
   padding: 20px;
   background-color: #f4f7f6;
@@ -229,10 +229,16 @@ p {
     box-sizing: border-box;
 }
 .quiz-question-title {
+    /* 【中文注释：适当减小字重，使标题不那么沉重】 */
+    font-weight: 500; 
+    /* 【中文注释：增加字母间距，提升美感】 */
+    letter-spacing: -0.5px;
     font-size: 1.8em;
     margin-bottom: 30px;
     color: #34495e;
+    line-height: 1.4; /* 确保行高合适 */
 }
+
 .quiz-answers-container {
     display: flex;
     flex-direction: column;
@@ -244,7 +250,8 @@ p {
     color: white;
     padding: 15px 25px;
     border-radius: 8px;
-    font-size: 1.1em;
+    font-size: 1.05em; 
+    font-weight: 500;
     cursor: pointer;
     transition: background-color 0.3s ease, transform 0.2s ease;
     width: 100%;
