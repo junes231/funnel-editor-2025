@@ -1207,14 +1207,14 @@ const QuizEditorComponent: React.FC<QuizEditorComponentProps> = ({
       {questions.length === 0 ? (
         <p className="no-questions-message">No questions added yet. Click "Add New Question" or "Import Questions" to start!</p>
       ) : (
-        <ul className="question-list">
+         <ul className="question-list">
           {questions.map((q, index) => (
             <li key={q.id} className="question-item" onClick={() => onEditQuestion(index)}>
-                 <div>
+              <div style={{display: 'flex', alignItems: 'center'}}> 
                  <strong>Question {index + 1}:</strong> {q.title}
-                 {/* 【中文注释：新增：显示问题 ID 的前缀，方便复制粘贴】 */}
-                 <span style={{fontSize: '0.8em', color: '#888', marginLeft: '15px'}}>(ID: {q.id.substring(0, 8)}...)</span>
-              </div>
+              </div> 
+              {/* 【中文注释：将 ID 放在 .question-item 的子元素中，使其与标题对齐】 */}
+              <span style={{fontSize: '0.8em', color: '#888', marginLeft: '15px'}}>(ID: {q.id.substring(0, 8)}...)</span>
             </li>
           ))}
         </ul>
