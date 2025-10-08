@@ -1222,7 +1222,7 @@ const QuizEditorComponent: React.FC<QuizEditorComponentProps> = ({
          display: 'block', 
          marginTop: '5px' 
       }}>
-        (ID: {q.id.substring(0, 8)}...)
+       (ID: {q.id}) 
     </span>
       </li>
           ))}
