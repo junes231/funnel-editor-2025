@@ -5,6 +5,8 @@ import { getDoc, doc } from 'firebase/firestore';
 interface Answer {
   id: string;
   text: string;
+  nextStepId?: string; 
+  clickCount?: number;
 }
 
 // 【中文注释：简化后的 FunnelStep 接口，只关注问答属性】
