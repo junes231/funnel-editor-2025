@@ -6,7 +6,7 @@ export interface FunnelComponent {
   position: { x: number; y: number };
   data: {
     question?: string;
-    answers?: { id: string; text: string; }[] | { [answerId: string]: { id: string; text: string; } };
+    answers?: { id: string; text: string; nextStepId?: string }[] | { [answerId: string]: { id: string; text: string; nextStepId?: string } };
     buttonColor?: string;
     backgroundColor?: string;
     textColor?: string;
@@ -22,4 +22,11 @@ export interface FunnelComponent {
 
     [key: string]: any;
   };
+}
+
+interface Answer {
+  id: string;
+  text: string;
+  nextStepId?: string; 
+  clickCount?: number;
 }
