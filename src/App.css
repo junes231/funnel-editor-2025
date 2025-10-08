@@ -829,6 +829,7 @@ p {
   font-weight: 500;            /* 字体稍微加粗，更清晰 */
   color: #343a40;             /* 使用更深的灰色，提高可读性 */
   display: flex;               /* 使用 Flex 布局，方便对齐 */
+  justify-content: space-between; /* 【中文注释：将标题推到左侧，ID 推到右侧】 */
   align-items: center;         /* 垂直居中对齐 */
   transition: all 0.2s ease-in-out; /* 为所有动态效果添加平滑的过渡动画 */
 }
