@@ -23,6 +23,10 @@
     box-sizing: border-box;
 }
 
+.quiz-editor-container {
+    /* 【中文注释：新增：确保内部文本左对齐，解决布局拥挤问题】 */
+    text-align: left; 
+}
 h1, h2, h3 {
     color: #333;
     margin-bottom: 20px;
