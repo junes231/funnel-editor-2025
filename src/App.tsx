@@ -1214,7 +1214,11 @@ const QuizEditorComponent: React.FC<QuizEditorComponentProps> = ({
         <ul className="question-list">
           {questions.map((q, index) => (
             <li key={q.id} className="question-item" onClick={() => onEditQuestion(index)}>
-              Question {index + 1}: {q.title}
+                 <div>
+                 <strong>Question {index + 1}:</strong> {q.title}
+                 {/* 【中文注释：新增：显示问题 ID 的前缀，方便复制粘贴】 */}
+                 <span style={{fontSize: '0.8em', color: '#888', marginLeft: '15px'}}>(ID: {q.id.substring(0, 8)}...)</span>
+              </div>
             </li>
           ))}
         </ul>
@@ -1304,7 +1308,16 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
             data: { ...question.data, affiliateLinks: newLinks } 
        });
   };
-  
+  const handleAnswerNextStepIdChange = (answerId: string, newNextStepId: string) => {
+    if (question) {
+      const updatedAnswers = {
+        ...question.answers,
+        [answerId]: { ...question.answers[answerId], nextStepId: newNextStepId },
+      };
+      const updatedQuestion: Question = { ...question, answers: updatedAnswers };
+      onUpdate(updatedQuestion);
+    }
+  };
   
   // 5. handleSave 现在使用本地状态，并直接（非防抖）调用 onUpdate
   const handleSave = async () => {
@@ -1427,7 +1440,19 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
               onChange={(e) => handleLinkChange(index, e.target.value)} 
               placeholder="Affiliate link (optional)" 
             />
-            <div style={{
+
+              <input
+                  type="text"
+                  value={answer.nextStepId || ''}
+                  onChange={(e) => {
+                    // 【中文注释：调用新的更新函数来设置 nextStepId】
+                    handleAnswerNextStepIdChange(answer.id, e.target.value);
+                  }}
+                  placeholder="Next Step ID (Optional)"
+                  className="affiliate-input" // 复用 affiliate-input 样式
+                  style={{ marginTop: '5px' }}
+                />
+                <div style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               padding: '8px 12px', backgroundColor: '#f0f0f0', borderRadius: '6px',
               marginTop: '5px', width: '100%', color: '#333',
