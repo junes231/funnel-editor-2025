@@ -841,8 +841,7 @@ p {
   word-wrap: break-word;
   word-break: break-word; /* 避免长文本溢出 */
   
-  min-height: 70px;
-}
+  }
 
 /* 【中文注释：增强标题可读性】 */
 .question-item strong, 
@@ -852,9 +851,9 @@ p {
 }
 
 .question-item strong {
-    /* 【中文注释：设置 display: inline 确保编号和标题在 li 内部首先尝试在同一行】 */
-    display: inline;
-    margin-right: 5px;
+    /* 删除原有的 display: inline 或 margin-right，让内联样式接管 */
+    font-weight: 500; 
+    line-height: 1.3;
 }
 /* 【中文注释：ID 标签的样式：确保与标题分离且可读】 */
 .question-item span {
