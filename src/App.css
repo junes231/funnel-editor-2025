@@ -825,52 +825,59 @@ p {
 
 /* 文件: junes231/funnel-editor-2025/funnel-editor-2025-8ec3b4a3cd21a700028b979ae1ec9e8ffeadd5c4/src/App.css */
 
-.question-item {
-  background-color: #f9f9fb; /* 浅灰背景 */
-  border: 1px solid #e5e7eb; /* 淡灰边框 */
-  border-radius: 12px; /* 柔和圆角 */
-  padding: 18px 24px; /* 更宽松的内边距 */
-  margin-bottom: 16px; /* 增加底部间距 */
+..question-item {
+  background: linear-gradient(135deg, #f0f4ff, #ffffff); /* 渐变背景 */
+  border: 1px solid #e0e6f0; /* 柔和边框 */
+  border-radius: 15px; /* 更大圆角 */
+  padding: 20px 25px; /* 更宽松内边距 */
+  margin-bottom: 18px; /* 一致的底部间距 */
   cursor: pointer;
-  color: #2c2c2c;
+  color: #1a1a1a; /* 深灰文字 */
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   word-break: break-word;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05); /* 默认轻微阴影 */
-  transition: all 0.3s ease; /* 平滑过渡 */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06); /* 增强阴影 */
+  transition: all 0.3s ease;
 }
 
 /* 点击时的下压效果 */
 .question-item:active {
-  transform: translateY(-1px) scale(0.98);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px) scale(0.98);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
 }
 
 /* 标题文字 */
 .question-item strong {
-  font-weight: 600;
-  font-size: 1.05em;
-  color: #111;
-  margin-bottom: 8px;
-  line-height: 1.3; /* 改善可读性 */
+  font-weight: 700; /* 更粗标题 */
+  font-size: 1.1em; /* 稍大字号 */
+  color: #222; /* 深色标题 */
+  margin-bottom: 10px;
+  line-height: 1.4;
 }
 
 /* 内容/ID 样式 */
+.question-item p {
+  font-weight: 600; /* 加粗问题内容 */
+  font-size: 1em; /* 标准字号 */
+  margin: 0 0 8px 0; /* 调整间距 */
+  line-height: 1.5;
+}
+
 .question-item span {
   font-size: 0.85em;
-  color: #666; /* 稍淡的灰色 */
-  margin-top: 8px;
+  color: #666; /* 淡灰ID */
+  margin-top: 6px;
   display: block;
   word-break: break-all;
 }
 
 /* 鼠标悬停效果 */
 .question-item:hover {
-  background-color: #ffffff; /* 白色背景 */
-  border-color: #66b0ff; /* 柔和蓝色边框 */
-  transform: translateY(-3px) scale(1.02); /* 轻微放大 */
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12); /* 增强阴影 */
+  background: linear-gradient(135deg, #e6efff, #ffffff); /* 悬停渐变 */
+  border-color: #4a90e2; /* 蓝色边框 */
+  transform: translateY(-4px) scale(1.03); /* 轻微放大 */
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
 }
 
 /* 文件末尾添加 */
