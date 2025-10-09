@@ -1216,7 +1216,7 @@ const QuizEditorComponent: React.FC<QuizEditorComponentProps> = ({
     </strong> 
     
     {/* 【中文注释：核心修改 2：将问题标题包裹在 block 元素中，强制成第二行】 */}
-    <span style={{display: 'block', fontWeight: 600, line-height: 1.4}}>
+    <span style={{display: 'block', fontWeight: 600, lineHeight: 1.4}}>
         {q.title}
     </span>
     
