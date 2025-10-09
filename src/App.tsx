@@ -1209,58 +1209,27 @@ const QuizEditorComponent: React.FC<QuizEditorComponentProps> = ({
       ) : (
           <ul className="question-list">
           {questions.map((q, index) => (
-         <li
-  key={q.id}
-  className="question-item"
-  onClick={() => onEditQuestion(index)}
-  style={{ listStyle: 'none', padding: '12px 16px', cursor: 'pointer' }} // 基础样式移到内联
->
-  {/* 【中文注释：核心修改：使用 Flex 容器实现横向对齐，优化间距】 */}
-  <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
-    {/* 【中文注释：问题编号徽章 (Q1, Q2)，添加样式】 */}
-    <span
-      className="question-badge"
-      style={{
-        backgroundColor: '#4a90e2',
-        color: '#fff',
-        padding: '4px 8px',
-        borderRadius: '12px',
-        fontSize: '0.9em',
-        fontWeight: 600,
-        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-        transition: 'transform 0.2s ease',
-      }}
-    >
-      Q{index + 1}
-    </span>
+         <li key={q.id} className="question-item" onClick={() => onEditQuestion(index)}>
+    
+    {/* 【中文注释：第一行容器：用于实现徽章和标题的横向对齐】 */}
+    <div className="question-header"> 
+        
+        {/* 【中文注释：问题编号徽章 (Q1, Q2)】 */}
+        <span className="question-badge">
+            Q{index + 1}
+        </span>
+        
+        {/* 【中文注释：主问题标题】 */}
+        <span className="question-title-text">
+            {q.title}
+        </span>
+    </div>
 
-    {/* 【中文注释：主问题标题，增强突出性】 */}
-    <span
-      style={{
-        fontWeight: 700,
-        lineHeight: 1.4,
-        marginLeft: '16px',
-        fontSize: '1.1em',
-        color: '#222',
-      }}
-    >
-      {q.title}
+    {/* 【中文注释：第二行：完整 ID，确保它在下一行】 */}
+    <span className="question-id-text">
+        (ID: {q.id}) 
     </span>
-  </div>
-
-  {/* 【中文注释：ID 标签，独立成行，优化对齐】 */}
-  <span
-    style={{
-      fontSize: '0.75em',
-      color: '#888',
-      display: 'block',
-      wordBreak: 'break-all',
-      marginLeft: 'calc(2.5rem + 8px)', // 动态计算徽章宽度 + 间距
-    }}
-  >
-    (ID: {q.id})
-  </span>
-     </li>
+</li>
     ))}
     </ul>
      )}
