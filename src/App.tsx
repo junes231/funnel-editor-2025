@@ -1260,22 +1260,10 @@ const QuizEditorComponent: React.FC<QuizEditorComponentProps> = ({
   >
     (ID: {q.id})
   </span>
-</li>
-
-<style>
-  .question-item:hover .question-badge {
-    transform: scale(1.1); /* 悬停放大徽章 */
-  }
-
-  .question-item:hover {
-    backgroundColor: '#f0f4ff'; /* 轻微变色 */
-    transform: translateY(-2px);
-    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)';
-  }
-</style>
-          ))}
-        </ul>
-      )}
+     </li>
+    ))}
+    </ul>
+     )}
 
      
          <BackButton onClick={onBack}>
