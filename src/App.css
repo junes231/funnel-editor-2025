@@ -826,49 +826,51 @@ p {
 /* 文件: junes231/funnel-editor-2025/funnel-editor-2025-8ec3b4a3cd21a700028b979ae1ec9e8ffeadd5c4/src/App.css */
 
 .question-item {
-  background-color: #f9f9fb; /* 浅灰背景：比纯白更柔和 */
+  background-color: #f9f9fb; /* 浅灰背景 */
   border: 1px solid #e5e7eb; /* 淡灰边框 */
-  border-radius: 12px; /* 更柔和的圆角 */
-  padding: 16px 20px;
-  margin-bottom: 14px;
+  border-radius: 12px; /* 柔和圆角 */
+  padding: 18px 24px; /* 更宽松的内边距 */
+  margin-bottom: 16px; /* 增加底部间距 */
   cursor: pointer;
   color: #2c2c2c;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   word-break: break-word;
-  transition: all 0.25s ease; /* 平滑过渡 */
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05); /* 默认轻微阴影 */
+  transition: all 0.3s ease; /* 平滑过渡 */
 }
 
-/* 🫧 点击时的下压效果（增加手感） */
+/* 点击时的下压效果 */
 .question-item:active {
-  transform: translateY(-1px);
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
+  transform: translateY(-1px) scale(0.98);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-/* 🔤 标题文字 */
+/* 标题文字 */
 .question-item strong {
   font-weight: 600;
   font-size: 1.05em;
   color: #111;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
+  line-height: 1.3; /* 改善可读性 */
 }
 
-/* 📄 内容/ID 样式 */
+/* 内容/ID 样式 */
 .question-item span {
   font-size: 0.85em;
-  color: #555;
-  margin-top: 6px;
+  color: #666; /* 稍淡的灰色 */
+  margin-top: 8px;
   display: block;
   word-break: break-all;
 }
 
-/* 鼠标悬停在问题项上时的效果 */
+/* 鼠标悬停效果 */
 .question-item:hover {
-  background-color: #ffffff;
-  border-color: #007bff;
-  transform: translateY(-3px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+  background-color: #ffffff; /* 白色背景 */
+  border-color: #66b0ff; /* 柔和蓝色边框 */
+  transform: translateY(-3px) scale(1.02); /* 轻微放大 */
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12); /* 增强阴影 */
 }
 
 /* 文件末尾添加 */
