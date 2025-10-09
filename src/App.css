@@ -829,7 +829,7 @@ p {
   background-color: #f8f9fa;
   border: 1px solid #e9ecef;
   border-radius: 8px;
-  padding: 18px 25px;
+  padding: 16px 20px;
   margin-bottom: 12px;
   cursor: pointer;
   color: #343a40;
@@ -851,7 +851,11 @@ p {
     line-height: 1.4;
 }
 
-
+.question-item strong {
+    /* 【中文注释：设置 display: inline 确保编号和标题在 li 内部首先尝试在同一行】 */
+    display: inline;
+    margin-right: 5px;
+}
 /* 【中文注释：ID 标签的样式：确保与标题分离且可读】 */
 .question-item span {
      font-size: 0.85em; 
@@ -859,7 +863,7 @@ p {
      display: block; 
      
      /* 【核心修复：确保 ID 占据独立一行，与标题分离】 */
-     margin-top: 5px; 
+     margin-top: 8px; 
      
      
      /* 【最终修复：强制文本在任何字符处断开，防止 ID 溢出】 */
