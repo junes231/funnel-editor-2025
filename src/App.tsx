@@ -1209,26 +1209,70 @@ const QuizEditorComponent: React.FC<QuizEditorComponentProps> = ({
       ) : (
           <ul className="question-list">
           {questions.map((q, index) => (
-          <li key={q.id} className="question-item" onClick={() => onEditQuestion(index)}>
-      <strong style={{display: 'block', marginBottom: '3px'}}>
-        Question {index + 1}:
-    </strong> 
-    
-    {/* 【中文注释：核心修改 2：将问题标题包裹在 block 元素中，强制成第二行】 */}
-    <span style={{display: 'block', fontWeight: 600, lineHeight: 1.4}}>
-        {q.title}
+         <li
+  key={q.id}
+  className="question-item"
+  onClick={() => onEditQuestion(index)}
+  style={{ listStyle: 'none', padding: '12px 16px', cursor: 'pointer' }} // 基础样式移到内联
+>
+  {/* 【中文注释：核心修改：使用 Flex 容器实现横向对齐，优化间距】 */}
+  <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
+    {/* 【中文注释：问题编号徽章 (Q1, Q2)，添加样式】 */}
+    <span
+      className="question-badge"
+      style={{
+        backgroundColor: '#4a90e2',
+        color: '#fff',
+        padding: '4px 8px',
+        borderRadius: '12px',
+        fontSize: '0.9em',
+        fontWeight: 600,
+        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+        transition: 'transform 0.2s ease',
+      }}
+    >
+      Q{index + 1}
     </span>
-    
-    {/* 【中文注释：ID 标签 - 成为第三行】 */}
-    <span style={{
-         fontSize: '0.8em', 
-         color: '#555', 
-         display: 'block', 
-         marginTop: '8px' 
-      }}>
-        (ID: {q.id}) 
+
+    {/* 【中文注释：主问题标题，增强突出性】 */}
+    <span
+      style={{
+        fontWeight: 700,
+        lineHeight: 1.4,
+        marginLeft: '16px',
+        fontSize: '1.1em',
+        color: '#222',
+      }}
+    >
+      {q.title}
     </span>
-      </li>
+  </div>
+
+  {/* 【中文注释：ID 标签，独立成行，优化对齐】 */}
+  <span
+    style={{
+      fontSize: '0.75em',
+      color: '#888',
+      display: 'block',
+      wordBreak: 'break-all',
+      marginLeft: 'calc(2.5rem + 8px)', // 动态计算徽章宽度 + 间距
+    }}
+  >
+    (ID: {q.id})
+  </span>
+</li>
+
+<style>
+  .question-item:hover .question-badge {
+    transform: scale(1.1); /* 悬停放大徽章 */
+  }
+
+  .question-item:hover {
+    backgroundColor: '#f0f4ff'; /* 轻微变色 */
+    transform: translateY(-2px);
+    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)';
+  }
+</style>
           ))}
         </ul>
       )}
