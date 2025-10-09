@@ -822,36 +822,40 @@ p {
   margin: 30px 0;        /* 增加列表上下的外边距，让布局更舒展 */
 }
 
+/* 1. 容器样式和布局（强制垂直堆叠） */
 .question-item {
-    /* 【中文注释：核心布局：设置为垂直堆叠，实现两行分离】 */
-    display: flex;
-    flex-direction: column; 
-    align-items: flex-start; /* 左上角对齐 */
-    
-    /* 继承用户的颜色和尺寸，但增强可读性 */
     background: linear-gradient(135deg, #007bff, #0056b3); 
-    color: white; /* 默认文字颜色 */
-    padding: 16px 20px; /* 调整内边距，让徽章有空间 */
+    color: white; 
+    padding: 16px 20px; 
     margin-bottom: 12px;
-    border-radius: 8px; /* 调整圆角为更标准的卡片圆角 */
+    border-radius: 8px; /* 统一卡片圆角 */
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     cursor: pointer;
-    width: 95%; /* 确保卡片占据屏幕大部分宽度 */
-    min-height: 75px; /* 确保有足够空间显示两行文本 */
+    width: 95%; 
+    min-height: 75px; 
     transition: all 0.3s ease;
-}
-
-/* 【中文注释：第一行容器：确保徽章和标题水平对齐】 */
-.question-item .question-header {
+    
+    /* 【核心修复 1: 强制垂直堆叠】 */
     display: flex;
-    align-items: flex-start; /* 徽章和文本顶部对齐 */
-    width: 100%;
-    margin-bottom: 8px; /* 标题与 ID 之间的垂直间距 */
+    flex-direction: column; 
+    align-items: flex-start;
+    
+    /* 【核心修复 2: 确保文本能水平流动，避免垂直溢出】 */
+    word-break: break-word;
+    word-wrap: break-word;
+    overflow: hidden; /* 隐藏可能超出卡片边界的冗余内容 */
 }
 
-/* 【中文注释：问题编号徽章样式】 */
+/* 2. 标题徽章和文本的水平容器 */
+.question-item .question-header {
+    display: flex; /* 徽章和标题水平对齐 */
+    align-items: flex-start; 
+    margin-bottom: 8px; /* 标题与 ID 之间的垂直间距 */
+    width: 100%;
+}
+
+/* 3. 徽章样式 */
 .question-item .question-badge {
-    /* 核心样式：圆形徽章 */
     display: inline-flex;
     justify-content: center;
     align-items: center;
@@ -863,32 +867,35 @@ p {
     font-weight: 700;
     font-size: 0.95em;
     flex-shrink: 0; 
-    margin-right: 12px; /* 徽章与标题的间距 */
+    margin-right: 12px; 
 }
 
-/* 【中文注释：主问题标题样式】 */
+/* 4. 标题文本样式 */
 .question-item .question-title-text {
-    font-weight: 600;
+    font-weight: 700;
     font-size: 1.05em;
     line-height: 1.25;
-    color: white; /* 标题文字颜色 */
-    word-break: break-word; /* 允许在长单词处断行 */
-    /* 确保标题在徽章旁边开始显示 */
-    margin-top: 5px; /* 配合徽章高度，微调对齐 */
+    color: white; 
+    word-break: break-word; 
+    margin-top: 5px; /* 对齐徽章 */
+    width: auto; /* 允许标题占据所需宽度 */
 }
 
-/* 【中文注释：ID 样式，独立成行，并左对齐】 */
+/* 5. ID 独立行样式 */
 .question-item .question-id-text {
     font-size: 0.7em;
-    color: #ccc; /* 浅灰色 ID 文本 */
-    display: block;
+    color: #ccc; 
+    display: block; /* 独立成行 */
     line-height: 1.2;
-    /* 【核心修复：确保 ID 从标题的左侧开始对齐】 */
-    margin-left: 44px; /* 徽章宽度 (32px) + 间距 (12px) = 44px */
-    word-break: break-all;
+    margin-left: 44px; /* 徽章对齐 (32px + 12px) */
+    
+    /* 【核心修复 3: 强制文本水平断开，解决垂直堆叠】 */
+    word-break: break-all; 
+    white-space: normal;
+    width: auto;
 }
 
-/* 【中文注释：鼠标悬停效果 - 保持不变】 */
+/* 悬停效果 (可选) */
 .question-item:hover {
     background: linear-gradient(135deg, #0056b3, #003366);
     transform: translateY(-2px) scale(1.01);
