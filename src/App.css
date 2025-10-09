@@ -826,55 +826,57 @@ p {
 /* 文件: junes231/funnel-editor-2025/funnel-editor-2025-8ec3b4a3cd21a700028b979ae1ec9e8ffeadd5c4/src/App.css */
 
 .question-item {
-  background-color: #f8f9fa;
-  border: 1px solid #e9ecef;
-  border-radius: 8px;
+  background-color: #f9f9fb;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
   padding: 16px 20px;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
   cursor: pointer;
-  color: #343a40;
-  
-  /* 【中文注释：核心修复：使用 Flex 纵向布局，确保标题和 ID 垂直堆叠】 */
+  color: #2c2c2c;
   display: flex;
-  flex-direction: column; 
-  align-items: flex-start; /* 左对齐 */
-  word-wrap: break-word;
-  word-break: break-word; /* 避免长文本溢出 */
-  
-  }
-
-/* 【中文注释：增强标题可读性】 */
-.question-item strong, 
-.question-item {
-    font-weight: 600; /* 标题加粗 */
-    line-height: 1.4;
+  flex-direction: column;
+  align-items: flex-start;
+  word-break: break-word;
+  transition: all 0.25s ease;
 }
 
+/* 🫧 点击时的“按下”手感 */
+.question-item:active {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* ✨ 选中状态（核心） */
+.question-item.selected {
+  background-color: #eef4ff; /* 淡蓝背景 */
+  border-color: #007bff; /* 蓝色边框 */
+  box-shadow: 0 0 0 3px rgba(0,123,255,0.15); /* 柔蓝光晕 */
+  transform: translateY(-2px);
+}
+
+/* 🔤 标题样式 */
 .question-item strong {
-    /* 删除原有的 display: inline 或 margin-right，让内联样式接管 */
-    font-weight: 500; 
-    line-height: 1.3;
+  font-weight: 600;
+  font-size: 1.05em;
+  color: #111;
+  margin-bottom: 6px;
 }
-/* 【中文注释：ID 标签的样式：确保与标题分离且可读】 */
+
+/* 📄 内容/ID 样式 */
 .question-item span {
-     font-size: 0.85em; 
-     color: #555; 
-     display: block; 
-     
-     /* 【核心修复：确保 ID 占据独立一行，与标题分离】 */
-     margin-top: 8px; 
-     
-     
-     /* 【最终修复：强制文本在任何字符处断开，防止 ID 溢出】 */
-     word-break: break-all;
+  font-size: 0.85em;
+  color: #555;
+  margin-top: 6px;
+  display: block;
+  word-break: break-all;
 }
 
 /* 鼠标悬停在问题项上时的效果 */
 .question-item:hover {
-  transform: translateY(-2px); /* 卡片向上轻微浮动 */
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); /* 添加一个自然的阴影，增强立体感 */
-  border-color: #007bff; /* 边框变为蓝色，突出显示 */
-  background-color: #ffffff; /* 背景变为白色，与阴影形成对比 */
+  background-color: #ffffff;
+  border-color: #007bff;
+  transform: translateY(-3px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
 }
 
 /* 文件末尾添加 */
