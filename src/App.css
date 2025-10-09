@@ -826,9 +826,9 @@ p {
 /* 文件: junes231/funnel-editor-2025/funnel-editor-2025-8ec3b4a3cd21a700028b979ae1ec9e8ffeadd5c4/src/App.css */
 
 .question-item {
-  background-color: #f9f9fb;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
+  background-color: #f9f9fb; /* 浅灰背景：比纯白更柔和 */
+  border: 1px solid #e5e7eb; /* 淡灰边框 */
+  border-radius: 12px; /* 更柔和的圆角 */
   padding: 16px 20px;
   margin-bottom: 14px;
   cursor: pointer;
@@ -837,24 +837,16 @@ p {
   flex-direction: column;
   align-items: flex-start;
   word-break: break-word;
-  transition: all 0.25s ease;
+  transition: all 0.25s ease; /* 平滑过渡 */
 }
 
-/* 🫧 点击时的“按下”手感 */
+/* 🫧 点击时的下压效果（增加手感） */
 .question-item:active {
   transform: translateY(-1px);
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
 }
 
-/* ✨ 选中状态（核心） */
-.question-item.selected {
-  background-color: #eef4ff; /* 淡蓝背景 */
-  border-color: #007bff; /* 蓝色边框 */
-  box-shadow: 0 0 0 3px rgba(0,123,255,0.15); /* 柔蓝光晕 */
-  transform: translateY(-2px);
-}
-
-/* 🔤 标题样式 */
+/* 🔤 标题文字 */
 .question-item strong {
   font-weight: 600;
   font-size: 1.05em;
