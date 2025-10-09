@@ -1020,7 +1020,7 @@ const QuizEditorComponent: React.FC<QuizEditorComponentProps> = ({
   templateFiles // <-- Destructure the prop here
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
-const [selectedQuestionIndex, setSelectedQuestionIndex] = useState<number | null>(null);
+
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
   const file = event.target.files?.[0];
   if (!file) {
@@ -1209,11 +1209,7 @@ const [selectedQuestionIndex, setSelectedQuestionIndex] = useState<number | null
       ) : (
           <ul className="question-list">
           {questions.map((q, index) => (
-            <li
-            key={q.id}
-          className={`question-item ${selectedQuestionIndex === index ? 'selected' : ''}`}
-          onClick={() => setSelectedQuestionIndex(index)}
-           >
+          <li key={q.id} className="question-item" onClick={() => onEditQuestion(index)}>
       <strong style={{display: 'block', marginBottom: '3px'}}>
         Question {index + 1}:
     </strong> 
