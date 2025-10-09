@@ -1209,10 +1209,11 @@ const [selectedQuestionIndex, setSelectedQuestionIndex] = useState<number | null
       ) : (
           <ul className="question-list">
           {questions.map((q, index) => (
-             key={q.id}
+            <li
+            key={q.id}
           className={`question-item ${selectedQuestionIndex === index ? 'selected' : ''}`}
           onClick={() => setSelectedQuestionIndex(index)}
-    
+           >
       <strong style={{display: 'block', marginBottom: '3px'}}>
         Question {index + 1}:
     </strong> 
