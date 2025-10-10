@@ -824,8 +824,11 @@ p {
 
 /* 1. 容器样式和布局（强制垂直堆叠） */
 .question-item {
-    background: linear-gradient(135deg, #007bff, #0056b3); 
-    color: white; 
+   background-color: #f8f9fa; 
+    border: 1px solid #e9ecef;
+    
+    /* 【中文注释：核心修复 2: 恢复为深色文字，以适应浅色背景】 */
+    color: #343a40; 
     padding: 16px 20px; 
     margin-bottom: 12px;
     border-radius: 8px; /* 统一卡片圆角 */
@@ -861,8 +864,8 @@ p {
     align-items: center;
     width: 32px; 
     height: 32px;
-    background-color: #fff; 
-    color: #007bff; 
+    background-color: #007bff; 
+    color: white; 
     border-radius: 50%; 
     font-weight: 700;
     font-size: 0.95em;
