@@ -898,22 +898,20 @@ p {
     width: auto;
 }
 
-
-/* 【中文注释：核心修复：不要使用背景色来表示选中状态，改为边框】 */
-.question-item.selected,
-.question-item:active {
-    /* 【中文注释：核心修复：使用边框和阴影表示选中，而不是深色背景】 */
-    background-color: #f8f9fa !important; /* 强制背景为浅色 */
-    border: 2px solid #007bff; /* 使用品牌色边框高亮 */
-    
-    /* 【确保文字颜色在选中时保持深色可读】 */
-    color: #343a40 !important;
-}
-/* 悬停效果 (可选) */
-.question-item:hover {
+/* 桌面端 hover 有渐变效果 */
+@media (hover: hover) and (pointer: fine) {
+  .question-item:hover {
     background: linear-gradient(135deg, #0056b3, #003366);
     transform: translateY(-2px) scale(1.01);
     box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
+  }
+}
+
+/* 移动端点击高亮通过 selected 控制 */
+.question-item.selected {
+  background-color: #f8f9fa !important;
+  border: 2px solid #007bff;
+  color: #343a40 !important;
 }
 
 /* 文件末尾添加 */
