@@ -1192,9 +1192,9 @@ const QuizEditorComponent: React.FC<QuizEditorComponentProps> = ({
               return (
                 <button 
                   key={fileName}
-                  className="template-btn" 
-                  onClick={() => onSelectTemplate(fileName.replace('.json', ''))}
-                >
+                  className={`question-item ${selectedIndex === index ? 'selected' : ''}`} 
+                  onClick={() => onEditQuestion(index)}
+                  >
                   {buttonLabel}
                 </button>
               );
