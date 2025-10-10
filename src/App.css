@@ -823,131 +823,138 @@ p {
 }
 
 /* 1. 容器样式和布局（强制垂直堆叠） */
+/* 基础卡片样式 */
 .question-item {
-    background-color: #ffffff !important; /* 确保背景是纯白色 */
-    border: 1px solid #e9ecef;
-    
-    /* 【中文注释：核心修复：强制文字颜色为深色，以适应浅色背景】 */
-    color: #343a40 !important; 
-    padding: 16px 20px; 
-    margin-bottom: 12px;
-    border-radius: 8px; /* 统一卡片圆角 */
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    cursor: pointer;
-    width: 95%; 
-    min-height: 75px; 
-    transition: all 0.3s ease;
-    
-    /* 【核心修复 1: 强制垂直堆叠】 */
-    display: flex;
-    flex-direction: column; 
-    align-items: flex-start;
-    
-    /* 【核心修复 2: 确保文本能水平流动，避免垂直溢出】 */
-    word-break: break-word;
-    word-wrap: break-word;
-    overflow: hidden; /* 隐藏可能超出卡片边界的冗余内容 */
+  background-color: #ffffff;
+  border: 1px solid #e9ecef;
+  color: #343a40;
+  padding: 16px 20px;
+  margin-bottom: 12px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  width: 95%;
+  min-height: 75px;
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  word-break: break-word;
+  overflow: hidden;
 }
 
-/* 2. 标题徽章和文本的水平容器 */
+/* 标题行 */
 .question-item .question-header {
-    display: flex; /* 徽章和标题水平对齐 */
-    align-items: flex-start; 
-    margin-bottom: 8px; /* 标题与 ID 之间的垂直间距 */
-    width: 100%;
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 8px;
+  width: 100%;
 }
 
-/* 3. 徽章样式 */
+/* 徽章 */
 .question-item .question-badge {
-    display: inline-flex;
-    justify-content: center;
-    align-items: center;
-    width: 32px; 
-    height: 32px;
-    background-color: #007bff; 
-    color: white; 
-    border-radius: 50%; 
-    font-weight: 700;
-    font-size: 0.95em;
-    flex-shrink: 0; 
-    margin-right: 12px; 
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  width: 32px;
+  height: 32px;
+  background-color: #007bff;
+  color: white;
+  border-radius: 50%;
+  font-weight: 700;
+  font-size: 0.95em;
+  flex-shrink: 0;
+  margin-right: 12px;
 }
 
-/* 4. 标题文本样式 */
+/* 标题文本 */
 .question-item .question-title-text {
-    font-weight: 700;
-    font-size: 1.05em;
-    line-height: 1.25;
-    
-    word-break: break-word; 
-    margin-top: 5px; /* 对齐徽章 */
-    width: auto; /* 允许标题占据所需宽度 */
+  font-weight: 700;
+  font-size: 1.05em;
+  line-height: 1.25;
+  word-break: break-word;
+  margin-top: 5px;
+  width: auto;
 }
 
-/* 5. ID 独立行样式 */
+/* ID 文本 */
 .question-item .question-id-text {
-    font-size: 0.7em;
-    color: #ccc; 
-    display: block; /* 独立成行 */
-    line-height: 1.2;
-    margin-left: 44px; /* 徽章对齐 (32px + 12px) */
-    
-    /* 【核心修复 3: 强制文本水平断开，解决垂直堆叠】 */
-    word-break: break-all; 
-    white-space: normal;
-    width: auto;
+  font-size: 0.7em;
+  color: #ccc;
+  display: block;
+  line-height: 1.2;
+  margin-left: 44px;
+  word-break: break-all;
+  white-space: normal;
+  width: auto;
 }
 
-/* 桌面端 hover 有渐变效果 */
+/* hover 效果（桌面端） */
 @media (hover: hover) and (pointer: fine) {
   .question-item:hover {
-    background: linear-gradient(135deg, #0056b3, #003366);
-    transform: translateY(-2px) scale(1.01);
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
+    background: linear-gradient(135deg, #e6f0ff, #ffffff);
+    transform: translateY(-1px) scale(1.01);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
   }
 }
 
-/* 移动端点击高亮通过 selected 控制 */
+/* 点击选中效果（动态蓝色边框 + 呼吸 + 缩放） */
 .question-item.selected {
-  background: linear-gradient(135deg, #e6f0ff, #ffffff) !important; /* 蓝白渐变背景 */
-  border: 2px solid #007bff; /* 蓝色高亮边框 */
-  color: #343a40 !important;
-  transform: scale(1.04); /* 轻微放大 */
-  animation: blue-breath 2.5s ease-in-out infinite; /* 呼吸动画 */
-  box-shadow: 0 0 15px rgba(0, 123, 255, 0.4);
+  border: 3px solid transparent;
+  border-radius: 8px;
+  background-clip: padding-box;
+  position: relative;
+  animation: blue-breath 2.5s ease-in-out infinite;
+  transform: scale(1.03);
 }
 
-/* 蓝色呼吸动效关键帧 */
+/* 动态蓝色流光边框伪元素 */
+.question-item.selected::before {
+  content: "";
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  border-radius: 10px;
+  padding: 2px;
+  background: linear-gradient(270deg, #007bff, #00c6ff, #007bff);
+  background-size: 600% 600%;
+  animation: border-flow 3s ease infinite;
+  z-index: -1;
+}
+
+/* 蓝色呼吸动画 */
 @keyframes blue-breath {
   0% {
     box-shadow: 0 0 8px rgba(0, 123, 255, 0.3);
-    transform: scale(1.03);
+    transform: scale(1);
   }
   50% {
     box-shadow: 0 0 20px rgba(0, 123, 255, 0.6);
-    transform: scale(1.06);
+    transform: scale(1.05);
   }
   100% {
     box-shadow: 0 0 8px rgba(0, 123, 255, 0.3);
-    transform: scale(1.03);
+    transform: scale(1);
+  }
+}
+
+/* 边框流光动画 */
+@keyframes border-flow {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
   }
 }
 
 /* 文件末尾添加 */
-@keyframes pulse {
-  0% {
-    transform: scale(1);
-    opacity: 0.85;
-  }
-  50% {
-    transform: scale(1.05);
-    opacity: 1;
-  }
-  100% {
-    transform: scale(1);
-    opacity: 0.85;
-  }
-}
+
 /* 认证相关样式 */
 .auth-container {
     background: white;
@@ -1269,6 +1276,3 @@ p {
     min-width: 100%;
 }
 
-ul .question-item.selected {
-  background: linear-gradient(135deg, #e6f0ff, #ffffff) !important;
-}
