@@ -898,6 +898,17 @@ p {
     width: auto;
 }
 
+
+/* 【中文注释：核心修复：不要使用背景色来表示选中状态，改为边框】 */
+.question-item.selected,
+.question-item:active {
+    /* 【中文注释：核心修复：使用边框和阴影表示选中，而不是深色背景】 */
+    background-color: #f8f9fa !important; /* 强制背景为浅色 */
+    border: 2px solid #007bff; /* 使用品牌色边框高亮 */
+    
+    /* 【确保文字颜色在选中时保持深色可读】 */
+    color: #343a40 !important;
+}
 /* 悬停效果 (可选) */
 .question-item:hover {
     background: linear-gradient(135deg, #0056b3, #003366);
