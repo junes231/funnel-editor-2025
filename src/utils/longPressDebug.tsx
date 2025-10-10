@@ -125,16 +125,65 @@ function initializeDebugger() {
     const allowedFunctions = {
   testFunction: () => 'Test result',
 
-  // 新增：检测 question-item 状态和动画
+  // 1️⃣ 检查所有卡片状态（可视化输出）
   checkQuestions: () => {
     const items = document.querySelectorAll('.question-item');
-    return Array.from(items).map((li, idx) => ({
-      index: idx,
-      id: li.querySelector('.question-id-text')?.innerText || 'N/A',
-      selected: li.classList.contains('selected'),
-      animation: getComputedStyle(li).animation,
-      transform: getComputedStyle(li).transform
-    }));
+    if (!items.length) return '没有找到任何 question-item 元素';
+
+    // 在调试面板输出可视化结果
+    const panel = document.querySelector('#panel-console-output');
+    if (panel) panel.innerHTML = ''; // 清空之前输出
+
+    const result = Array.from(items).map((li, idx) => {
+      const selected = li.classList.contains('selected');
+      const animation = getComputedStyle(li).animation;
+      const transform = getComputedStyle(li).transform;
+
+      // 可视化输出
+      if (panel) {
+        const div = document.createElement('div');
+        div.style.padding = '4px';
+        div.style.borderBottom = '1px solid #444';
+        div.innerHTML = `<strong>Q${idx+1}</strong> | ${li.querySelector('.question-id-text')?.innerText || 'N/A'} | selected: ${selected} | animation: ${animation}`;
+        if (selected) div.style.background = '#e6f0ff';
+        panel.appendChild(div);
+      }
+
+      return { index: idx, id: li.querySelector('.question-id-text')?.innerText || 'N/A', selected, animation, transform };
+    });
+
+    return result;
+  },
+
+  // 2️⃣ 强制选中指定卡片并触发动画（可视化）
+  forceSelect: (index: number = 0) => {
+    const items = document.querySelectorAll('.question-item');
+    if (!items.length) return '没有找到任何 question-item 元素';
+
+    items.forEach(li => li.classList.remove('selected'));
+    const target = items[index];
+    if (target) {
+      target.classList.add('selected');
+      void target.offsetWidth; // 触发动画
+    }
+
+    return allowedFunctions.checkQuestions();
+  },
+
+  // 3️⃣ 循环选中所有卡片动画（可视化）
+  cycleSelect: async (delay: number = 800) => {
+    const items = document.querySelectorAll('.question-item');
+    if (!items.length) return '没有找到任何 question-item 元素';
+
+    for (let i = 0; i < items.length; i++) {
+      items.forEach(li => li.classList.remove('selected'));
+      items[i].classList.add('selected');
+      void items[i].offsetWidth; // 强制触发动画
+      allowedFunctions.checkQuestions(); // 实时更新面板
+      await new Promise(r => setTimeout(r, delay));
+    }
+
+    return '循环选中完成';
   }
 };
     if (allowedFunctions[code]) {
