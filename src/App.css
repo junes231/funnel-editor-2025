@@ -1268,3 +1268,7 @@ p {
     /* 【中文注释：将最小宽度设置为 100% 以适应容器，防止被固定宽度限制】 */
     min-width: 100%;
 }
+
+ul .question-item.selected {
+  background: linear-gradient(135deg, #e6f0ff, #ffffff) !important;
+}
