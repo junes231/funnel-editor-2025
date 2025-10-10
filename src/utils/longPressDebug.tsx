@@ -122,40 +122,38 @@ function initializeDebugger() {
   logToPanel('log', [`> ${code}`]);
   try {
     // 限制可执行代码，例如只允许特定函数
-    const allowedFunctions = {
-  testFunction: () => 'Test result',
+    checkQuestions: () => {
+  const items = document.querySelectorAll('.question-item');
+  if (!items.length) return '没有找到任何 question-item 元素';
 
-  // 1️⃣ 检查所有卡片状态（可视化输出）
-  checkQuestions: () => {
-    const items = document.querySelectorAll('.question-item');
-    if (!items.length) return '没有找到任何 question-item 元素';
+  const panel = document.querySelector('#panel-console-output');
+  if (panel) panel.innerHTML = ''; // 清空输出
 
-    // 在调试面板输出可视化结果
-    const panel = document.querySelector('#panel-console-output');
-    if (panel) panel.innerHTML = ''; // 清空之前输出
+  const result = Array.from(items).map((li, idx) => {
+    const selected = li.classList.contains('selected');
+    const animation = getComputedStyle(li).animation;
+    const animationName = getComputedStyle(li).animationName;
+    const transform = getComputedStyle(li).transform;
 
-    const result = Array.from(items).map((li, idx) => {
-      const selected = li.classList.contains('selected');
-      const animation = getComputedStyle(li).animation;
-      const transform = getComputedStyle(li).transform;
+    // 判断是否在蓝色呼吸动画中
+    const isAnimating = animationName === 'blue-breath';
 
-      // 可视化输出
-      if (panel) {
-        const div = document.createElement('div');
-        div.style.padding = '4px';
-        div.style.borderBottom = '1px solid #444';
-        div.innerHTML = `<strong>Q${idx+1}</strong> | ${li.querySelector('.question-id-text')?.innerText || 'N/A'} | selected: ${selected} | animation: ${animation}`;
-        if (selected) div.style.background = '#e6f0ff';
-        panel.appendChild(div);
-      }
+    if (panel) {
+      const div = document.createElement('div');
+      div.style.padding = '4px';
+      div.style.borderBottom = '1px solid #444';
+      div.innerHTML = `<strong>Q${idx+1}</strong> | ${li.querySelector('.question-id-text')?.innerText || 'N/A'} | selected: ${selected} | 动画: ${isAnimating ? '✅ 动画中' : '❌ 无动画'}`;
+      if (selected) div.style.background = '#e6f0ff';
+      panel.appendChild(div);
+    }
 
-      return { index: idx, id: li.querySelector('.question-id-text')?.innerText || 'N/A', selected, animation, transform };
-    });
+    return { index: idx, id: li.querySelector('.question-id-text')?.innerText || 'N/A', selected, animation, animationName, transform, isAnimating };
+  });
 
-    return result;
-  },
+  return result;
+},
 
-  // 2️⃣ 强制选中指定卡片并触发动画（可视化）
+  // 强制选中指定卡片并触发动画
   forceSelect: (index: number = 0) => {
     const items = document.querySelectorAll('.question-item');
     if (!items.length) return '没有找到任何 question-item 元素';
@@ -170,7 +168,7 @@ function initializeDebugger() {
     return allowedFunctions.checkQuestions();
   },
 
-  // 3️⃣ 循环选中所有卡片动画（可视化）
+  // 循环选中所有卡片动画
   cycleSelect: async (delay: number = 800) => {
     const items = document.querySelectorAll('.question-item');
     if (!items.length) return '没有找到任何 question-item 元素';
@@ -179,13 +177,83 @@ function initializeDebugger() {
       items.forEach(li => li.classList.remove('selected'));
       items[i].classList.add('selected');
       void items[i].offsetWidth; // 强制触发动画
-      allowedFunctions.checkQuestions(); // 实时更新面板
+      allowedFunctions.checkQuestions(); // 更新面板
       await new Promise(r => setTimeout(r, delay));
     }
 
     return '循环选中完成';
   }
 };
+
+// ------------------- 面板按钮控制 -------------------
+function addCardControlButtons() {
+  const consolePanel = document.getElementById('panel-console-output');
+  if (!consolePanel) return;
+
+  const items = document.querySelectorAll('.question-item');
+  if (!items.length) return;
+
+  const btnContainer = document.createElement('div');
+  btnContainer.style.display = 'flex';
+  btnContainer.style.flexWrap = 'wrap';
+  btnContainer.style.gap = '4px';
+  btnContainer.style.marginBottom = '8px';
+
+  items.forEach((li, idx) => {
+    const btn = document.createElement('button');
+    btn.textContent = `Q${idx+1}`;
+    btn.style.padding = '4px 8px';
+    btn.style.fontSize = '12px';
+    btn.style.cursor = 'pointer';
+    btn.style.border = '1px solid #007acc';
+    btn.style.borderRadius = '4px';
+    btn.style.background = '#1e1e1e';
+    btn.style.color = '#d4d4d4';
+
+    btn.onclick = () => {
+      items.forEach(li => li.classList.remove('selected'));
+      li.classList.add('selected');
+      void li.offsetWidth; // 触发动画
+      allowedFunctions.checkQuestions();
+    };
+
+    btnContainer.appendChild(btn);
+  });
+
+  // 循环高亮按钮
+  const cycleBtn = document.createElement('button');
+  cycleBtn.textContent = '循环高亮所有卡片';
+  cycleBtn.style.padding = '4px 8px';
+  cycleBtn.style.fontSize = '12px';
+  cycleBtn.style.cursor = 'pointer';
+  cycleBtn.style.border = '1px solid #28a745';
+  cycleBtn.style.borderRadius = '4px';
+  cycleBtn.style.background = '#1e1e1e';
+  cycleBtn.style.color = '#28a745';
+  cycleBtn.style.marginLeft = '8px';
+
+  let running = false;
+  cycleBtn.onclick = async () => {
+    if (running) return;
+    running = true;
+    for (let i = 0; i < items.length; i++) {
+      items.forEach(li => li.classList.remove('selected'));
+      items[i].classList.add('selected');
+      void items[i].offsetWidth; // 触发动画
+      allowedFunctions.checkQuestions();
+      await new Promise(r => setTimeout(r, 800));
+    }
+    running = false;
+  };
+
+  btnContainer.appendChild(cycleBtn);
+
+  // 插入到面板最前面
+  consolePanel.prepend(btnContainer);
+}
+
+// 初始化完成后调用
+addCardControlButtons();
     if (allowedFunctions[code]) {
       const result = allowedFunctions[code]();
       logToPanel('log', ['<-', result]);
