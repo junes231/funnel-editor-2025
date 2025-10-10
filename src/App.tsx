@@ -1019,6 +1019,7 @@ const QuizEditorComponent: React.FC<QuizEditorComponentProps> = ({
   onSelectTemplate,
   templateFiles // <-- Destructure the prop here
 }) => {
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
