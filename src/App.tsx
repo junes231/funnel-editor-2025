@@ -1210,15 +1210,15 @@ const QuizEditorComponent: React.FC<QuizEditorComponentProps> = ({
       ) : (
           <ul className="question-list">
   {questions.map((q, index) => (
-    <li
-  key={q.id}
-  className={`question-item ${selectedIndex === index ? 'selected' : ''}`}
-  onClick={() => {
-    setSelectedIndex(null);
-    setTimeout(() => setSelectedIndex(index), 10);
-    onEditQuestion(index);
-  }}
-  >
+        <li
+      key={q.id}
+      className={`question-item ${selectedIndex === index ? 'selected' : ''}`}
+      onClick={() => {
+        setSelectedIndex(index);
+        onEditQuestion(index);
+      }}
+    >
+    
       {/* 【中文注释：第一行容器：用于实现徽章和标题的横向对齐】 */}
       <div className="question-header"> 
         {/* 【中文注释：问题编号徽章 (Q1, Q2)】 */}
