@@ -1021,7 +1021,32 @@ const QuizEditorComponent: React.FC<QuizEditorComponentProps> = ({
 }) => {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+   // 循环高亮函数
+const cycleHighlightQuestions = async (delay: number = 800) => {
+  const items = document.querySelectorAll('.question-item');
+  if (!items.length) return;
 
+  for (let i = 0; i < items.length; i++) {
+    // 移除所有选中状态
+    items.forEach(item => item.classList.remove('selected'));
+
+    // 添加 selected 并强制刷新动画
+    const current = items[i];
+    current.classList.remove('selected');
+    void current.offsetWidth; // 强制刷新动画
+    current.classList.add('selected');
+
+    // 更新 React 状态（可选，用于保持同步）
+    setSelectedIndex(i);
+
+    // 等待一段时间再选下一个
+    await new Promise(r => setTimeout(r, delay));
+  }
+
+  // 循环结束后可选清除高亮
+  items.forEach(item => item.classList.remove('selected'));
+  setSelectedIndex(null);
+};
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
   const file = event.target.files?.[0];
   if (!file) {
@@ -1211,32 +1236,30 @@ const QuizEditorComponent: React.FC<QuizEditorComponentProps> = ({
           <ul className="question-list">
   {questions.map((q, index) => (
         <li
-      key={q.id}
-      className={`question-item ${selectedIndex === index ? 'selected' : ''}`}
-      onClick={() => {
-        setSelectedIndex(index);
-        onEditQuestion(index);
-      }}
-    >
-    
-      {/* 【中文注释：第一行容器：用于实现徽章和标题的横向对齐】 */}
-      <div className="question-header"> 
-        {/* 【中文注释：问题编号徽章 (Q1, Q2)】 */}
-        <span className="question-badge">
-          Q{index + 1}
-        </span>
+  key={q.id}
+  className={`question-item ${selectedIndex === index ? 'selected' : ''}`}
+  onClick={() => {
+    const items = document.querySelectorAll('.question-item');
+    // 移除所有 selected
+    items.forEach(item => item.classList.remove('selected'));
 
-        {/* 【中文注释：主问题标题】 */}
-        <span className="question-title-text">
-          {q.title}
-        </span>
-      </div>
+    // 强制刷新动画
+    const current = items[index];
+    void current.offsetWidth;
+    current.classList.add('selected');
 
-      {/* 【中文注释：第二行：完整 ID，确保它在下一行】 */}
-      <span className="question-id-text">
-        (ID: {q.id})
-      </span>
-      </li>
+    // 更新 React state
+    setSelectedIndex(index);
+
+    onEditQuestion(index);
+  }}
+>
+  <div className="question-header">
+    <span className="question-badge">Q{index + 1}</span>
+    <span className="question-title-text">{q.title}</span>
+  </div>
+  <span className="question-id-text">(ID: {q.id})</span>
+</li>
       ))}
      </ul>
      )}
@@ -1245,6 +1268,9 @@ const QuizEditorComponent: React.FC<QuizEditorComponentProps> = ({
          <BackButton onClick={onBack}>
   <span role="img" aria-label="back">←</span> Back to Funnel Dashboard
         </BackButton>
+   <button onClick={() => cycleHighlightQuestions(800)}>
+  Loop Highlight Q1~Q6
+</button>
     </div>
   );
 };
