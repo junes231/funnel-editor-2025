@@ -123,9 +123,20 @@ function initializeDebugger() {
   try {
     // 限制可执行代码，例如只允许特定函数
     const allowedFunctions = {
-      testFunction: () => 'Test result',
-      // 其他安全函数
-    };
+  testFunction: () => 'Test result',
+
+  // 新增：检测 question-item 状态和动画
+  checkQuestions: () => {
+    const items = document.querySelectorAll('.question-item');
+    return Array.from(items).map((li, idx) => ({
+      index: idx,
+      id: li.querySelector('.question-id-text')?.innerText || 'N/A',
+      selected: li.classList.contains('selected'),
+      animation: getComputedStyle(li).animation,
+      transform: getComputedStyle(li).transform
+    }));
+  }
+};
     if (allowedFunctions[code]) {
       const result = allowedFunctions[code]();
       logToPanel('log', ['<-', result]);
