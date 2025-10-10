@@ -840,7 +840,8 @@ p {
   flex-direction: column;
   align-items: flex-start;
   word-break: break-word;
-  overflow: hidden;
+  overflow: visible; /* 保证流光显示 */
+  position: relative;
 }
 
 /* 标题行 */
@@ -898,17 +899,13 @@ p {
   }
 }
 
-/* 点击选中效果（动态蓝色边框 + 呼吸 + 缩放） */
+/* 点击选中效果 + 蓝色呼吸动画 */
 .question-item.selected {
-  border: 3px solid transparent;
   border-radius: 8px;
-  background-clip: padding-box;
-  position: relative;
   animation: blue-breath 2.5s ease-in-out infinite;
-  transform: scale(1.03);
 }
 
-/* 动态蓝色流光边框伪元素 */
+/* 蓝色流光边框伪元素 */
 .question-item.selected::before {
   content: "";
   position: absolute;
@@ -942,15 +939,9 @@ p {
 
 /* 边框流光动画 */
 @keyframes border-flow {
-  0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
-  }
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }
 
 /* 文件末尾添加 */
