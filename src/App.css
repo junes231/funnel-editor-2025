@@ -893,16 +893,6 @@ p {
   }
 }
 
-/* hover 效果 */
-@media (hover: hover) and (pointer: fine) {
-  .question-item:hover {
-    background: linear-gradient(135deg, #e6f0ff, #ffffff);
-    transform: translateY(-1px) scale(1.01);
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
-  }
-}
-
-
 
 /* 认证相关样式 */
 .auth-container {
