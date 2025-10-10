@@ -1192,9 +1192,9 @@ const QuizEditorComponent: React.FC<QuizEditorComponentProps> = ({
               return (
                 <button 
                   key={fileName}
-                  className={`question-item ${selectedIndex === index ? 'selected' : ''}`} 
-                  onClick={() => onEditQuestion(index)}
-                  >
+                  className="template-btn" 
+                  onClick={() => onSelectTemplate(fileName.replace('.json', ''))}
+                >
                   {buttonLabel}
                 </button>
               );
@@ -1209,7 +1209,9 @@ const QuizEditorComponent: React.FC<QuizEditorComponentProps> = ({
       ) : (
           <ul className="question-list">
           {questions.map((q, index) => (
-         <li key={q.id} className="question-item" onClick={() => onEditQuestion(index)}>
+         className={`question-item ${selectedIndex === index ? 'selected' : ''}`} 
+         onClick={() => onEditQuestion(index)}
+         >
     
     {/* 【中文注释：第一行容器：用于实现徽章和标题的横向对齐】 */}
     <div className="question-header"> 
