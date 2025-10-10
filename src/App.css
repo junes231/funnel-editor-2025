@@ -822,7 +822,7 @@ p {
   margin: 30px 0;        /* 增加列表上下的外边距，让布局更舒展 */
 }
 
-/* 1. 容器样式和布局（强制垂直堆叠） */
+
 /* 基础卡片样式 */
 .question-item {
   background-color: #ffffff;
@@ -835,90 +835,33 @@ p {
   cursor: pointer;
   width: 95%;
   min-height: 75px;
-  transition: all 0.3s ease;
+  transition: transform 0.3s ease, box-shadow 0.3s ease; /* 只对 transform 和 box-shadow 应用 transition */
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   word-break: break-word;
-  overflow: visible; /* 保证流光显示 */
   position: relative;
 }
 
-/* 标题行 */
-.question-item .question-header {
-  display: flex;
-  align-items: flex-start;
-  margin-bottom: 8px;
-  width: 100%;
-}
-
-/* 徽章 */
-.question-item .question-badge {
-  display: inline-flex;
-  justify-content: center;
-  align-items: center;
-  width: 32px;
-  height: 32px;
-  background-color: #007bff;
-  color: white;
-  border-radius: 50%;
-  font-weight: 700;
-  font-size: 0.95em;
-  flex-shrink: 0;
-  margin-right: 12px;
-}
-
-/* 标题文本 */
-.question-item .question-title-text {
-  font-weight: 700;
-  font-size: 1.05em;
-  line-height: 1.25;
-  word-break: break-word;
-  margin-top: 5px;
-  width: auto;
-}
-
-/* ID 文本 */
-.question-item .question-id-text {
-  font-size: 0.7em;
-  color: #ccc;
-  display: block;
-  line-height: 1.2;
-  margin-left: 44px;
-  word-break: break-all;
-  white-space: normal;
-  width: auto;
-}
-
-/* hover 效果（桌面端） */
-@media (hover: hover) and (pointer: fine) {
-  .question-item:hover {
-    background: linear-gradient(135deg, #e6f0ff, #ffffff);
-    transform: translateY(-1px) scale(1.01);
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
-  }
-}
-
-/* 点击选中效果 + 蓝色呼吸动画 */
+/* 选中状态 */
 .question-item.selected {
   border-radius: 8px;
   animation: blue-breath 2.5s ease-in-out infinite;
 }
 
-/* 蓝色流光边框伪元素 */
+/* 伪元素流光边框 */
 .question-item.selected::before {
-  content: "";
+  content: '';
   position: absolute;
   top: -2px;
   left: -2px;
   right: -2px;
   bottom: -2px;
   border-radius: 10px;
-  padding: 2px;
   background: linear-gradient(270deg, #007bff, #00c6ff, #007bff);
   background-size: 600% 600%;
   animation: border-flow 3s ease infinite;
-  z-index: -1;
+  z-index: -1; /* 确保伪元素在卡片下方 */
 }
 
 /* 蓝色呼吸动画 */
@@ -939,12 +882,27 @@ p {
 
 /* 边框流光动画 */
 @keyframes border-flow {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
 }
 
-/* 文件末尾添加 */
+/* hover 效果 */
+@media (hover: hover) and (pointer: fine) {
+  .question-item:hover {
+    background: linear-gradient(135deg, #e6f0ff, #ffffff);
+    transform: translateY(-1px) scale(1.01);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+  }
+}
+
+
 
 /* 认证相关样式 */
 .auth-container {
