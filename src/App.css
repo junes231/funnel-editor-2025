@@ -824,7 +824,7 @@ p {
 
 /* 1. 容器样式和布局（强制垂直堆叠） */
 .question-item {
-    background-color: #ffffff; /* 确保背景是纯白色 */
+    background-color: #ffffff !important; /* 确保背景是纯白色 */
     border: 1px solid #e9ecef;
     
     /* 【中文注释：核心修复：强制文字颜色为深色，以适应浅色背景】 */
