@@ -909,9 +909,28 @@ p {
 
 /* 移动端点击高亮通过 selected 控制 */
 .question-item.selected {
-  background-color: #f8f9fa !important;
-  border: 2px solid #007bff;
+  background: linear-gradient(135deg, #e6f0ff, #ffffff) !important; /* 蓝白渐变背景 */
+  border: 2px solid #007bff; /* 蓝色高亮边框 */
   color: #343a40 !important;
+  transform: scale(1.04); /* 轻微放大 */
+  animation: blue-breath 2.5s ease-in-out infinite; /* 呼吸动画 */
+  box-shadow: 0 0 15px rgba(0, 123, 255, 0.4);
+}
+
+/* 蓝色呼吸动效关键帧 */
+@keyframes blue-breath {
+  0% {
+    box-shadow: 0 0 8px rgba(0, 123, 255, 0.3);
+    transform: scale(1.03);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(0, 123, 255, 0.6);
+    transform: scale(1.06);
+  }
+  100% {
+    box-shadow: 0 0 8px rgba(0, 123, 255, 0.3);
+    transform: scale(1.03);
+  }
 }
 
 /* 文件末尾添加 */
