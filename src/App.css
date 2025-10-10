@@ -824,11 +824,11 @@ p {
 
 /* 1. 容器样式和布局（强制垂直堆叠） */
 .question-item {
-   background-color: #f8f9fa; 
+    background-color: #ffffff; /* 确保背景是纯白色 */
     border: 1px solid #e9ecef;
     
-    /* 【中文注释：核心修复 2: 恢复为深色文字，以适应浅色背景】 */
-    color: #343a40; 
+    /* 【中文注释：核心修复：强制文字颜色为深色，以适应浅色背景】 */
+    color: #343a40 !important; 
     padding: 16px 20px; 
     margin-bottom: 12px;
     border-radius: 8px; /* 统一卡片圆角 */
@@ -878,7 +878,7 @@ p {
     font-weight: 700;
     font-size: 1.05em;
     line-height: 1.25;
-    color: white; 
+    
     word-break: break-word; 
     margin-top: 5px; /* 对齐徽章 */
     width: auto; /* 允许标题占据所需宽度 */
