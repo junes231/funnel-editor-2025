@@ -1235,27 +1235,11 @@ const cycleHighlightQuestions = async (delay: number = 800) => {
       ) : (
           <ul className="question-list">
   {questions.map((q, index) => (
-       <li
+     <li
   key={q.id}
   className={`question-item ${selectedIndex === index ? 'selected' : ''}`}
-  onClick={(e) => {
-    // 获取所有卡片节点
-    const items = document.querySelectorAll('.question-item');
-    // 移除所有 selected
-    items.forEach(item => item.classList.remove('selected'));
-
-    // 获取当前点击的卡片（更精准）
-    const current = e.currentTarget as HTMLElement;
-
-    // 先移除再强制刷新，再添加
-    current.classList.remove('selected');
-    void current.offsetWidth; // 💡 强制浏览器重新渲染，重启动画
-    current.classList.add('selected');
-
-    // 更新 React 状态
-    setSelectedIndex(index);
-
-    // 调用编辑逻辑
+  onClick={() => {
+    setSelectedIndex(index); 
     onEditQuestion(index);
   }}
 >
