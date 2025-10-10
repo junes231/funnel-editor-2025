@@ -122,6 +122,8 @@ function initializeDebugger() {
   logToPanel('log', [`> ${code}`]);
   try {
     // 限制可执行代码，例如只允许特定函数
+   const allowedFunctions = {
+  testFunction: () => 'Test result',
     checkQuestions: () => {
   const items = document.querySelectorAll('.question-item');
   if (!items.length) return '没有找到任何 question-item 元素';
