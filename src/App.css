@@ -922,37 +922,6 @@ p {
   width: 100%;
 }
 
-.question-item.selected::before {
-  /* 移除或注释掉此样式 */
-  display: none !important;
-}
-
-/*
-@keyframes blue-breath {
-  0% {
-    box-shadow: 0 0 8px rgba(0, 123, 255, 0.3);
-    transform: scale(1);
-  }
-  50% {
-    box-shadow: 0 0 20px rgba(0, 123, 255, 0.6);
-    transform: scale(1.05);
-  }
-  100% {
-    box-shadow: 0 0 8px rgba(0, 123, 255, 0.3);
-    transform: scale(1);
-  }
-}
-*/
-/* 
-@keyframes border-flow {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-*/
-
-
-
 /* 认证相关样式 */
 .auth-container {
     background: white;
