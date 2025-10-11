@@ -1022,18 +1022,13 @@ const QuizEditorComponent: React.FC<QuizEditorComponentProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const handleItemClick = (index: number) => {
-    // 1. 设置选中状态，触发 CSS 动画 (className 会立即更新为 'selected')
+    // 1. 设置选中状态，触发 CSS 动画 (立即更新为 'selected')
     setSelectedIndex(index);
 
-    // 2. 延迟导航，确保动画有时间播放 (600ms 对应 CSS 中的 pulseHighlight 动画时间)
-    setTimeout(() => {
-        // 导航到编辑页面，此时父组件状态会更新，组件会被卸载
-        onEditQuestion(index);
-        
-        // 可选：在导航后立即重置本地状态
-        setSelectedIndex(null); 
-    }, 600); 
-  };
+    // 2. ✅ FIX: 移除 setTimeout，让跳转立即发生 (增强响应速度)
+    onEditQuestion(index);
+    
+};
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
   const file = event.target.files?.[0];
   if (!file) {
