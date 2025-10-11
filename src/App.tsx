@@ -1213,18 +1213,25 @@ const QuizEditorComponent: React.FC<QuizEditorComponentProps> = ({
      <li
   key={q.id}
   className={`question-item ${selectedIndex === index ? 'selected' : ''}`}
-  onClick={(e) => {
-    const current = e.currentTarget as HTMLElement;
+  onClick={() => {
+  const items = document.querySelectorAll('.question-item');
+  const current = items[index];
 
-    // 🔹 移除并强制刷新动画
-    current.classList.remove('selected');
-    void current.offsetWidth; // 💡 触发浏览器重排
-    current.classList.add('selected');
+  // 1️⃣ 先移除所有选中状态
+  items.forEach(item => item.classList.remove('selected'));
 
-    // 🔹 同时更新 React 状态
-    setSelectedIndex(index);
-    onEditQuestion(index);
-  }}
+  // 2️⃣ 如果点击的是当前卡片，也允许重新触发动画
+  void current.offsetWidth; // 💡 关键：强制浏览器重排（重启动画）
+
+  // 3️⃣ 再次添加 class，触发蓝色动画
+  current.classList.add('selected');
+
+  // 4️⃣ 更新 React 状态
+  setSelectedIndex(index);
+
+  // 5️⃣ 调用原有编辑逻辑
+  onEditQuestion(index);
+}}
 >
   <div className="question-header">
     <span className="question-badge">Q{index + 1}</span>
