@@ -852,11 +852,9 @@ p {
 
 /* 点击/触摸按下（移动端/桌面端）：关键修复 */
 .question-item:active {
-  /* 模拟按钮被按下的效果 */
-  transform: scale(0.98); 
-  /* 简化阴影，让效果更自然 */
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); 
-  /* 确保按下动画快速生效 */
+  transform: scale(0.97); /* 按下时轻微收缩 */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background-color: #d0e7ff; /* 按下时颜色加深 */
   transition: all 0.1s ease-out; 
 }
 
@@ -907,30 +905,22 @@ p {
 }
 /* 选中状态 */
 .question-item.selected {
-  border-radius: 8px;
-  border-color: transparent; 
-  /* 为流光效果预留空间 */
-  margin: 14px auto 12px; 
-  width: 100%; 
+  /* 移除复杂的流光和脉冲动画的依赖 */
+  border: 1px solid #007bff; /* 保持蓝色边框 */
+  background-color: #e6f7ff; /* 浅蓝背景快速闪烁 */
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.25);
+  transform: scale(1.005); /* 移除大缩放 */
+  /* 确保过渡时间足够快 */
+  transition: all 0.2s ease-out; 
 }
 
 /* 伪元素流光边框 */
 .question-item.selected::before {
-  content: '';
-  position: absolute;
-  top: -2px;
-  left: -2px;
-  right: -2px;
-  bottom: -2px;
-  border-radius: 10px;
-  background: linear-gradient(270deg, #007bff, #00c6ff, #007bff);
-  background-size: 400% 400%;
-  animation: border-flow 3s linear infinite; 
-  border: 2px solid #007bff;
-  z-index: -1; /* 确保伪元素在卡片下方 */
+  /* 移除或注释掉此样式 */
+  display: none !important;
 }
 
-/* 蓝色呼吸动画 */
+/*
 @keyframes blue-breath {
   0% {
     box-shadow: 0 0 8px rgba(0, 123, 255, 0.3);
@@ -945,18 +935,16 @@ p {
     transform: scale(1);
   }
 }
-
-/* 边框流光动画 */
+*/
+/* 
 @keyframes border-flow {
   0% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }
   100% { background-position: 0% 50%; }
 }
-@keyframes pulseHighlight {
-  0%   { background-color: #007bff55; transform: scale(1.01); }
-  50%  { background-color: #007bff99; transform: scale(1.02); }
-  100% { background-color: #ffffff; transform: scale(1); }
-}
+*/
+
+
 
 /* 认证相关样式 */
 .auth-container {
