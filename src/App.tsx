@@ -1023,9 +1023,9 @@ const QuizEditorComponent: React.FC<QuizEditorComponentProps> = ({
    const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
 
 const handleItemClick = (index: number) => {
-  setSelectedIndex(index);        // 更新选中状态
-  setTimeout(() => onEditQuestion(index), 100); // 延迟切换视图
-};
+    // 立即跳转，依赖 CSS 的 :active 提供点击反馈
+    onEditQuestion(index);
+  };
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
   const file = event.target.files?.[0];
   if (!file) {
