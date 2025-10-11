@@ -1020,12 +1020,7 @@ const QuizEditorComponent: React.FC<QuizEditorComponentProps> = ({
   templateFiles // <-- Destructure the prop here
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
-   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
-
-const handleItemClick = (index: number) => {
-    // 立即跳转，依赖 CSS 的 :active 提供点击反馈
-    onEditQuestion(index);
-  };
+   
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
   const file = event.target.files?.[0];
   if (!file) {
@@ -1216,8 +1211,8 @@ const handleItemClick = (index: number) => {
           {questions.map((q, index) => (
             <li
             key={q.id}
-           className={`question-item ${selectedIndex === index ? 'selected' : ''}`} // ✅ 自动切换
-          onClick={() => handleItemClick(index)}
+           className="question-item" 
+              onClick={() => onEditQuestion(index)}
          >
          <div className="question-header">
           <span className="question-badge">Q{index + 1}</span>
