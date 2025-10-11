@@ -843,7 +843,22 @@ p {
   overflow: visible; /* 保证流光显示 */
   position: relative;
 }
+.question-item:hover {
+  transform: translateY(-2px); 
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.12); /* 增强悬停阴影 */
+  border-color: #007bff; 
+  background-color: #f8f9ff; /* 浅蓝色背景反馈 */
+}
 
+/* 点击/触摸按下（移动端/桌面端）：关键修复 */
+.question-item:active {
+  /* 模拟按钮被按下的效果 */
+  transform: scale(0.98); 
+  /* 简化阴影，让效果更自然 */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); 
+  /* 确保按下动画快速生效 */
+  transition: all 0.1s ease-out; 
+}
 
 /* 标题行 */
 .question-item .question-header {
@@ -893,8 +908,10 @@ p {
 /* 选中状态 */
 .question-item.selected {
   border-radius: 8px;
-  animation: pulseHighlight 0.6s ease;
-  background-color: #007bff22; 
+  border-color: transparent; 
+  /* 为流光效果预留空间 */
+  margin: 14px auto 12px; 
+  width: 100%; 
 }
 
 /* 伪元素流光边框 */
@@ -907,8 +924,9 @@ p {
   bottom: -2px;
   border-radius: 10px;
   background: linear-gradient(270deg, #007bff, #00c6ff, #007bff);
-  background-size: 600% 600%;
-  animation: border-flow 3s ease infinite;
+  background-size: 400% 400%;
+  animation: border-flow 3s linear infinite; 
+  border: 2px solid #007bff;
   z-index: -1; /* 确保伪元素在卡片下方 */
 }
 
@@ -930,15 +948,9 @@ p {
 
 /* 边框流光动画 */
 @keyframes border-flow {
-  0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
-  }
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }
 @keyframes pulseHighlight {
   0%   { background-color: #007bff55; transform: scale(1.01); }
