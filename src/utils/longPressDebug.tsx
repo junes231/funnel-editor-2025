@@ -123,72 +123,69 @@ function initializeDebugger() {
   try {
     // 限制可执行代码，例如只允许特定函数
    const allowedFunctions = {
-  testFunction: () => 'Test result',
-    checkQuestions: () => {
-  const items = document.querySelectorAll('.question-item');
-  if (!items.length) return '没有找到任何 question-item 元素';
-
-  const panel = document.querySelector('#panel-console-output');
-  if (panel) panel.innerHTML = ''; // 清空输出
-
-  const result = Array.from(items).map((li, idx) => {
-    const selected = li.classList.contains('selected');
-    const animation = getComputedStyle(li).animation;
-    const animationName = getComputedStyle(li).animationName;
-    const transform = getComputedStyle(li).transform;
-
-    // 判断是否在蓝色呼吸动画中
-    const isAnimating = animationName === 'blue-breath';
-
-    if (panel) {
-      const div = document.createElement('div');
-      div.style.padding = '4px';
-      div.style.borderBottom = '1px solid #444';
-      div.innerHTML = `<strong>Q${idx+1}</strong> | ${li.querySelector('.question-id-text')?.innerText || 'N/A'} | selected: ${selected} | 动画: ${isAnimating ? '✅ 动画中' : '❌ 无动画'}`;
-      if (selected) div.style.background = '#e6f0ff';
-      panel.appendChild(div);
-    }
-
-    return { index: idx, id: li.querySelector('.question-id-text')?.innerText || 'N/A', selected, animation, animationName, transform, isAnimating };
-  });
-
-  return result;
-},
-
-  // 强制选中指定卡片并触发动画
-  forceSelect: (index: number = 0) => {
+  // 检查所有卡片状态（不会修改）
+  checkQuestions: () => {
     const items = document.querySelectorAll('.question-item');
     if (!items.length) return '没有找到任何 question-item 元素';
 
-    items.forEach(li => li.classList.remove('selected'));
-    const target = items[index];
-    if (target) {
-      target.classList.add('selected');
-      void target.offsetWidth; // 触发动画
-    }
+    const panel = document.querySelector('#panel-console-output');
+    if (panel) panel.innerHTML = ''; // 清空输出
 
-    return allowedFunctions.checkQuestions();
+    const result = Array.from(items).map((li, idx) => {
+      const selected = li.classList.contains('selected');
+      const animationName = getComputedStyle(li).animationName;
+      const isAnimating = animationName === 'blue-breath';
+
+      if (panel) {
+        const div = document.createElement('div');
+        div.style.padding = '4px';
+        div.style.borderBottom = '1px solid #444';
+        div.innerHTML = `<strong>Q${idx + 1}</strong> | selected: ${selected ? '✅' : '❌'} | 动画: ${isAnimating ? '✅ 正在呼吸' : '❌ 无动画'}`;
+        if (selected) div.style.background = '#e6f0ff';
+        panel.appendChild(div);
+      }
+
+      return { index: idx, selected, animationName, isAnimating };
+    });
+
+    return result;
   },
 
-  // 循环选中所有卡片动画
-  cycleSelect: async (delay: number = 800) => {
+  // ✅ 手动触发单张卡片动画，不影响 React 状态
+  pulseCard: (index = 0) => {
+    const items = document.querySelectorAll('.question-item');
+    if (!items.length) return '没有找到任何 question-item 元素';
+
+    const target = items[index];
+    if (!target) return `没有找到第 ${index + 1} 张卡片`;
+
+    // 重新触发动画
+    target.classList.remove('selected');
+    void target.offsetWidth; // 强制刷新
+    target.classList.add('selected');
+
+    return `已触发 Q${index + 1} 呼吸动画`;
+  },
+
+  // ✅ 循环预览动画，但不会打断点击状态
+  cycleHighlight: async (delay = 1000) => {
     const items = document.querySelectorAll('.question-item');
     if (!items.length) return '没有找到任何 question-item 元素';
 
     for (let i = 0; i < items.length; i++) {
-      items.forEach(li => li.classList.remove('selected'));
-      items[i].classList.add('selected');
-      void items[i].offsetWidth; // 强制触发动画
-      allowedFunctions.checkQuestions(); // 更新面板
+      const item = items[i];
+      item.classList.remove('selected');
+      void item.offsetWidth;
+      item.classList.add('selected');
       await new Promise(r => setTimeout(r, delay));
     }
 
-    return '循环选中完成';
-  }
+    return '循环高亮完成 ✅';
+  },
 };
 
 // ------------------- 面板按钮控制 -------------------
-function addCardControlButtons() {
+function addCardControlButtons(setSelectedIndex) {
   const consolePanel = document.getElementById('panel-console-output');
   if (!consolePanel) return;
 
@@ -203,19 +200,28 @@ function addCardControlButtons() {
 
   items.forEach((li, idx) => {
     const btn = document.createElement('button');
-    btn.textContent = `Q${idx+1}`;
-    btn.style.padding = '4px 8px';
-    btn.style.fontSize = '12px';
-    btn.style.cursor = 'pointer';
-    btn.style.border = '1px solid #007acc';
-    btn.style.borderRadius = '4px';
-    btn.style.background = '#1e1e1e';
-    btn.style.color = '#d4d4d4';
+    btn.textContent = `Q${idx + 1}`;
+    Object.assign(btn.style, {
+      padding: '4px 8px',
+      fontSize: '12px',
+      cursor: 'pointer',
+      border: '1px solid #007acc',
+      borderRadius: '4px',
+      background: '#1e1e1e',
+      color: '#d4d4d4',
+    });
 
     btn.onclick = () => {
-      items.forEach(li => li.classList.remove('selected'));
-      li.classList.add('selected');
-      void li.offsetWidth; // 触发动画
+      // 更新 React 状态，这样 className 会由 React 自动更新
+      if (setSelectedIndex) {
+        setSelectedIndex(idx);
+      } else {
+        // 如果没有 React 状态，就手动触发动画
+        li.classList.remove('selected');
+        void li.offsetWidth;
+        li.classList.add('selected');
+      }
+
       allowedFunctions.checkQuestions();
     };
 
@@ -225,23 +231,29 @@ function addCardControlButtons() {
   // 循环高亮按钮
   const cycleBtn = document.createElement('button');
   cycleBtn.textContent = '循环高亮所有卡片';
-  cycleBtn.style.padding = '4px 8px';
-  cycleBtn.style.fontSize = '12px';
-  cycleBtn.style.cursor = 'pointer';
-  cycleBtn.style.border = '1px solid #28a745';
-  cycleBtn.style.borderRadius = '4px';
-  cycleBtn.style.background = '#1e1e1e';
-  cycleBtn.style.color = '#28a745';
-  cycleBtn.style.marginLeft = '8px';
+  Object.assign(cycleBtn.style, {
+    padding: '4px 8px',
+    fontSize: '12px',
+    cursor: 'pointer',
+    border: '1px solid #28a745',
+    borderRadius: '4px',
+    background: '#1e1e1e',
+    color: '#28a745',
+    marginLeft: '8px',
+  });
 
   let running = false;
   cycleBtn.onclick = async () => {
     if (running) return;
     running = true;
     for (let i = 0; i < items.length; i++) {
-      items.forEach(li => li.classList.remove('selected'));
-      items[i].classList.add('selected');
-      void items[i].offsetWidth; // 触发动画
+      if (setSelectedIndex) {
+        setSelectedIndex(i);
+      } else {
+        items.forEach(li => li.classList.remove('selected'));
+        void items[i].offsetWidth;
+        items[i].classList.add('selected');
+      }
       allowedFunctions.checkQuestions();
       await new Promise(r => setTimeout(r, 800));
     }
@@ -249,8 +261,6 @@ function addCardControlButtons() {
   };
 
   btnContainer.appendChild(cycleBtn);
-
-  // 插入到面板最前面
   consolePanel.prepend(btnContainer);
 }
 
