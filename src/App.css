@@ -850,7 +850,7 @@ p {
 .question-item:hover {
   transform: translateY(-4px); /* 悬浮效果 */
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15); 
-  border-color: #007bff; 
+  border-color: #800080; 
   background-color: #f8faff; 
 }
 
