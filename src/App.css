@@ -850,10 +850,13 @@ p {
 .question-item:hover {
   transform: translateY(-4px); /* 悬浮效果 */
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15); 
-  border-color: #800080; 
   background-color: #f8faff; 
 }
-
+.question-item.selected {
+  border-color: #800080; /* 仅选中状态显示紫色 */
+  animation: blue-breath 2.5s ease-in-out infinite;
+  position: relative;
+}
 .question-item:active {
   transform: scale(0.97); /* 按下效果 */
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
