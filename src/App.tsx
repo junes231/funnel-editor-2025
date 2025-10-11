@@ -1020,15 +1020,9 @@ const QuizEditorComponent: React.FC<QuizEditorComponentProps> = ({
   templateFiles // <-- Destructure the prop here
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
-  const handleItemClick = (index: number) => {
-    // 1. 设置选中状态，触发 CSS 动画 (立即更新为 'selected')
-    setSelectedIndex(index);
-
-    // 2. ✅ FIX: 移除 setTimeout，让跳转立即发生 (增强响应速度)
-    onEditQuestion(index);
-    
-};
+   const handleItemClick = (index: number) => {
+     onEditQuestion(index);
+    };
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
   const file = event.target.files?.[0];
   if (!file) {
@@ -1220,7 +1214,7 @@ const QuizEditorComponent: React.FC<QuizEditorComponentProps> = ({
             <li 
               key={q.id} 
               // ✅ FIX 3: 正确绑定 className，使用本地定义的 selectedIndex 和循环变量 index
-              className={`question-item ${selectedIndex === index ? 'selected' : ''}`}
+              className="question-item"
               // ✅ FIX 4: 使用新的集中点击处理函数，移除手动 DOM 操作
               onClick={() => handleItemClick(index)}
             >
