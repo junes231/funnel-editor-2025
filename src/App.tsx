@@ -1021,32 +1021,7 @@ const QuizEditorComponent: React.FC<QuizEditorComponentProps> = ({
 }) => {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-   // 循环高亮函数
-const cycleHighlightQuestions = async (delay: number = 800) => {
-  const items = document.querySelectorAll('.question-item');
-  if (!items.length) return;
-
-  for (let i = 0; i < items.length; i++) {
-    // 移除所有选中状态
-    items.forEach(item => item.classList.remove('selected'));
-
-    // 添加 selected 并强制刷新动画
-    const current = items[i];
-    current.classList.remove('selected');
-    void current.offsetWidth; // 强制刷新动画
-    current.classList.add('selected');
-
-    // 更新 React 状态（可选，用于保持同步）
-    setSelectedIndex(i);
-
-    // 等待一段时间再选下一个
-    await new Promise(r => setTimeout(r, delay));
-  }
-
-  // 循环结束后可选清除高亮
-  items.forEach(item => item.classList.remove('selected'));
-  setSelectedIndex(null);
-};
+   
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
   const file = event.target.files?.[0];
   if (!file) {
@@ -1238,8 +1213,16 @@ const cycleHighlightQuestions = async (delay: number = 800) => {
      <li
   key={q.id}
   className={`question-item ${selectedIndex === index ? 'selected' : ''}`}
-  onClick={() => {
-    setSelectedIndex(index); 
+  onClick={(e) => {
+    const current = e.currentTarget as HTMLElement;
+
+    // 🔹 移除并强制刷新动画
+    current.classList.remove('selected');
+    void current.offsetWidth; // 💡 触发浏览器重排
+    current.classList.add('selected');
+
+    // 🔹 同时更新 React 状态
+    setSelectedIndex(index);
     onEditQuestion(index);
   }}
 >
@@ -1257,12 +1240,9 @@ const cycleHighlightQuestions = async (delay: number = 800) => {
          <BackButton onClick={onBack}>
   <span role="img" aria-label="back">←</span> Back to Funnel Dashboard
         </BackButton>
-   <button onClick={() => cycleHighlightQuestions(800)}>
-  Loop Highlight Q1~Q6
-</button>
-    </div>
-  );
-};
+     </div>
+      );
+      };
 
 interface QuestionFormComponentProps {
   question?: Question;
