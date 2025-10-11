@@ -846,13 +846,8 @@ p {
   position: relative; /* 关键：用于徽章绝对定位的锚点 */
 }
 
-/* --- 3. 交互状态 (保持简洁快速的反馈) --- */
-.question-item:hover {
-  transform: translateY(-4px); /* 悬浮效果 */
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15); 
-  background-color: #f8faff; 
-  border-color: #007bff;
-}
+
+
 .question-item.selected {
   border-color: #007bff; /* 仅选中状态显示紫色 */
   animation: blue-breath 2.5s ease-in-out infinite;
@@ -864,7 +859,12 @@ p {
   background-color: #e6f7ff; /* 浅蓝背景反馈 */
   transition: all 0.1s ease-out; 
 }
-
+.question-item:hover {
+  transform: translateY(-4px); /* 悬浮效果 */
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15); 
+  background-color: #f8faff; 
+  border-color: #007bff;
+}
 /* --- 4. 徽章（Q1, Q2） - 绝对定位到角落 --- */
 .question-item .question-badge {
   /* 关键：绝对定位到左上角，并略微突出卡片边缘 */
