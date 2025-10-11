@@ -1023,9 +1023,8 @@ const QuizEditorComponent: React.FC<QuizEditorComponentProps> = ({
    const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
 
 const handleItemClick = (index: number) => {
-  console.log('Setting selectedIndex to:', index);
-  setSelectedIndex(index);
-  onEditQuestion(index);
+  setSelectedIndex(index);        // 更新选中状态
+  setTimeout(() => onEditQuestion(index), 100); // 延迟切换视图
 };
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
   const file = event.target.files?.[0];
