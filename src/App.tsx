@@ -1226,8 +1226,8 @@ const QuizEditorComponent: React.FC<QuizEditorComponentProps> = ({
             >
               <div className="question-header">
                 <span className="question-badge">Q{index + 1}</span>
-                <span className="question-title-text">{q.title}</span>
-              </div>
+                 </div>
+              <span className="question-title-text">{q.title}</span>
               <span className="question-id-text">(ID: {q.id})</span>
             </li>
           ))}
