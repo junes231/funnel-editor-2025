@@ -1019,9 +1019,21 @@ const QuizEditorComponent: React.FC<QuizEditorComponentProps> = ({
   onSelectTemplate,
   templateFiles // <-- Destructure the prop here
 }) => {
-  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-   
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const handleItemClick = (index: number) => {
+    // 1. 设置选中状态，触发 CSS 动画 (className 会立即更新为 'selected')
+    setSelectedIndex(index);
+
+    // 2. 延迟导航，确保动画有时间播放 (600ms 对应 CSS 中的 pulseHighlight 动画时间)
+    setTimeout(() => {
+        // 导航到编辑页面，此时父组件状态会更新，组件会被卸载
+        onEditQuestion(index);
+        
+        // 可选：在导航后立即重置本地状态
+        setSelectedIndex(null); 
+    }, 600); 
+  };
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
   const file = event.target.files?.[0];
   if (!file) {
@@ -1208,26 +1220,23 @@ const QuizEditorComponent: React.FC<QuizEditorComponentProps> = ({
       {questions.length === 0 ? (
         <p className="no-questions-message">No questions added yet. Click "Add New Question" or "Import Questions" to start!</p>
       ) : (
-          <ul className="question-list">
-  {questions.map((q, index) => (
-     <li
-  key={q.id}
-  // ✅ 关键：直接将 selected 类名绑定到 React 状态
-  className={`question-item ${questionIndex === selectedQuestionIndex ? 'selected' : ''}`}
-  onClick={() => {
-    
-    onEditQuestion(index);
-  }}
->
-  <div className="question-header">
-    <span className="question-badge">Q{index + 1}</span>
-    {/* 假设 q.title 是有效的，如果需要使用 questionToEdit，则需要调整组件结构 */}
-    <span className="question-title-text">{q.title}</span> 
-  </div>
-  <span className="question-id-text">(ID: {q.id})</span>
-</li>
-      ))}
-     </ul>
+            <ul className="question-list">
+          {questions.map((q, index) => (
+            <li 
+              key={q.id} 
+              // ✅ FIX 3: 正确绑定 className，使用本地定义的 selectedIndex 和循环变量 index
+              className={`question-item ${selectedIndex === index ? 'selected' : ''}`}
+              // ✅ FIX 4: 使用新的集中点击处理函数，移除手动 DOM 操作
+              onClick={() => handleItemClick(index)}
+            >
+              <div className="question-header">
+                <span className="question-badge">Q{index + 1}</span>
+                <span className="question-title-text">{q.title}</span>
+              </div>
+              <span className="question-id-text">(ID: {q.id})</span>
+            </li>
+          ))}
+        </ul>
      )}
 
      
