@@ -843,6 +843,51 @@ p {
   position: relative;
 }
 
+/* 标题行 */
+.question-item .question-header {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 8px;
+  width: 100%;
+}
+
+/* 徽章 */
+.question-item .question-badge {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  width: 32px;
+  height: 32px;
+  background-color: #007bff;
+  color: white;
+  border-radius: 50%;
+  font-weight: 700;
+  font-size: 0.95em;
+  flex-shrink: 0;
+  margin-right: 12px;
+}
+
+/* 标题文本 */
+.question-item .question-title-text {
+  font-weight: 700;
+  font-size: 1.05em;
+  line-height: 1.25;
+  word-break: break-word;
+  margin-top: 5px;
+  width: auto;
+}
+
+/* ID 文本 */
+.question-item .question-id-text {
+  font-size: 0.7em;
+  color: #ccc;
+  display: block;
+  line-height: 1.2;
+  margin-left: 44px;
+  word-break: break-all;
+  white-space: normal;
+  width: auto;
+}
 /* 选中状态 */
 .question-item.selected {
   border-radius: 8px;
