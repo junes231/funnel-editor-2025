@@ -851,10 +851,10 @@ p {
   transform: translateY(-4px); /* 悬浮效果 */
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15); 
   background-color: #f8faff; 
-  border-color: #800080;
+  border-color: #007bff;
 }
 .question-item.selected {
-  border-color: #800080; /* 仅选中状态显示紫色 */
+  border-color: #007bff; /* 仅选中状态显示紫色 */
   animation: blue-breath 2.5s ease-in-out infinite;
   position: relative;
 }
