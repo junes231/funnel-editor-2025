@@ -921,18 +921,7 @@ p {
   white-space: normal;
   width: 100%;
 }
-/* 选中状态 */
-.question-item.selected {
-  /* 移除复杂的流光和脉冲动画的依赖 */
-  border: 1px solid #007bff; /* 保持蓝色边框 */
-  background-color: #e6f7ff; /* 浅蓝背景快速闪烁 */
-  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.25);
-  transform: scale(1.005); /* 移除大缩放 */
-  /* 确保过渡时间足够快 */
-  transition: all 0.2s ease-out; 
-}
 
-/* 伪元素流光边框 */
 .question-item.selected::before {
   /* 移除或注释掉此样式 */
   display: none !important;
