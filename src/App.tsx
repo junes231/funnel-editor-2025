@@ -1023,7 +1023,8 @@ const QuizEditorComponent: React.FC<QuizEditorComponentProps> = ({
    const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
 
 const handleItemClick = (index: number) => {
-  setSelectedIndex(index); // ✅ 设置选中状态
+  console.log('Setting selectedIndex to:', index);
+  setSelectedIndex(index);
   onEditQuestion(index);
 };
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
