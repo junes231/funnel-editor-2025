@@ -851,6 +851,7 @@ p {
   transform: translateY(-4px); /* 悬浮效果 */
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15); 
   background-color: #f8faff; 
+  border-color: #800080;
 }
 .question-item.selected {
   border-color: #800080; /* 仅选中状态显示紫色 */
