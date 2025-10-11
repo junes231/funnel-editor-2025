@@ -820,91 +820,106 @@ p {
   list-style-type: none;
   padding: 0;
   margin: 30px 0;
-  /* ✅ 确保列表居中，因为问题项有 95% 宽度限制 */
   display: flex; 
   flex-direction: column;
   align-items: center; 
 }
 
+/* --- 2. 问题卡片主体 (.question-item) --- */
 .question-item {
   background-color: #ffffff;
   border: 1px solid #e9ecef;
   color: #343a40;
-  padding: 16px 20px;
-  margin-bottom: 15px; /* 增加卡片间距 */
-  border-radius: 12px; /* 更圆润的边角 */
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08); /* 略微增强阴影 */
+  padding: 24px; /* 增加整体内边距，看起来更宽敞 */
+  padding-top: 15px; /* 顶部内边距减少，与徽章错开 */
+  margin-bottom: 15px;
+  border-radius: 12px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.05); /* 更薄且更广的阴影 */
   cursor: pointer;
-  width: 95%; /* 保持 95% 宽度 */
-  min-height: 80px; /* 略微增加最小高度 */
+  width: 95%; 
+  min-height: 80px;
   transition: all 0.3s ease;
   display: flex;
-  flex-direction: column; 
+  flex-direction: column;
   align-items: flex-start;
   word-break: break-word;
-  position: relative;
+  position: relative; /* 关键：用于徽章绝对定位的锚点 */
+}
 
-  }
-
-/* 悬停/点击动画 (保持上一轮修改后的简洁和快速反馈) */
+/* --- 3. 交互状态 (保持简洁快速的反馈) --- */
 .question-item:hover {
-  transform: translateY(-4px); /* 提升浮动高度 */
+  transform: translateY(-4px); /* 悬浮效果 */
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15); 
   border-color: #007bff; 
   background-color: #f8faff; 
 }
+
 .question-item:active {
-  transform: scale(0.98); 
+  transform: scale(0.97); /* 按下效果 */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background-color: #e6f7ff; /* 浅蓝背景反馈 */
   transition: all 0.1s ease-out; 
 }
 
-.question-item .question-header {
-  display: flex; /* 徽章和 ID 文本一行 */
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 6px;
-  width: 100%;
-}
-
-/* 徽章 (保持不变，但确保它独立于标题文本) */
+/* --- 4. 徽章（Q1, Q2） - 绝对定位到角落 --- */
 .question-item .question-badge {
-  display: inline-flex;
-  justify-content: center;
-  align-items: center;
+  /* 关键：绝对定位到左上角，并略微突出卡片边缘 */
+  position: absolute;
+  top: -12px;
+  left: -12px;
+  
   width: 32px;
   height: 32px;
-  background-color: #007bff;
+  background-color: #007bff; /* 蓝色主色 */
   color: white;
   border-radius: 50%;
   font-weight: 700;
-  font-size: 0.95em;
+  font-size: 0.9em;
+  z-index: 10; /* 确保它在卡片内容之上 */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* 徽章浮动效果 */
+  
+  /* Flexbox 居中内容 */
+  display: flex;
+  justify-content: center;
+  align-items: center;
   flex-shrink: 0;
-  margin-right: 12px; /* 徽章右侧留白 */
+  
+  /* 移除 margin-right: 12px，因为它不再与标题并排 */
+  margin-right: 0;
 }
 
-/* 标题文本 (不再与徽章同行，独立占据一行) */
+
+/* --- 5. 标题和 ID 文本 - 调整垂直堆叠 --- */
+
+/* 标题行 (用于辅助对齐，但现在主要是容器) */
+.question-item .question-header {
+  /* 移除 display: flex，让内容自然堆叠 */
+  display: block; 
+  margin-bottom: 5px; /* 与 ID 文本留出空间 */
+  width: 100%;
+}
+
+/* 标题文本 (成为卡片中最主要的元素) */
 .question-item .question-title-text {
-  /* 关键：使用 margin-top 调整垂直位置，并确保它独占空间 */
-  font-weight: 600; /* 略微减轻粗细，提升可读性 */
-  font-size: 1.15em; /* 增大字体 */
+  font-weight: 700; /* 加粗，使其醒目 */
+  font-size: 1.15em;
   line-height: 1.35;
-  color: #212529; /* 深色字体 */
-  margin: 0; /* 重置可能存在的 margin-top: 5px */
-  /* 占据剩余空间 */
-  flex-grow: 1; 
+  color: #212529;
+  margin-top: 5px; /* 从徽章下方内容开始的位置留出空间 */
+  padding-left: 10px; /* 确保标题文字和徽章有合理间距 */
 }
 
-/* ID 文本 (作为子标题，显示在标题下方) */
+/* ID 文本 (次要信息，使用更柔和的样式) */
 .question-item .question-id-text {
-  font-size: 0.75em; /* 略微增大 */
-  color: #99aab5; /* 柔和的灰色 */
+  font-size: 0.75em;
+  color: #99aab5;
   display: block;
   line-height: 1.2;
-  margin-left: 0; /* ✅ 移除左侧缩进 */
-  margin-top: 5px; /* 在标题下方留出空间 */
+  margin-top: 4px; /* 标题下方留出空间 */
+  padding-left: 10px; /* 与标题对齐 */
   word-break: break-all;
   white-space: normal;
-  width: 100%; /* 占据整行 */
+  width: 100%;
 }
 /* 选中状态 */
 .question-item.selected {
