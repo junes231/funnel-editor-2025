@@ -1020,9 +1020,12 @@ const QuizEditorComponent: React.FC<QuizEditorComponentProps> = ({
   templateFiles // <-- Destructure the prop here
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
-   const handleItemClick = (index: number) => {
-     onEditQuestion(index);
-    };
+   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+
+const handleItemClick = (index: number) => {
+  setSelectedIndex(index); // ✅ 设置选中状态
+  onEditQuestion(index);
+};
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
   const file = event.target.files?.[0];
   if (!file) {
@@ -1211,19 +1214,17 @@ const QuizEditorComponent: React.FC<QuizEditorComponentProps> = ({
       ) : (
             <ul className="question-list">
           {questions.map((q, index) => (
-            <li 
-              key={q.id} 
-              // ✅ FIX 3: 正确绑定 className，使用本地定义的 selectedIndex 和循环变量 index
-              className="question-item"
-              // ✅ FIX 4: 使用新的集中点击处理函数，移除手动 DOM 操作
-              onClick={() => handleItemClick(index)}
-            >
-              <div className="question-header">
-                <span className="question-badge">Q{index + 1}</span>
-                 </div>
-              <span className="question-title-text">{q.title}</span>
-              <span className="question-id-text">(ID: {q.id})</span>
-            </li>
+            <li
+            key={q.id}
+           className={`question-item ${selectedIndex === index ? 'selected' : ''}`} // ✅ 自动切换
+          onClick={() => handleItemClick(index)}
+         >
+         <div className="question-header">
+          <span className="question-badge">Q{index + 1}</span>
+          </div>
+         <span className="question-title-text">{q.title}</span>
+         <span className="question-id-text">(ID: {q.id})</span>
+         </li>
           ))}
         </ul>
      )}
