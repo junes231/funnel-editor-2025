@@ -1310,7 +1310,12 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
        });
   };
   const handleAnswerNextStepIdChange = (answerId: string, newNextStepId: string) => {
-    if (question) {
+   if (question) {
+      // --- 关键修复：确保 ID 包含 'question-' 前缀（如果它不是空字符串） ---
+      let standardizedId = newNextStepId.trim();
+      if (standardizedId !== '' && !standardizedId.startsWith('question-')) {
+          standardizedId = 'question-' + standardizedId;
+      }
       const updatedAnswers = {
         ...question.answers,
         [answerId]: { ...question.answers[answerId], nextStepId: newNextStepId },
