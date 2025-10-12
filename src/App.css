@@ -857,7 +857,7 @@ p {
 
 @media (hover: hover) {
   .question-item:hover {
-    transform: translateY(-4px);
+    transform: none;
     box-shadow: 0 10px 25px rgba(0,0,0,0.15);
     border-color: #007bff;
   }
