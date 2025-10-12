@@ -830,7 +830,7 @@ p {
   background-color: #ffffff;
   border: 1px solid #e9ecef;
   color: #343a40;
-  padding: 20px 24px 18px 24px; 
+  padding: 30px 24px 20px 24px;
   padding-top: 30px;            /* 保持顶部与徽章错开 */
   margin-bottom: 15px;
   border-radius: 12px; 
@@ -904,21 +904,22 @@ p {
 /* 标题文本 (成为卡片中最主要的元素) */
 .question-item .question-title-text {
   font-weight: 700;
-  font-size: 1.15em;
+  font-size: 1.25em;
   line-height: 1.5;   /* 确保这个值生效 */
   color: #212529;
-  
- margin-top: 5px; /* ✅ 关键：在徽章下方留出空间 */
+  margin: 0;
+  margin-top: 5px; /* ✅ 关键：在徽章下方留出空间 */
   width: 100%;
   padding-left: 10px; /* 保持与徽章的左侧对齐 */
 }
 
 /* ID 文本 (次要信息，使用更柔和的样式) */
 .question-item .question-id-text {
-  font-size: 0.75em;
-  color: #99aab5;
+  font-size: 0.8em;
+  color: #9aa7bb;
   line-height: 1.3;
-  margin-top: 12px; /* ✅ 关键：增大与标题之间的垂直间距 */
+  margin-top: 15px; /* ✅ 关键：增大与标题之间的垂直间距 */
+  margin-bottom: 0; 
   padding-left: 10px;
   width: 100%;
 }
