@@ -1217,7 +1217,9 @@ const QuizEditorComponent: React.FC<QuizEditorComponentProps> = ({
   <span class="question-badge">Q{index + 1}</span> 
   {/* 标题和 ID 文本直接作为 li 的子元素 */}
   <span className="question-title-text">{q.title}</span> 
-  <span className="question-id-text">(ID: {q.id})</span>
+  <span className="question-id-text">
+    (ID: {q.id.replace('question-', '')}) 
+  </span>
 </li>
     ))}
     </ul>
