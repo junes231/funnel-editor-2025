@@ -1214,14 +1214,15 @@ const QuizEditorComponent: React.FC<QuizEditorComponentProps> = ({
            className="question-item" 
               onClick={() => onEditQuestion(index)}
          >
-           <div class="question-header-container"> 
-                  <span class="question-badge">Q{index + 1}</span>
-                  <span class="question-id-text">(ID: {q.id})</span>
+           <div style={{width: '100%', marginBottom: '10px'}}>
+                
               </div>
               
-              {/* ✅ 2. 问题标题作为单独的 Flex Item，让 line-height 自由发挥 */}
-              <span class="question-title-text">{q.title}</span> 
+            <span className="question-title-text">{q.title}</span> 
+              
+           <span className="question-id-text">(ID: {q.id})</span>
 
+           <span class="question-badge">Q{index + 1}</span>
             </li>
           ))}
         </ul>
