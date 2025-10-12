@@ -908,9 +908,7 @@ p {
   line-height: 1.45;   /* 确保这个值生效 */
   color: #212529;
   margin: 0;
-  flex-grow: 1;
-  /* ✅ 关键新增：让它独占一行，并应用块级样式 */
-  display: block; 
+ margin-top: 5px; /* ✅ 关键：在徽章下方留出空间 */
   width: 100%;
   padding-left: 10px; /* 保持与徽章的左侧对齐 */
 }
@@ -919,13 +917,9 @@ p {
 .question-item .question-id-text {
   font-size: 0.75em;
   color: #99aab5;
-  display: block;
   line-height: 1.2;
   margin-top: 8px; /* ✅ 关键：增大与标题之间的垂直间距 */
-  margin-bottom: 0; /* 确保 ID 文本下方没有多余空间 */
-  padding-left: 10px; /* 保持与标题的左侧对齐 */
-  word-break: break-all;
-  white-space: normal;
+  padding-left: 10px;
   width: 100%;
 }
 
