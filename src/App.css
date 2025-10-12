@@ -843,8 +843,9 @@ p {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  word-break: break-word;
-  position: relative; /* 关键：用于徽章绝对定位的锚点 */
+  word-break: normal; 
+  overflow-wrap: break-word;
+  position: relative; 
 }
 
 .question-item:active {
