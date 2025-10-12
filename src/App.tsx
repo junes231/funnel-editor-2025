@@ -1209,23 +1209,18 @@ const QuizEditorComponent: React.FC<QuizEditorComponentProps> = ({
       ) : (
             <ul className="question-list">
           {questions.map((q, index) => (
-            <li
-            key={q.id}
-           className="question-item" 
-              onClick={() => onEditQuestion(index)}
-         >
-           <div style={{width: '100%', marginBottom: '10px'}}>
-                
-              </div>
-              
-            <span className="question-title-text">{q.title}</span> 
-              
-           <span className="question-id-text">(ID: {q.id})</span>
-
-           <span class="question-badge">Q{index + 1}</span>
-            </li>
-          ))}
-        </ul>
+            <li 
+  key={q.id} 
+  className="question-item"
+  onClick={() => onEditQuestion(index)}
+>
+  <span class="question-badge">Q{index + 1}</span> 
+  {/* 标题和 ID 文本直接作为 li 的子元素 */}
+  <span className="question-title-text">{q.title}</span> 
+  <span className="question-id-text">(ID: {q.id})</span>
+</li>
+    ))}
+    </ul>
      )}
 
      
