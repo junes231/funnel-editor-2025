@@ -854,7 +854,7 @@ p {
   transition: all 0.1s ease-out; 
    border-color: #007bff;
 }
-/*
+
 @media (hover: hover) {
   .question-item:hover {
     transform: none; 
@@ -862,7 +862,7 @@ p {
     border-color: #007bff;
   }
 }
- */
+ 
 /* --- 4. 徽章（Q1, Q2） - 绝对定位到角落 --- */
 .question-item .question-badge {
   /* 关键：绝对定位到左上角，并略微突出卡片边缘 */
@@ -928,7 +928,7 @@ p {
   white-space: normal;
   width: 100%;
 }
-
+/*
 @keyframes pulse {
   0% {
     transform: scale(1);
@@ -943,6 +943,7 @@ p {
     opacity: 0.85;
   }
 }
+ */
 /* 认证相关样式 */
 .auth-container {
     background: white;
