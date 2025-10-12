@@ -830,8 +830,8 @@ p {
   background-color: #ffffff;
   border: 1px solid #e9ecef;
   color: #343a40;
-  padding: 20px 24px 18px 24px; /* ✅ 优化内边距：上下略微减少，左右保持宽敞 */
-  padding-top: 15px;            /* 保持顶部与徽章错开 */
+  padding: 20px 24px 18px 24px; 
+  padding-top: 25px;            /* 保持顶部与徽章错开 */
   margin-bottom: 15px;
   border-radius: 12px; 
   box-shadow: 0 4px 18px rgba(0, 0, 0, 0.05); /* 更薄且更广的阴影 */
@@ -857,7 +857,7 @@ p {
 
 @media (hover: hover) {
   .question-item:hover {
-    transform: none;
+   /* transform: none; */
     box-shadow: 0 10px 25px rgba(0,0,0,0.15);
     border-color: #007bff;
   }
@@ -903,13 +903,16 @@ p {
 
 /* 标题文本 (成为卡片中最主要的元素) */
 .question-item .question-title-text {
-  font-weight: 700; /* 加粗，使其醒目 */
+  font-weight: 700;
   font-size: 1.15em;
-  line-height: 1.45;
+  line-height: 1.45;   /* 确保这个值生效 */
   color: #212529;
   margin: 0;
-  flex-grow: 1;  
-  padding-left: 10px; 
+  flex-grow: 1;
+  /* ✅ 关键新增：让它独占一行，并应用块级样式 */
+  display: block; 
+  width: 100%;
+  padding-left: 10px; /* 保持与徽章的左侧对齐 */
 }
 
 /* ID 文本 (次要信息，使用更柔和的样式) */
