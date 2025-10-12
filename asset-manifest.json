@@ -1,15 +1,15 @@
 {
   "files": {
-    "main.css": "/funnel-editor-2025/static/css/main.601d28df.css",
+    "main.css": "/funnel-editor-2025/static/css/main.19f2ac71.css",
     "main.js": "/funnel-editor-2025/static/js/main.d0ebae6c.js",
     "zxcvbn-chunk.js": "/funnel-editor-2025/static/js/zxcvbn-chunk.7e892d72.chunk.js",
     "index.html": "/funnel-editor-2025/index.html",
-    "main.601d28df.css.map": "/funnel-editor-2025/static/css/main.601d28df.css.map",
+    "main.19f2ac71.css.map": "/funnel-editor-2025/static/css/main.19f2ac71.css.map",
     "main.d0ebae6c.js.map": "/funnel-editor-2025/static/js/main.d0ebae6c.js.map",
     "zxcvbn-chunk.7e892d72.chunk.js.map": "/funnel-editor-2025/static/js/zxcvbn-chunk.7e892d72.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.601d28df.css",
+    "static/css/main.19f2ac71.css",
     "static/js/main.d0ebae6c.js"
   ]
 }
