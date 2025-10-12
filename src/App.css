@@ -830,10 +830,10 @@ p {
   background-color: #ffffff;
   border: 1px solid #e9ecef;
   color: #343a40;
-  padding: 24px; /* 增加整体内边距，看起来更宽敞 */
-  padding-top: 15px; /* 顶部内边距减少，与徽章错开 */
+  padding: 20px 24px 18px 24px; /* ✅ 优化内边距：上下略微减少，左右保持宽敞 */
+  padding-top: 15px;            /* 保持顶部与徽章错开 */
   margin-bottom: 15px;
-  border-radius: 12px;
+  border-radius: 12px; 
   box-shadow: 0 4px 18px rgba(0, 0, 0, 0.05); /* 更薄且更广的阴影 */
   cursor: pointer;
   width: 95%; 
@@ -905,10 +905,11 @@ p {
 .question-item .question-title-text {
   font-weight: 700; /* 加粗，使其醒目 */
   font-size: 1.15em;
-  line-height: 1.35;
+  line-height: 1.45;
   color: #212529;
-  margin-top: 5px; /* 从徽章下方内容开始的位置留出空间 */
-  padding-left: 10px; /* 确保标题文字和徽章有合理间距 */
+  margin: 0;
+  flex-grow: 1;  
+  padding-left: 10px; 
 }
 
 /* ID 文本 (次要信息，使用更柔和的样式) */
@@ -917,8 +918,9 @@ p {
   color: #99aab5;
   display: block;
   line-height: 1.2;
-  margin-top: 4px; /* 标题下方留出空间 */
-  padding-left: 10px; /* 与标题对齐 */
+  margin-top: 8px; /* ✅ 关键：增大与标题之间的垂直间距 */
+  margin-bottom: 0; /* 确保 ID 文本下方没有多余空间 */
+  padding-left: 10px; /* 保持与标题的左侧对齐 */
   word-break: break-all;
   white-space: normal;
   width: 100%;
