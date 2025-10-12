@@ -854,15 +854,15 @@ p {
   transition: all 0.1s ease-out; 
    border-color: #007bff;
 }
-
+/*
 @media (hover: hover) {
   .question-item:hover {
-   /* transform: none; */
+    transform: none; 
     box-shadow: 0 10px 25px rgba(0,0,0,0.15);
     border-color: #007bff;
   }
 }
-
+ */
 /* --- 4. 徽章（Q1, Q2） - 绝对定位到角落 --- */
 .question-item .question-badge {
   /* 关键：绝对定位到左上角，并略微突出卡片边缘 */
