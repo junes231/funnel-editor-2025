@@ -854,10 +854,12 @@ p {
    border-color: #007bff;
 }
 
-.question-item:hover {
-  
-  background-color: #f8faff; 
-  border-color: #007bff;
+@media (hover: hover) {
+  .question-item:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+    border-color: #007bff;
+  }
 }
 
 /* --- 4. 徽章（Q1, Q2） - 绝对定位到角落 --- */
