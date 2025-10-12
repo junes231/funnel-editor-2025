@@ -845,13 +845,14 @@ p {
   word-break: break-word;
   position: relative; /* 关键：用于徽章绝对定位的锚点 */
 }
-
+/*
 .question-item:active {
   transform: scale(0.97); /* 按下效果 */
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   background-color: #e6f7ff; /* 浅蓝背景反馈 */
   transition: all 0.1s ease-out; 
 }
+*/
 .question-item:hover {
   transform: translateY(-4px); /* 悬浮效果 */
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15); 
