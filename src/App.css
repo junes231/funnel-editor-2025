@@ -847,9 +847,9 @@ p {
 }
 /*
 .question-item:active {
-  transform: scale(0.97); /* 按下效果 */
+  transform: scale(0.97); 
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  background-color: #e6f7ff; /* 浅蓝背景反馈 */
+  background-color: #e6f7ff; 
   transition: all 0.1s ease-out; 
 }
 */
