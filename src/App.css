@@ -898,11 +898,10 @@ p {
   line-height: 1.5;
   color: #212529;
   padding-left: 10px;
-  padding-bottom: 25px; /* 减少底部内边距 */
+  padding-bottom: 25px;
   width: 100%;
-  white-space: nowrap; /* 防止换行 */
-  overflow: hidden; /* 隐藏溢出内容 */
-  text-overflow: ellipsis; /* 用省略号表示溢出 */
+  white-space: normal; /* 允许换行 */
+  overflow: visible; /* 显示所有内容 */
 }
 
 .question-item .question-id-text {
