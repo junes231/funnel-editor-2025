@@ -1310,15 +1310,13 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
        });
   };
   const handleAnswerNextStepIdChange = (answerId: string, newNextStepId: string) => {
-   if (question) {
-      // --- 关键修复：确保 ID 包含 'question-' 前缀（如果它不是空字符串） ---
-      let standardizedId = newNextStepId.trim();
-      if (standardizedId !== '' && !standardizedId.startsWith('question-')) {
-          standardizedId = 'question-' + standardizedId;
-      }
+    if (question) {
+      // 撤销昨天的修复，直接保存用户输入的值 (精简 ID 或完整 ID)
+      const standardizedId = newNextStepId.trim(); 
+      
       const updatedAnswers = {
         ...question.answers,
-        [answerId]: { ...question.answers[answerId], nextStepId: newNextStepId },
+        [answerId]: { ...question.answers[answerId], nextStepId: standardizedId },
       };
       const updatedQuestion: Question = { ...question, answers: updatedAnswers };
       onUpdate(updatedQuestion);
