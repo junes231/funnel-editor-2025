@@ -1209,30 +1209,25 @@ const QuizEditorComponent: React.FC<QuizEditorComponentProps> = ({
       ) : (
           <ul className="question-list">
           {questions.map((q, index) => (
-         <li key={q.id} className="question-item" onClick={() => onEditQuestion(index)}>
+             <li key={q.id} className="question-item" onClick={() => onEditQuestion(index)}>
     
-    {/* 【中文注释：第一行容器：用于实现徽章和标题的横向对齐】 */}
-    <div className="question-header"> 
-        
-        {/* 【中文注释：问题编号徽章 (Q1, Q2)】 */}
-        <span className="question-badge">
-            Q{index + 1}
-        </span>
-        
-        {/* 【中文注释：主问题标题】 */}
-        <span className="question-title-text">
-            {q.title}
-        </span>
+    <div style={{fontWeight: 600}}> {/* 【中文注释：将标题和编号组合成一个不可分割的整体】 */}
+        <strong>Question {index + 1}:</strong> {q.title}
     </div>
-
-    {/* 【中文注释：第二行：完整 ID，确保它在下一行】 */}
-    <span className="question-id-text">
-        (ID: {q.id}) 
+    
+    {/* 【中文注释：ID 标签 - 成为第二个 Flex 子项，确保它在下一行】 */}
+    <span style={{
+         fontSize: '0.8em', 
+         color: '#888', 
+         display: 'block', 
+         marginTop: '5px' 
+      }}>
+       (ID: {q.id}) 
     </span>
-</li>
-    ))}
-    </ul>
-     )}
+      </li>
+          ))}
+        </ul>
+      )}
 
      
          <BackButton onClick={onBack}>
