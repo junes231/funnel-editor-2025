@@ -1343,10 +1343,7 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
   }
 
   // 7. JSX 渲染现在使用 localQuestion
-    const stableAnswers = React.useMemo(() => {
-      // 保证渲染顺序稳定
-      return Object.values(question.answers).sort((a, b) => a.id.localeCompare(b.id));
-    }, [question]);  // 仅在 localQuestion 改变时重新计算
+    
 
   return (
     <div className="question-form-container">
