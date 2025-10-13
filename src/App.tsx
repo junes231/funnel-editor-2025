@@ -623,7 +623,7 @@ const selectedQuestionIndex = (currentSubView === 'questionForm' && urlIndex !==
 };
 const debouncedSave = useCallback( 
   debounce(performSave, 300), 
-[funnelId, updateFunnelData, leadCaptureEnabled, leadCaptureWebhookUrl]
+  [funnelId, updateFunnelData] 
 );
 
 // 3. 监听状态变化并调用防抖保存的 useEffect (替代原有的 unoptimized useEffect)
@@ -640,8 +640,6 @@ useEffect(() => {
     buttonColor,
     backgroundColor,
     textColor,
-   enableLeadCapture: leadCaptureEnabled, 
-    leadCaptureWebhookUrl: leadCaptureWebhookUrl, 
   };
    (window as any).__funnelData = latestData;
 
@@ -662,8 +660,6 @@ useEffect(() => {
   buttonColor,
   backgroundColor,
   textColor,
-  leadCaptureEnabled, 
-  leadCaptureWebhookUrl,
   isDataLoaded,
   debouncedSave 
 ]);
@@ -1498,8 +1494,7 @@ const LinkSettingsComponent: React.FC<LinkSettingsComponentProps> = ({
   useEffect(() => {
     setLocalLink(finalRedirectLink);
     setLocalTracking(tracking);
-  setLocalWebhookUrl(leadCaptureWebhookUrl); 
-  }, [finalRedirectLink, tracking, leadCaptureWebhookUrl]);
+  }, [finalRedirectLink, tracking]);
   
   // 核心修复 3: 使用 useCallback 和 debounce 创建一个延迟通知父组件的函数
   const debouncedSetState = useCallback(
