@@ -1555,7 +1555,7 @@ const LinkSettingsComponent: React.FC<LinkSettingsComponentProps> = ({
     // 立即更新本地状态 (保证输入框流畅)
     setLocalLink(value);
     // 延迟通知父组件
-    debouncedSetState(value, localTracking);
+    debouncedSetState(value, localTracking, leadCaptureWebhookUrl, leadCaptureEnabled);
   };
   
   // 处理追踪参数输入变化
@@ -1564,13 +1564,15 @@ const LinkSettingsComponent: React.FC<LinkSettingsComponentProps> = ({
     // 立即更新本地状态
     setLocalTracking(value);
     // 延迟通知父组件
-    debouncedSetState(localLink, value);
+    debouncedSetState(localLink, value, leadCaptureWebhookUrl, leadCaptureEnabled);
   };
   const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const checked = e.target.checked;
       setLeadCaptureEnabled(checked);
       // 【中文注释：修复：调用父组件传入的保存函数，并传入所有最新状态】
-      triggerSave(finalRedirectLink, tracking, leadCaptureWebhookUrl, checked); 
+      debouncedSetState(localLink, localTracking, localWebhookUrl, checked);
+      // 强制执行 debounced 函数，以立即触发 FunnelEditor 的保存 useEffect
+      debouncedSetState.flush(); // 强制执行
   };
   const handleWebhookChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
