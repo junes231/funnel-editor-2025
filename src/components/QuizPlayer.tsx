@@ -256,7 +256,13 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ db }) => {
 
         if (nextStepId) {
             // 【中文注释：如果设置了 nextStepId，查找目标问题的索引并跳转】
-            const nextIndex = funnelData.questions.findIndex((q: any) => q.id === nextStepId);
+            const fullId = nextStepId.startsWith('question-') ? nextStepId : `question-${nextStepId}`;
+            const simpleId = nextStepId.startsWith('question-') ? nextStepId.replace('question-', '') : nextStepId;
+
+            // 尝试匹配完整 ID 或精简 ID
+            const nextIndex = funnelData.questions.findIndex((q: any) => 
+                q.id === fullId || q.id === simpleId
+            );
             if (nextIndex !== -1) {
                 setCurrentQuestionIndex(nextIndex);
                 return; // 【中文注释：执行跳转并返回】
