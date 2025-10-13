@@ -1500,7 +1500,7 @@ interface LinkSettingsComponentProps {
   leadCaptureWebhookUrl: string;
   setLeadCaptureWebhookUrl: React.Dispatch<React.SetStateAction<string>>;
   onBack: (event: React.MouseEvent<HTMLButtonElement>) => void;
-  
+  showNotification: (message: string, type?: 'success' | 'error') => void;
 }
 
 // 2. 然后用这个接口来创建组件函数
@@ -1516,7 +1516,7 @@ const LinkSettingsComponent: React.FC<LinkSettingsComponentProps> = ({
   leadCaptureWebhookUrl,
   setLeadCaptureWebhookUrl,
   onBack,
-  
+  showNotification
 }) => {
  
     const [localLink, setLocalLink] = useState(finalRedirectLink);
@@ -1530,54 +1530,62 @@ const LinkSettingsComponent: React.FC<LinkSettingsComponentProps> = ({
   setLocalWebhookUrl(leadCaptureWebhookUrl); 
   }, [finalRedirectLink, tracking, leadCaptureWebhookUrl]);
   
+  // 核心修复 3: 使用 useCallback 和 debounce 创建一个延迟通知父组件的函数
+  const debouncedSetState = useCallback(
+        // 这里不需要所有参数，只需要调用父组件的 setXXX
+        debounce((linkValue: string, trackingValue: string, webhookUrlValue: string, captureEnabled: boolean) => {
+            // 这部分逻辑将延迟执行
+            setFinalRedirectLink(linkValue);
+            setTracking(trackingValue);
+            setLeadCaptureWebhookUrl(webhookUrlValue);
+            setLeadCaptureEnabled(captureEnabled);
+        }, 300), // 300ms 延迟，避免频繁触发 FunnelEditor 的 Firebase 保存
+        [setFinalRedirectLink, setTracking, setLeadCaptureWebhookUrl, setLeadCaptureEnabled] 
+    );
   
-  const handleImmediateUpdate = (
-      linkValue: string, 
-      trackingValue: string, 
-      webhookUrlValue: string, 
-      captureEnabled: boolean
-  ) => {
-      setFinalRedirectLink(linkValue);
-      setTracking(trackingValue);
-      setLeadCaptureWebhookUrl(webhookUrlValue);
-      setLeadCaptureEnabled(captureEnabled);
-  };
+    // 【修复 4】: 组件卸载时清除 debouncer，防止内存泄漏
+    useEffect(() => {
+        return () => {
+            debouncedSetState.cancel();
+        };
+    }, [debouncedSetState]);
 
-   const handleLinkChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    // 1. 立即更新本地状态 (保证输入框流畅)
-    setLocalLink(value);
-    // 2. 延迟到下一个周期更新父组件状态
-    setTimeout(() => {
-        handleImmediateUpdate(value, localTracking, localWebhookUrl, leadCaptureEnabled);
-    }, 0);
-  };
-  
-  // 修复后的 handleTrackingChange
-  const handleTrackingChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setLocalTracking(value);
-    setTimeout(() => {
-        handleImmediateUpdate(localLink, value, localWebhookUrl, leadCaptureEnabled);
-    }, 0);
-  };
-  
-  // 修复后的 handleWebhookChange
-  const handleWebhookChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setLocalWebhookUrl(value);
-    setTimeout(() => {
-        handleImmediateUpdate(localLink, localTracking, value, leadCaptureEnabled);
-    }, 0);
-  };
-  
-  // 修复后的 handleCheckboxChange
-  const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const checked = e.target.checked;
-      setLeadCaptureEnabled(checked);
-      // Checkbox 应该立即更新父组件，无需延迟
-      handleImmediateUpdate(localLink, localTracking, localWebhookUrl, checked);
-  };
+    // 【修复 5】: 处理链接输入变化
+    const handleLinkChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        // 1. 立即更新本地状态 (保证输入框流畅)
+        setLocalLink(value);
+        // 2. 延迟通知父组件（传递本地状态的最新值和其余状态的当前值）
+        debouncedSetState(value, localTracking, localWebhookUrl, leadCaptureEnabled);
+    };
+    
+    // 【修复 6】: 处理追踪参数输入变化
+    const handleTrackingChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        // 1. 立即更新本地状态
+        setLocalTracking(value);
+        // 2. 延迟通知父组件
+        debouncedSetState(localLink, value, localWebhookUrl, leadCaptureEnabled);
+    };
+
+    // 【修复 7】: 处理 Webhook URL 变化
+    const handleWebhookChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        // 1. 立即更新本地状态
+        setLocalWebhookUrl(value);
+        // 2. 延迟通知父组件
+        debouncedSetState(localLink, localTracking, value, leadCaptureEnabled);
+    };
+    
+    // 【修复 8】: 处理 Checkbox 变化 (Checkbox 通常不需要防抖，立即更新即可)
+    const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const checked = e.target.checked;
+        // 立即更新父组件状态
+        setLeadCaptureEnabled(checked);
+        // 因为 setLeadCaptureEnabled 会触发 FunnelEditor 的 debouncedSave，所以这里不用额外调用 debouncedSetState
+        // 但为了确保保存能立即包含这个变化，我们可以强制 flush 输入的 debounced 状态
+        debouncedSetState.flush();
+    };
   return (
     <div className="link-settings-container">
       <h2>
@@ -1619,7 +1627,7 @@ const LinkSettingsComponent: React.FC<LinkSettingsComponentProps> = ({
           <input
             type="checkbox"
             checked={leadCaptureEnabled}
-            onChange={handleCheckboxChange} 
+            onChange={handleCheckboxChange}
             style={{width: 'auto'}}
           />
         </label>
