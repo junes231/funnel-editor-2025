@@ -1266,117 +1266,137 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
   onSave: onSaveAndClose,
   onCancel,
   onDelete,
-  onUpdate, 
+  onUpdate,
 }) => {
-  const navigate = useNavigate();
-  
-  // 1. 引入本地状态来管理所有表单输入，以确保输入流畅
+  // 1. 使用本地状态来驱动所有输入框，这是确保流畅的关键。
   const [localQuestion, setLocalQuestion] = useState<Question | undefined>(question);
-  const [affiliateLinks, setAffiliateLinks] = useState<string[]>(
-    question?.data?.affiliateLinks || []
-  );
-  
+
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  
-  // 2. 当父组件的 question 属性改变时，同步到本地状态 (即切换问题时)
+
+  // 2. 当作为 prop 的 'question' 变化时 (例如，切换编辑另一个问题)，同步更新本地状态。
   useEffect(() => {
-    //
     setLocalQuestion(question);
-    setAffiliateLinks(question?.data?.affiliateLinks || []);
   }, [question]);
 
-  // 4. 输入事件处理函数：现在只更新本地状态，不再立即调用 onUpdate
-    const handleTitleChange = (newTitle: string) => {
-        if (!localQuestion) return;
-        const updatedQuestion = { ...localQuestion, title: newTitle };
-        setLocalQuestion(updatedQuestion);
-        onUpdate(updatedQuestion); 
+  // 3. 创建一个防抖函数。它会收集一段时间内的所有变化，然后在用户停止输入500毫秒后，
+  //    再一次性地调用 onUpdate，将最新的 localQuestion 数据同步给父组件。
+  const debouncedOnUpdate = useCallback(
+    debounce((updatedQ: Question) => {
+      onUpdate(updatedQ);
+    }, 500),
+    [onUpdate] // 依赖项是 onUpdate 函数本身
+  );
+
+  // 4. 使用 useEffect 监听本地状态的变化。
+  useEffect(() => {
+    // 只有当本地状态存在且与父组件传入的状态不同时，才触发防抖更新。
+    if (localQuestion && localQuestion !== question) {
+      debouncedOnUpdate(localQuestion);
+    }
+    // 组件卸载时，确保取消任何还未执行的防抖调用，防止内存泄漏。
+    return () => {
+      debouncedOnUpdate.cancel();
     };
+  }, [localQuestion, question, debouncedOnUpdate]);
+
+
+  // --- 所有的 handle...Change 函数现在只更新本地状态 (setLocalQuestion) ---
+  // --- 这使得输入响应非常迅速 ---
+
+  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newTitle = e.target.value;
+    setLocalQuestion(prev => prev ? { ...prev, title: newTitle } : undefined);
+  };
 
   const handleAnswerTextChange = (answerId: string, newText: string) => {
-      if (!localQuestion) return;
-      const updatedAnswers = {
-        ...localQuestion.answers,
-        [answerId]: { ...localQuestion.answers[answerId], text: newText },
-      };
-      const updatedQuestion = { ...localQuestion, answers: updatedAnswers };
-      setLocalQuestion(updatedQuestion);
-      onUpdate(updatedQuestion);
+    setLocalQuestion(prev => {
+        if (!prev) return undefined;
+        const updatedAnswers = {
+            ...prev.answers,
+            [answerId]: { ...prev.answers[answerId], text: newText },
+        };
+        return { ...prev, answers: updatedAnswers };
+    });
   };
 
   const handleLinkChange = (index: number, value: string) => {
-      if (!localQuestion) return;
-
-      const newLinks = [...affiliateLinks];
+    setLocalQuestion(prev => {
+      if (!prev) return undefined;
+      const newLinks = [...(prev.data?.affiliateLinks || [])];
+      while (newLinks.length <= index) {
+        newLinks.push('');
+      }
       newLinks[index] = value;
-      setAffiliateLinks(newLinks);
-      
-      const updatedQuestion = {
-            ...localQuestion,
-            data: { ...localQuestion.data, affiliateLinks: newLinks } 
+      return {
+        ...prev,
+        data: { ...prev.data, affiliateLinks: newLinks }
       };
-      setLocalQuestion(updatedQuestion);
-      onUpdate(updatedQuestion);
+    });
   };
     
   const handleAnswerNextStepIdChange = (answerId: string, newNextStepId: string) => {
-    if (!localQuestion) return;
-    
-    const standardizedId = newNextStepId.trim(); 
-    const updatedAnswers = {
-      ...localQuestion.answers,
-      [answerId]: { ...localQuestion.answers[answerId], nextStepId: standardizedId },
-    };
-    const updatedQuestion = { ...localQuestion, answers: updatedAnswers };
-    setLocalQuestion(updatedQuestion);
-    onUpdate(updatedQuestion);
+    setLocalQuestion(prev => {
+        if (!prev) return undefined;
+        const standardizedId = newNextStepId.trim(); 
+        const updatedAnswers = {
+            ...prev.answers,
+            [answerId]: { ...prev.answers[answerId], nextStepId: standardizedId },
+        };
+        return { ...prev, answers: updatedAnswers };
+    });
   };
   
-  // 5. handleSave 现在使用本地状态，并直接（非防抖）调用 onUpdate
+  // 使用您提供的、更完整的 handleSave 函数逻辑，并稍作调整
   const handleSave = async () => {
+    // 1. 立即取消任何等待中的防抖更新，防止冲突
+    debouncedOnUpdate.cancel();
+
     if (!localQuestion) return;
 
     setIsSaving(true);
     try {
-      
       const newAnswersMap: { [answerId: string]: Answer } = {};
       let hasValidAnswer = false;
       
+      // 清理和验证答案
       Object.values(localQuestion.answers).forEach((answer) => {
           const currentText = answer.text.trim();
-          
           if (currentText !== "") {
-              newAnswersMap[answer.id] = {
-                  ...answer, 
-                  text: currentText, 
-              };
+              newAnswersMap[answer.id] = { ...answer, text: currentText };
               hasValidAnswer = true;
           }
       });
       
       if (!localQuestion.title.trim()) {
-        console.error("Question title cannot be empty!");
+        alert("Question title cannot be empty!");
         setIsSaving(false);
         return;
       }
       
       if (!hasValidAnswer) {
-        console.error("Please provide at least one answer option.");
+        alert("Please provide at least one answer option.");
         setIsSaving(false);
         return;
       }
 
-      const cleanAffiliateLinks = Array.from({ length: 4 }).map((_, index) => affiliateLinks[index] || '');
+      // 确保 affiliateLinks 数组的长度正确
+      const cleanAffiliateLinks = Array.from({ length: Object.keys(newAnswersMap).length }).map(
+        (_, index) => localQuestion.data?.affiliateLinks?.[index] || ''
+      );
       
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      
-      onUpdate({
+      // 2. 构造最终要保存的数据对象
+      const finalQuestionData = {
         ...localQuestion,
         answers: newAnswersMap, 
-        data: { affiliateLinks: cleanAffiliateLinks },
-      });
+        data: { ...localQuestion.data, affiliateLinks: cleanAffiliateLinks },
+      };
 
+      // 3. 立即用最终数据调用 onUpdate，强制将最新状态同步到父组件
+      onUpdate(finalQuestionData);
+
+      // 模拟保存延迟，然后关闭
+      await new Promise((resolve) => setTimeout(resolve, 300)); // 缩短延迟
       onSaveAndClose();
 
     } catch (error) {
@@ -1385,8 +1405,8 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
       setIsSaving(false);
     }
   };
-  
-  const handleDelete = () => {
+
+const handleDelete = () => {
     setIsDeleting(true);
     const button = document.querySelector('.delete-button');
     if (button) {
