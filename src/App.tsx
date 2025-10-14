@@ -1286,10 +1286,8 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
 
   // 3️⃣ ✅ 防抖更新函数（父组件仅在输入停止 300ms 后更新）
   const debouncedUpdate = useCallback(
-    debounce((updated: Question) => {
-      onUpdate(updated);
-    }, 300),
-    [onUpdate]
+    debounce(onUpdate, 300), 
+    [onUpdate] 
   );
    useEffect(() => {
   return () => {
@@ -1299,9 +1297,9 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
   // 4️⃣ 各类输入处理函数（全部防抖）
   const handleTitleChange = (newTitle: string) => {
     if (!localQuestion) return;
-    const updated = { ...localQuestion, title: newTitle };
-    setLocalQuestion(updated);
-    debouncedUpdate(updated);
+    const updatedQuestion = { ...localQuestion, title: newTitle };
+    setLocalQuestion(updatedQuestion);
+    debouncedUpdate(updatedQuestion);
   };
 
   const handleAnswerTextChange = (answerId: string, newText: string) => {
@@ -1310,9 +1308,9 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
       ...localQuestion.answers,
       [answerId]: { ...localQuestion.answers[answerId], text: newText },
     };
-    const updated = { ...localQuestion, answers: updatedAnswers };
-    setLocalQuestion(updated);
-    debouncedUpdate(updated);
+    const updatedQuestion = { ...localQuestion, answers: updatedAnswers };
+    setLocalQuestion(updatedQuestion);
+    debouncedUpdate(updatedQuestion);
   };
 
   const handleLinkChange = (index: number, value: string) => {
@@ -1321,12 +1319,12 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
     newLinks[index] = value;
     setAffiliateLinks(newLinks);
 
-    const updated = {
+    const updatedQuestion = {
       ...localQuestion,
       data: { ...localQuestion.data, affiliateLinks: newLinks },
     };
-    setLocalQuestion(updated);
-    debouncedUpdate(updated);
+    setLocalQuestion(updatedQuestion);
+    debouncedUpdate(updatedQuestion);
   };
 
   const handleAnswerNextStepIdChange = (answerId: string, newNextStepId: string) => {
@@ -1336,9 +1334,9 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
       ...localQuestion.answers,
       [answerId]: { ...localQuestion.answers[answerId], nextStepId: standardizedId },
     };
-    const updated = { ...localQuestion, answers: updatedAnswers };
-    setLocalQuestion(updated);
-    debouncedUpdate(updated);
+    const updatedQuestion = { ...localQuestion, answers: updatedAnswers };
+    setLocalQuestion(updatedQuestion);
+    debouncedUpdate(updatedQuestion);
   };
 
   // 5️⃣ 保存按钮逻辑（立即触发保存，不防抖）
@@ -1373,9 +1371,9 @@ const handleSave = async () => {
     const cleanAffiliateLinks = Array.from({ length: 4 }).map(
       (_, index) => affiliateLinks[index] || ""
     );
-
+       debouncedUpdate.flush(); 
     // ✅ 可选延迟模拟保存中状态
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    await new Promise((resolve) => setTimeout(resolve, 100));
 
     onUpdate({
       ...localQuestion,
