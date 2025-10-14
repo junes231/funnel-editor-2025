@@ -535,13 +535,19 @@ const selectedQuestionIndex = (currentSubView === 'questionForm' && urlIndex !==
       let compatibleQuestions = Array.isArray(funnel.data.questions) ? funnel.data.questions : [];
       compatibleQuestions = compatibleQuestions.map(question => {
         if (Array.isArray(question.answers)) {
+          // 确保答案总是对象形式，以便 QuizPlayer 和 QuestionFormComponent 正确读取 clickCount
           const answersObj: { [answerId: string]: Answer } = {};
           question.answers.forEach((answer: Answer) => {
-            answersObj[answer.id] = answer;
+            // 如果旧数据没有 ID，为其生成一个
+            answersObj[answer.id || `answer-${Date.now()}-${Math.random()}`] = answer;
           });
           return { ...question, answers: answersObj };
         }
-        return question;
+        // 【中文注释：处理旧数据结构中的 text 字段缺失问题】
+        if (!question.title && (question as any).question) {
+            question.title = (question as any).question;
+        }
+        return question; // 已经是对象格式
       });
 
       // ✅ 移除 if (compatibleQuestions.length > 0) 检查，总是加载
@@ -561,12 +567,16 @@ const selectedQuestionIndex = (currentSubView === 'questionForm' && urlIndex !==
       console.log('✅ Firestore data loaded and state updated. Questions length:', compatibleQuestions.length);
       
     } else {
-      console.log('未找到该漏斗!');
+       console.log('未找到该漏斗!');
+      // 【中文注释：文档不存在，停止加载并跳转】
+      setIsDataLoaded(true); 
       navigate('/');
     }
   }, (error) => {
     console.error("监听漏斗数据变化时出错:", error);
-    console.error('Failed to load funnel data.', 'error');  // ✅ 添加通知
+    // 【中文注释：加载失败，停止加载并跳转】
+    setIsDataLoaded(true); 
+    console.error('Failed to load funnel data.', 'error');
     navigate('/');
   });
 
@@ -699,13 +709,19 @@ const handleSelectTemplate = async (templateName: string) => {
     //  alert('You can only have up to 6 questions for this quiz.');
       return;
     }
-    const newQuestion: Question = {
+     const newQuestion: Question = {
       id: Date.now().toString(),
       title: `New Question ${questions.length + 1}`,
       type: 'single-choice',
+      // 【中文注释：确保答案初始化为对象格式，包含 ID 和 clickCount】
       answers: Array(4)
         .fill(null)
-        .map((_, i) => ({ id: `option-${Date.now()}-${i}`, text: `Option ${String.fromCharCode(65 + i)}` })),
+        .reduce((acc, _, i) => {
+          const answerId = `option-${Date.now()}-${i}`;
+          // 确保 Answer 接口的字段完整
+          acc[answerId] = { id: answerId, text: `Option ${String.fromCharCode(65 + i)}`, clickCount: 0 }; 
+          return acc;
+        }, {} as { [answerId: string]: Answer }),
     };
     setQuestions([...questions, newQuestion]);
     
@@ -790,8 +806,15 @@ const handleImportQuestions = (importedQuestions: Question[]) => {
   }
 };
   const renderEditorContent = () => {
-    switch (currentSubView) {
-      case 'quizEditorList':
+     switch (currentSubView) {
+      // ... (quizEditorList, linkSettings, colorCustomizer, analytics 保持不变)
+      case 'questionForm':
+        // 【中文注释：防止在数据加载失败或 question 不存在时渲染表单】
+        if (!questionToEdit && selectedQuestionIndex !== null) {
+            console.error('Question to edit not found, redirecting to list.');
+            setCurrentSubView('quizEditorList');
+            return null; // 避免渲染错误
+        }
         return (
           <QuizEditorComponent
             questions={questions}
@@ -943,7 +966,21 @@ case 'analytics':
            );
             }
            };
-
+            if (!funnelId) {
+        return (
+            <p className="loading-message">
+                <span className="loading-spinner"></span> Missing Funnel ID...
+            </p>
+        );
+    }
+   
+   if (!isDataLoaded) {
+       return (
+          <p className="loading-message">
+              <span className="loading-spinner"></span> Loading Funnel Data...
+          </p>
+       );
+   }
            return <div className="App">{renderEditorContent()}</div>;
            };
 
@@ -1206,63 +1243,53 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
   
   // 2. 当父组件的 question 属性改变时，同步到本地状态 (即切换问题时)
   useEffect(() => {
-    setLocalQuestion(question);
     setAffiliateLinks(question?.data?.affiliateLinks || []);
   }, [question]);
 
-  // 3. 定义一个**防抖函数**来调用父组件的 onUpdate
-  // 这样只有在用户停止输入 300 毫秒后，才会触发 FunnelEditor 的状态更新和随后的 Firestore 自动保存
-  const debouncedOnUpdate = React.useCallback(
-    debounce((updatedQuestion: Question, updatedLinks: string[]) => {
-      // 合并本地的 affiliateLinks 到 question.data 结构中
-      const finalUpdate = { 
-          ...updatedQuestion, 
-          data: { 
-              ...updatedQuestion.data, 
-              affiliateLinks: updatedLinks 
-          } 
-      };
-      onUpdate(finalUpdate);
-    }, 300), 
-    [onUpdate]
-  );
+ 
   
   // 4. 输入事件处理函数：更新本地状态，并触发防抖的父组件更新
-  const handleTitleChange = (newTitle: string) => {
-    if (localQuestion) {
-      const updated = { ...localQuestion, title: newTitle };
-      setLocalQuestion(updated); // 立即更新本地状态 (UI流畅)
-      debouncedOnUpdate(updated, affiliateLinks); // 延迟通知父组件
+    const handleTitleChange = (newTitle: string) => {
+    if (question) {
+      // 构造新的 Question 对象，并立即传给父组件
+      const updatedQuestion: Question = { ...question, title: newTitle };
+      onUpdate(updatedQuestion); 
     }
   };
 
+  // 【中文注释：答案文本输入事件处理函数：立即更新父组件状态】
   const handleAnswerTextChange = (answerId: string, newText: string) => {
-    if (localQuestion) {
+    if (question) {
       const updatedAnswers = {
-        ...localQuestion.answers,
-        [answerId]: { ...localQuestion.answers[answerId], text: newText },
+        ...question.answers,
+        [answerId]: { ...question.answers[answerId], text: newText },
       };
-      const updated = { ...localQuestion, answers: updatedAnswers };
-      setLocalQuestion(updated); // 立即更新本地状态 (UI流畅)
-      debouncedOnUpdate(updated, affiliateLinks); // 延迟通知父组件
+      const updatedQuestion: Question = { ...question, answers: updatedAnswers };
+      onUpdate(updatedQuestion);
     }
   };
 
+  // 【中文注释：联盟链接处理函数：立即更新父组件状态（包含最新的 links）】
   const handleLinkChange = (index: number, value: string) => {
-    if (!localQuestion) return;
+      if (!question) return;
 
-    // 仅更新本地的 affiliateLinks 数组状态
-    const newLinks = [...affiliateLinks];
-    newLinks[index] = value;
-    setAffiliateLinks(newLinks);
-    
-    // 延迟通知父组件，并将当前的 localQuestion 状态传递过去
-    debouncedOnUpdate(localQuestion, newLinks);
+      // 1. 更新本地 UI 状态
+      const newLinks = [...affiliateLinks];
+      newLinks[index] = value;
+      setAffiliateLinks(newLinks);
+      
+      // 2. 立即更新父组件，将新的 links 数据嵌入到 data 字段
+       onUpdate({
+            ...question,
+            // 确保 data 字段是完整的，不丢失其他 data 属性
+            data: { ...question.data, affiliateLinks: newLinks } 
+       });
   };
+  
   
   // 5. handleSave 现在使用本地状态，并直接（非防抖）调用 onUpdate
   const handleSave = async () => {
-    if (!localQuestion) return;
+    if (!question) return;
 
     setIsSaving(true);
     try {
@@ -1270,12 +1297,11 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
       const newAnswersMap: { [answerId: string]: Answer } = {};
       let hasValidAnswer = false;
       
-      // 1. 迭代 localQuestion 的答案
-      Object.values(localQuestion.answers).forEach((answer) => {
+      // 使用当前最新的 question prop (它包含了最新的 title/text)
+      Object.values(question.answers).forEach((answer) => {
           const currentText = answer.text.trim();
           
           if (currentText !== "") {
-              // 2. 关键修复：将完整的 Answer 对象（包括 clickCount）传播到新的 Map 中
               newAnswersMap[answer.id] = {
                   ...answer, 
                   text: currentText, 
@@ -1284,8 +1310,7 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
           }
       });
       
-      // 检查标题和答案数量...
-      if (!localQuestion.title.trim()) {
+      if (!question.title.trim()) {
         console.error("Question title cannot be empty!");
         setIsSaving(false);
         return;
@@ -1297,14 +1322,14 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
         return;
       }
 
-      // Preserve affiliate links logic
+      // 使用本地最新的 affiliateLinks
       const cleanAffiliateLinks = Array.from({ length: 4 }).map((_, index) => affiliateLinks[index] || '');
       
       await new Promise((resolve) => setTimeout(resolve, 1000));
       
-      // The final object is passed up to the parent component (非防抖，强制立即更新)
+      // 最终同步更新，确保数据结构正确
       onUpdate({
-        ...localQuestion,
+        ...question,
         answers: newAnswersMap, 
         data: { affiliateLinks: cleanAffiliateLinks },
       });
@@ -1317,13 +1342,7 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
       setIsSaving(false);
     }
   };
-
-  // 6. 清理函数：在组件卸载时取消任何待执行的 debouncedOnUpdate
-  React.useEffect(() => {
-    return () => {
-      debouncedOnUpdate.cancel();
-    };
-  }, [debouncedOnUpdate]);
+  
 
   const handleDelete = () => {
   setIsDeleting(true);
@@ -1337,14 +1356,15 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
 };
 
   // 防御性检查: 如果没有本地 question，则显示加载中
-  if (!localQuestion) {
+   if (!question) {
     return <div>Loading question...</div>;
   }
 
   // 7. JSX 渲染现在使用 localQuestion
-  const stableAnswers = React.useMemo(() => {
-      return Object.values(localQuestion.answers).sort((a, b) => a.id.localeCompare(b.id));
-    }, [localQuestion]); // 仅在 localQuestion 改变时重新计算
+    const stableAnswers = React.useMemo(() => {
+      // 保证渲染顺序稳定
+      return Object.values(question.answers).sort((a, b) => a.id.localeCompare(b.id));
+    }, [question]);  // 仅在 localQuestion 改变时重新计算
 
   return (
     <div className="question-form-container">
@@ -1360,7 +1380,7 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
         <label>Question Title:</label>
         <input
           type="text"
-          value={localQuestion.title || ''} 
+          value={question.title || ''} 
           onChange={(e) => handleTitleChange(e.target.value)}
           placeholder="e.g., What's your biggest health concern?"
         />
