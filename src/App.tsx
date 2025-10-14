@@ -1191,12 +1191,11 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
   onSave: onSaveAndClose,
   onCancel,
   onDelete,
-  onUpdate, 
+  onUpdate, // <-- 这个函数现在会被立即调用
 }) => {
   const navigate = useNavigate();
   
-  // 1. 引入本地状态来管理所有表单输入，以确保输入流畅
-  const [localQuestion, setLocalQuestion] = useState<Question | undefined>(question);
+  // 1. 仅将 affiliateLinks 保持为本地状态，因为它与核心的 questions 文本内容相互独立。
   const [affiliateLinks, setAffiliateLinks] = useState<string[]>(
     question?.data?.affiliateLinks || []
   );
@@ -1204,65 +1203,51 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   
-  // 2. 当父组件的 question 属性改变时，同步到本地状态 (即切换问题时)
+  // 2. 确保在切换编辑对象时，本地状态能与传入的 prop 同步
   useEffect(() => {
-    setLocalQuestion(question);
     setAffiliateLinks(question?.data?.affiliateLinks || []);
   }, [question]);
 
-  // 3. 定义一个**防抖函数**来调用父组件的 onUpdate
-  // 这样只有在用户停止输入 300 毫秒后，才会触发 FunnelEditor 的状态更新和随后的 Firestore 自动保存
-  const debouncedOnUpdate = React.useCallback(
-    debounce((updatedQuestion: Question, updatedLinks: string[]) => {
-      // 合并本地的 affiliateLinks 到 question.data 结构中
-      const finalUpdate = { 
-          ...updatedQuestion, 
-          data: { 
-              ...updatedQuestion.data, 
-              affiliateLinks: updatedLinks 
-          } 
-      };
-      onUpdate(finalUpdate);
-    }, 300), 
-    [onUpdate]
-  );
-  
-  // 4. 输入事件处理函数：更新本地状态，并触发防抖的父组件更新
+
+  // 3. 输入事件处理函数：**立即**更新父组件状态，以确保输入框的流畅度。
   const handleTitleChange = (newTitle: string) => {
-    if (localQuestion) {
-      const updated = { ...localQuestion, title: newTitle };
-      setLocalQuestion(updated); // 立即更新本地状态 (UI流畅)
-      debouncedOnUpdate(updated, affiliateLinks); // 延迟通知父组件
+    if (question) {
+      // 创建新的 Question 对象，并立即传给父组件
+      const updatedQuestion: Question = { ...question, title: newTitle };
+      onUpdate(updatedQuestion); 
     }
   };
 
+  // 4. 答案文本输入事件处理函数：**立即**更新父组件状态。
   const handleAnswerTextChange = (answerId: string, newText: string) => {
-    if (localQuestion) {
+    if (question) {
       const updatedAnswers = {
-        ...localQuestion.answers,
-        [answerId]: { ...localQuestion.answers[answerId], text: newText },
+        ...question.answers,
+        [answerId]: { ...question.answers[answerId], text: newText },
       };
-      const updated = { ...localQuestion, answers: updatedAnswers };
-      setLocalQuestion(updated); // 立即更新本地状态 (UI流畅)
-      debouncedOnUpdate(updated, affiliateLinks); // 延迟通知父组件
+      const updatedQuestion: Question = { ...question, answers: updatedAnswers };
+      onUpdate(updatedQuestion);
     }
   };
 
+  // 5. 联盟链接处理函数：更新本地状态，并触发一次父组件更新（FunnelEditor 的 debouncedSave 会处理持久化）。
   const handleLinkChange = (index: number, value: string) => {
-    if (!localQuestion) return;
+      if (!question) return;
 
-    // 仅更新本地的 affiliateLinks 数组状态
-    const newLinks = [...affiliateLinks];
-    newLinks[index] = value;
-    setAffiliateLinks(newLinks);
-    
-    // 延迟通知父组件，并将当前的 localQuestion 状态传递过去
-    debouncedOnUpdate(localQuestion, newLinks);
+      // 1. 更新本地 UI 状态 (affiliateLinks)
+      const newLinks = [...affiliateLinks];
+      newLinks[index] = value;
+      setAffiliateLinks(newLinks);
+      
+      // 2. 立即更新父组件，将新的 links 数据嵌入到 data 字段
+       onUpdate({
+            ...question,
+            data: { ...question.data, affiliateLinks: newLinks } 
+       });
   };
   
-  // 5. handleSave 现在使用本地状态，并直接（非防抖）调用 onUpdate
   const handleSave = async () => {
-    if (!localQuestion) return;
+    if (!question) return;
 
     setIsSaving(true);
     try {
@@ -1270,12 +1255,11 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
       const newAnswersMap: { [answerId: string]: Answer } = {};
       let hasValidAnswer = false;
       
-      // 1. 迭代 localQuestion 的答案
-      Object.values(localQuestion.answers).forEach((answer) => {
+      // 使用当前最新的 question prop (它包含了最新的 title/text)
+      Object.values(question.answers).forEach((answer) => {
           const currentText = answer.text.trim();
           
           if (currentText !== "") {
-              // 2. 关键修复：将完整的 Answer 对象（包括 clickCount）传播到新的 Map 中
               newAnswersMap[answer.id] = {
                   ...answer, 
                   text: currentText, 
@@ -1284,8 +1268,7 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
           }
       });
       
-      // 检查标题和答案数量...
-      if (!localQuestion.title.trim()) {
+      if (!question.title.trim()) {
         console.error("Question title cannot be empty!");
         setIsSaving(false);
         return;
@@ -1297,14 +1280,14 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
         return;
       }
 
-      // Preserve affiliate links logic
+      // 使用本地最新的 affiliateLinks
       const cleanAffiliateLinks = Array.from({ length: 4 }).map((_, index) => affiliateLinks[index] || '');
       
       await new Promise((resolve) => setTimeout(resolve, 1000));
       
-      // The final object is passed up to the parent component (非防抖，强制立即更新)
+      // 最终同步更新
       onUpdate({
-        ...localQuestion,
+        ...question,
         answers: newAnswersMap, 
         data: { affiliateLinks: cleanAffiliateLinks },
       });
@@ -1317,34 +1300,28 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
       setIsSaving(false);
     }
   };
-
-  // 6. 清理函数：在组件卸载时取消任何待执行的 debouncedOnUpdate
-  React.useEffect(() => {
-    return () => {
-      debouncedOnUpdate.cancel();
-    };
-  }, [debouncedOnUpdate]);
-
+  
   const handleDelete = () => {
-  setIsDeleting(true);
-  const button = document.querySelector('.delete-button');
-  if (button) {
-    button.classList.add('animate-out');
-  }
-  setTimeout(() => {
-    onDelete();
-  }, 1000);
-};
-
-  // 防御性检查: 如果没有本地 question，则显示加载中
-  if (!localQuestion) {
+    setIsDeleting(true);
+    const button = document.querySelector('.delete-button');
+    if (button) {
+        button.classList.add('animate-out');
+    }
+    setTimeout(() => {
+        onDelete();
+    }, 1000);
+  };
+  
+  // Defensive check: If for some reason no question is provided, render nothing.
+  if (!question) {
     return <div>Loading question...</div>;
   }
 
-  // 7. JSX 渲染现在使用 localQuestion
+  // 渲染时直接使用传入的 prop
   const stableAnswers = React.useMemo(() => {
-      return Object.values(localQuestion.answers).sort((a, b) => a.id.localeCompare(b.id));
-    }, [localQuestion]); // 仅在 localQuestion 改变时重新计算
+      // 保证渲染顺序稳定
+      return Object.values(question.answers).sort((a, b) => a.id.localeCompare(b.id));
+    }, [question]); 
 
   return (
     <div className="question-form-container">
@@ -1360,14 +1337,15 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
         <label>Question Title:</label>
         <input
           type="text"
-          value={localQuestion.title || ''} 
+          // 直接使用 question prop 的值
+          value={question.title || ''} 
           onChange={(e) => handleTitleChange(e.target.value)}
           placeholder="e.g., What's your biggest health concern?"
         />
       </div>
       <div className="form-group">
         <label>Question Type:</label>
-        <select value={localQuestion.type || 'single-choice'} onChange={() => {}} disabled>
+        <select value={question.type || 'single-choice'} onChange={() => {}} disabled>
           <option>Single Choice</option>
           <option>Multiple Choice (Coming Soon)</option>
           <option>Text Input (Coming Soon)</option>
@@ -1379,11 +1357,13 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
           <div key={answer.id} className="answer-input-group">
             <input 
               type="text" 
+              // 直接使用 answer.text 的值
               value={answer.text || ''}  
               onChange={(e) => handleAnswerTextChange(answer.id, e.target.value)} 
             />
             <input 
               type="url" 
+              // 使用本地 affiliateLinks 状态
               value={affiliateLinks[index] || ''} 
               onChange={(e) => handleLinkChange(index, e.target.value)} 
               placeholder="Affiliate link (optional)" 
