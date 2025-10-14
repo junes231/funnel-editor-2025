@@ -1413,136 +1413,79 @@ const handleSave = async () => {
   return (
     <div className="question-form-container">
       <h2>
-        <span role="img" aria-label="edit">
-          📝
-        </span>{" "}
-        Quiz Question Editor
+        <span role="img" aria-label="edit">📝</span> Quiz Question Editor
       </h2>
-
       <p className="question-index-display">
         {questionIndex !== null
           ? `Editing Question ${questionIndex + 1} of 6`
-          : "Adding New Question"}
+          : 'Adding New Question'}
       </p>
-
-      {/* --- 标题输入 --- */}
       <div className="form-group">
         <label>Question Title:</label>
         <input
           type="text"
-          value={localQuestion.title || ""}
+          value={localQuestion.title || ''} 
           onChange={(e) => handleTitleChange(e.target.value)}
           placeholder="e.g., What's your biggest health concern?"
         />
       </div>
-
-      {/* --- 问题类型 --- */}
       <div className="form-group">
         <label>Question Type:</label>
-        <select
-          value={localQuestion.type || "single-choice"}
-          onChange={() => {}}
-          disabled
-        >
+        <select value={localQuestion.type || 'single-choice'} onChange={() => {}} disabled>
           <option>Single Choice</option>
           <option>Multiple Choice (Coming Soon)</option>
           <option>Text Input (Coming Soon)</option>
         </select>
       </div>
-
-      {/* --- 答案选项 --- */}
       <div className="answer-options-section">
         <p>Answer Options (Max 4):</p>
-        {(localQuestion.answers || []).map((answer, index) => (
+        {stableAnswers.map((answer, index) => (
           <div key={answer.id} className="answer-input-group">
-            {/* 选项文字 */}
-            <input
-              type="text"
-              value={answer.text || ""}
-              onChange={(e) =>
-                handleAnswerTextChange(answer.id, e.target.value)
-              }
-              placeholder={`Option ${index + 1}`}
+            <input 
+              type="text" 
+              value={answer.text || ''}  
+              onChange={(e) => handleAnswerTextChange(answer.id, e.target.value)} 
+            />
+            <input 
+              type="url" 
+              value={affiliateLinks[index] || ''} 
+              onChange={(e) => handleLinkChange(index, e.target.value)} 
+              placeholder="Affiliate link (optional)" 
             />
 
-            {/* 关联链接 */}
-            <input
-              type="url"
-              value={affiliateLinks[index] || ""}
-              onChange={(e) => handleLinkChange(index, e.target.value)}
-              placeholder="Affiliate link (optional)"
-            />
-
-            {/* 下一步 ID */}
-            <input
-              type="text"
-              value={answer.nextStepId || ""}
-              onChange={(e) => {
-                const updatedAnswers = localQuestion.answers.map((a) =>
-                  a.id === answer.id
-                    ? { ...a, nextStepId: e.target.value }
-                    : a
-                );
-                const updated = { ...localQuestion, answers: updatedAnswers };
-                setLocalQuestion(updated);
-                debouncedUpdate(updated);
-              }}
-              placeholder="Next Step ID (Optional)"
-              className="affiliate-input"
-              style={{ marginTop: "5px" }}
-            />
-
-            {/* 点击数展示 */}
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                padding: "8px 12px",
-                backgroundColor: "#f0f0f0",
-                borderRadius: "6px",
-                marginTop: "5px",
-                width: "100%",
-                color: "#333",
-                fontSize: "14px",
-                cursor: "default",
-              }}
-            >
-              <span
-                role="img"
-                aria-label="clicks"
-                style={{ marginRight: "8px" }}
-              >
-                👁️
-              </span>
+              <input
+                  type="text"
+                  value={answer.nextStepId || ''}
+                  onChange={(e) => {
+                    handleAnswerNextStepIdChange(answer.id, e.target.value);
+                  }}
+                  placeholder="Next Step ID (Optional)"
+                  className="affiliate-input"
+                  style={{ marginTop: '5px' }}
+                />
+                <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              padding: '8px 12px', backgroundColor: '#f0f0f0', borderRadius: '6px',
+              marginTop: '5px', width: '100%', color: '#333',
+              fontSize: '14px', cursor: 'default'
+            }}>
+              <span role="img" aria-label="clicks" style={{ marginRight: '8px' }}>👁️</span>
               <strong>{answer?.clickCount || 0} clicks</strong>
             </div>
           </div>
         ))}
       </div>
-
-      {/* --- 底部按钮 --- */}
+      
       <div className="form-actions">
         <button className="save-button" onClick={handleSave}>
-          <span role="img" aria-label="save">
-            💾
-          </span>{" "}
-          Save Question
+          <span role="img" aria-label="save">💾</span> Save Question
         </button>
-
         <button className="cancel-button" onClick={onCancel}>
-          <span role="img" aria-label="cancel">
-            ←
-          </span>{" "}
-          Back to List
+          <span role="img" aria-label="cancel">←</span> Back to List
         </button>
-
         {questionIndex !== null && (
           <button className="delete-button" onClick={handleDelete}>
-            <span role="img" aria-label="delete">
-              🗑️
-            </span>{" "}
-            Delete Question
+            <span role="img" aria-label="delete">🗑️</span> Delete Question
           </button>
         )}
       </div>
