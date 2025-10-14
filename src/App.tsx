@@ -1268,123 +1268,124 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
   onDelete,
   onUpdate, 
 }) => {
-  const navigate = useNavigate();
-  
-  // 1. 引入本地状态来管理所有表单输入，以确保输入流畅
+   const navigate = useNavigate();
+
+  // 1️⃣ 本地状态（输入流畅）
   const [localQuestion, setLocalQuestion] = useState<Question | undefined>(question);
   const [affiliateLinks, setAffiliateLinks] = useState<string[]>(
     question?.data?.affiliateLinks || []
   );
-  
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  
-  // 2. 当父组件的 question 属性改变时，同步到本地状态 (即切换问题时)
+
+  // 2️⃣ 父组件切换问题时同步
   useEffect(() => {
-    //
     setLocalQuestion(question);
     setAffiliateLinks(question?.data?.affiliateLinks || []);
   }, [question]);
 
-  // 4. 输入事件处理函数：现在只更新本地状态，不再立即调用 onUpdate
-    const handleTitleChange = (newTitle: string) => {
-        if (!localQuestion) return;
-        const updatedQuestion = { ...localQuestion, title: newTitle };
-        setLocalQuestion(updatedQuestion);
-        onUpdate(updatedQuestion); 
-    };
+  // 3️⃣ ✅ 防抖更新函数（父组件仅在输入停止 300ms 后更新）
+  const debouncedUpdate = useCallback(
+    debounce((updated: Question) => {
+      onUpdate(updated);
+    }, 300),
+    [onUpdate]
+  );
+
+  // 4️⃣ 各类输入处理函数（全部防抖）
+  const handleTitleChange = (newTitle: string) => {
+    if (!localQuestion) return;
+    const updated = { ...localQuestion, title: newTitle };
+    setLocalQuestion(updated);
+    debouncedUpdate(updated);
+  };
 
   const handleAnswerTextChange = (answerId: string, newText: string) => {
-      if (!localQuestion) return;
-      const updatedAnswers = {
-        ...localQuestion.answers,
-        [answerId]: { ...localQuestion.answers[answerId], text: newText },
-      };
-      const updatedQuestion = { ...localQuestion, answers: updatedAnswers };
-      setLocalQuestion(updatedQuestion);
-      onUpdate(updatedQuestion);
+    if (!localQuestion) return;
+    const updatedAnswers = {
+      ...localQuestion.answers,
+      [answerId]: { ...localQuestion.answers[answerId], text: newText },
+    };
+    const updated = { ...localQuestion, answers: updatedAnswers };
+    setLocalQuestion(updated);
+    debouncedUpdate(updated);
   };
 
   const handleLinkChange = (index: number, value: string) => {
-      if (!localQuestion) return;
+    if (!localQuestion) return;
+    const newLinks = [...affiliateLinks];
+    newLinks[index] = value;
+    setAffiliateLinks(newLinks);
 
-      const newLinks = [...affiliateLinks];
-      newLinks[index] = value;
-      setAffiliateLinks(newLinks);
-      
-      const updatedQuestion = {
-            ...localQuestion,
-            data: { ...localQuestion.data, affiliateLinks: newLinks } 
-      };
-      setLocalQuestion(updatedQuestion);
-      onUpdate(updatedQuestion);
+    const updated = {
+      ...localQuestion,
+      data: { ...localQuestion.data, affiliateLinks: newLinks },
+    };
+    setLocalQuestion(updated);
+    debouncedUpdate(updated);
   };
-    
+
   const handleAnswerNextStepIdChange = (answerId: string, newNextStepId: string) => {
     if (!localQuestion) return;
-    
-    const standardizedId = newNextStepId.trim(); 
+    const standardizedId = newNextStepId.trim();
     const updatedAnswers = {
       ...localQuestion.answers,
       [answerId]: { ...localQuestion.answers[answerId], nextStepId: standardizedId },
     };
-    const updatedQuestion = { ...localQuestion, answers: updatedAnswers };
-    setLocalQuestion(updatedQuestion);
-    onUpdate(updatedQuestion);
+    const updated = { ...localQuestion, answers: updatedAnswers };
+    setLocalQuestion(updated);
+    debouncedUpdate(updated);
   };
-  
-  // 5. handleSave 现在使用本地状态，并直接（非防抖）调用 onUpdate
-  const handleSave = async () => {
-    if (!localQuestion) return;
 
-    setIsSaving(true);
-    try {
-      
-      const newAnswersMap: { [answerId: string]: Answer } = {};
-      let hasValidAnswer = false;
-      
-      Object.values(localQuestion.answers).forEach((answer) => {
-          const currentText = answer.text.trim();
-          
-          if (currentText !== "") {
-              newAnswersMap[answer.id] = {
-                  ...answer, 
-                  text: currentText, 
-              };
-              hasValidAnswer = true;
-          }
-      });
-      
-      if (!localQuestion.title.trim()) {
-        console.error("Question title cannot be empty!");
-        setIsSaving(false);
-        return;
+  // 5️⃣ 保存按钮逻辑（立即触发保存，不防抖）
+const handleSave = async () => {
+  if (!localQuestion) return;
+
+  setIsSaving(true);
+  try {
+    const newAnswersMap: { [answerId: string]: Answer } = {};
+    let hasValidAnswer = false;
+
+    Object.values(localQuestion.answers).forEach((answer) => {
+      const currentText = answer.text.trim();
+      if (currentText !== "") {
+        newAnswersMap[answer.id] = { ...answer, text: currentText };
+        hasValidAnswer = true;
       }
-      
-      if (!hasValidAnswer) {
-        console.error("Please provide at least one answer option.");
-        setIsSaving(false);
-        return;
-      }
+    });
 
-      const cleanAffiliateLinks = Array.from({ length: 4 }).map((_, index) => affiliateLinks[index] || '');
-      
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      
-      onUpdate({
-        ...localQuestion,
-        answers: newAnswersMap, 
-        data: { affiliateLinks: cleanAffiliateLinks },
-      });
-
-      onSaveAndClose();
-
-    } catch (error) {
-      console.error("Error saving question:", error);
-    } finally {
+    if (!localQuestion.title.trim()) {
+      console.error("Question title cannot be empty!");
       setIsSaving(false);
+      return;
     }
-  };
+
+    if (!hasValidAnswer) {
+      console.error("Please provide at least one answer option.");
+      setIsSaving(false);
+      return;
+    }
+
+    const cleanAffiliateLinks = Array.from({ length: 4 }).map(
+      (_, index) => affiliateLinks[index] || ""
+    );
+
+    // ✅ 可选延迟模拟保存中状态
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
+    onUpdate({
+      ...localQuestion,
+      answers: newAnswersMap,
+      data: { affiliateLinks: cleanAffiliateLinks },
+    });
+
+    onSaveAndClose();
+  } catch (error) {
+    console.error("Error saving question:", error);
+  } finally {
+    setIsSaving(false);
+  }
+};
   
   const handleDelete = () => {
     setIsDeleting(true);
@@ -1408,79 +1409,136 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
   return (
     <div className="question-form-container">
       <h2>
-        <span role="img" aria-label="edit">📝</span> Quiz Question Editor
+        <span role="img" aria-label="edit">
+          📝
+        </span>{" "}
+        Quiz Question Editor
       </h2>
+
       <p className="question-index-display">
         {questionIndex !== null
           ? `Editing Question ${questionIndex + 1} of 6`
-          : 'Adding New Question'}
+          : "Adding New Question"}
       </p>
+
+      {/* --- 标题输入 --- */}
       <div className="form-group">
         <label>Question Title:</label>
         <input
           type="text"
-          value={localQuestion.title || ''} 
+          value={localQuestion.title || ""}
           onChange={(e) => handleTitleChange(e.target.value)}
           placeholder="e.g., What's your biggest health concern?"
         />
       </div>
+
+      {/* --- 问题类型 --- */}
       <div className="form-group">
         <label>Question Type:</label>
-        <select value={localQuestion.type || 'single-choice'} onChange={() => {}} disabled>
+        <select
+          value={localQuestion.type || "single-choice"}
+          onChange={() => {}}
+          disabled
+        >
           <option>Single Choice</option>
           <option>Multiple Choice (Coming Soon)</option>
           <option>Text Input (Coming Soon)</option>
         </select>
       </div>
+
+      {/* --- 答案选项 --- */}
       <div className="answer-options-section">
         <p>Answer Options (Max 4):</p>
-        {stableAnswers.map((answer, index) => (
+        {(localQuestion.answers || []).map((answer, index) => (
           <div key={answer.id} className="answer-input-group">
-            <input 
-              type="text" 
-              value={answer.text || ''}  
-              onChange={(e) => handleAnswerTextChange(answer.id, e.target.value)} 
-            />
-            <input 
-              type="url" 
-              value={affiliateLinks[index] || ''} 
-              onChange={(e) => handleLinkChange(index, e.target.value)} 
-              placeholder="Affiliate link (optional)" 
+            {/* 选项文字 */}
+            <input
+              type="text"
+              value={answer.text || ""}
+              onChange={(e) =>
+                handleAnswerTextChange(answer.id, e.target.value)
+              }
+              placeholder={`Option ${index + 1}`}
             />
 
-              <input
-                  type="text"
-                  value={answer.nextStepId || ''}
-                  onChange={(e) => {
-                    handleAnswerNextStepIdChange(answer.id, e.target.value);
-                  }}
-                  placeholder="Next Step ID (Optional)"
-                  className="affiliate-input"
-                  style={{ marginTop: '5px' }}
-                />
-                <div style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              padding: '8px 12px', backgroundColor: '#f0f0f0', borderRadius: '6px',
-              marginTop: '5px', width: '100%', color: '#333',
-              fontSize: '14px', cursor: 'default'
-            }}>
-              <span role="img" aria-label="clicks" style={{ marginRight: '8px' }}>👁️</span>
+            {/* 关联链接 */}
+            <input
+              type="url"
+              value={affiliateLinks[index] || ""}
+              onChange={(e) => handleLinkChange(index, e.target.value)}
+              placeholder="Affiliate link (optional)"
+            />
+
+            {/* 下一步 ID */}
+            <input
+              type="text"
+              value={answer.nextStepId || ""}
+              onChange={(e) => {
+                const updatedAnswers = localQuestion.answers.map((a) =>
+                  a.id === answer.id
+                    ? { ...a, nextStepId: e.target.value }
+                    : a
+                );
+                const updated = { ...localQuestion, answers: updatedAnswers };
+                setLocalQuestion(updated);
+                debouncedUpdate(updated);
+              }}
+              placeholder="Next Step ID (Optional)"
+              className="affiliate-input"
+              style={{ marginTop: "5px" }}
+            />
+
+            {/* 点击数展示 */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: "8px 12px",
+                backgroundColor: "#f0f0f0",
+                borderRadius: "6px",
+                marginTop: "5px",
+                width: "100%",
+                color: "#333",
+                fontSize: "14px",
+                cursor: "default",
+              }}
+            >
+              <span
+                role="img"
+                aria-label="clicks"
+                style={{ marginRight: "8px" }}
+              >
+                👁️
+              </span>
               <strong>{answer?.clickCount || 0} clicks</strong>
             </div>
           </div>
         ))}
       </div>
-      
+
+      {/* --- 底部按钮 --- */}
       <div className="form-actions">
         <button className="save-button" onClick={handleSave}>
-          <span role="img" aria-label="save">💾</span> Save Question
+          <span role="img" aria-label="save">
+            💾
+          </span>{" "}
+          Save Question
         </button>
+
         <button className="cancel-button" onClick={onCancel}>
-          <span role="img" aria-label="cancel">←</span> Back to List
+          <span role="img" aria-label="cancel">
+            ←
+          </span>{" "}
+          Back to List
         </button>
+
         {questionIndex !== null && (
           <button className="delete-button" onClick={handleDelete}>
-            <span role="img" aria-label="delete">🗑️</span> Delete Question
+            <span role="img" aria-label="delete">
+              🗑️
+            </span>{" "}
+            Delete Question
           </button>
         )}
       </div>
