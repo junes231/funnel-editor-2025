@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, ChangeEvent } from 'react';
 import { getAuth, onAuthStateChanged, User, signOut } from 'firebase/auth';
+import { FunnelData, FunnelComponent, Answer, Question } from './types/funnel.ts'; 
 import debounce from 'lodash.debounce'; 
 import QuizPlayer from './components/QuizPlayer.tsx';
 import ResetPage from './pages/reset.tsx';
@@ -28,12 +29,7 @@ import {
 import Login from './components/Login.tsx';
 import './App.css';
 
-// --- Interface Definitions ---
-interface Answer {
-  id: string;
-  text: string;
-  clickCount?: number;
-}
+
 
 interface Question {
   id: string;
@@ -623,7 +619,7 @@ const selectedQuestionIndex = (currentSubView === 'questionForm' && urlIndex !==
 };
 const debouncedSave = useCallback( 
   debounce(performSave, 300), 
-  [funnelId, updateFunnelData] 
+[funnelId, updateFunnelData, leadCaptureEnabled, leadCaptureWebhookUrl]
 );
 
 // 3. 监听状态变化并调用防抖保存的 useEffect (替代原有的 unoptimized useEffect)
@@ -640,6 +636,8 @@ useEffect(() => {
     buttonColor,
     backgroundColor,
     textColor,
+   enableLeadCapture: leadCaptureEnabled, 
+    leadCaptureWebhookUrl: leadCaptureWebhookUrl, 
   };
    (window as any).__funnelData = latestData;
 
@@ -660,6 +658,8 @@ useEffect(() => {
   buttonColor,
   backgroundColor,
   textColor,
+  leadCaptureEnabled, 
+  leadCaptureWebhookUrl,
   isDataLoaded,
   debouncedSave 
 ]);
@@ -1020,7 +1020,7 @@ const QuizEditorComponent: React.FC<QuizEditorComponentProps> = ({
   templateFiles // <-- Destructure the prop here
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
-
+   
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
   const file = event.target.files?.[0];
   if (!file) {
@@ -1207,22 +1207,31 @@ const QuizEditorComponent: React.FC<QuizEditorComponentProps> = ({
       {questions.length === 0 ? (
         <p className="no-questions-message">No questions added yet. Click "Add New Question" or "Import Questions" to start!</p>
       ) : (
-        <ul className="question-list">
+            <ul className="question-list">
           {questions.map((q, index) => (
-            <li key={q.id} className="question-item" onClick={() => onEditQuestion(index)}>
-              Question {index + 1}: {q.title}
-            </li>
-          ))}
-        </ul>
-      )}
+            <li 
+  key={q.id} 
+  className="question-item"
+  onClick={() => onEditQuestion(index)}
+>
+  <span class="question-badge">Q{index + 1}</span> 
+  {/* 标题和 ID 文本直接作为 li 的子元素 */}
+  <span className="question-title-text">{q.title}</span> 
+  <span className="question-id-text">
+    (ID: {q.id.replace('question-', '')}) 
+  </span>
+</li>
+    ))}
+    </ul>
+     )}
 
      
          <BackButton onClick={onBack}>
   <span role="img" aria-label="back">←</span> Back to Funnel Dashboard
         </BackButton>
-    </div>
-  );
-};
+     </div>
+      );
+      };
 
 interface QuestionFormComponentProps {
   question?: Question;
@@ -1300,7 +1309,19 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
             data: { ...question.data, affiliateLinks: newLinks } 
        });
   };
-  
+  const handleAnswerNextStepIdChange = (answerId: string, newNextStepId: string) => {
+    if (question) {
+      // 撤销昨天的修复，直接保存用户输入的值 (精简 ID 或完整 ID)
+      const standardizedId = newNextStepId.trim(); 
+      
+      const updatedAnswers = {
+        ...question.answers,
+        [answerId]: { ...question.answers[answerId], nextStepId: standardizedId },
+      };
+      const updatedQuestion: Question = { ...question, answers: updatedAnswers };
+      onUpdate(updatedQuestion);
+    }
+  };
   
   // 5. handleSave 现在使用本地状态，并直接（非防抖）调用 onUpdate
   const handleSave = async () => {
@@ -1423,7 +1444,19 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
               onChange={(e) => handleLinkChange(index, e.target.value)} 
               placeholder="Affiliate link (optional)" 
             />
-            <div style={{
+
+              <input
+                  type="text"
+                  value={answer.nextStepId || ''}
+                  onChange={(e) => {
+                    // 【中文注释：调用新的更新函数来设置 nextStepId】
+                    handleAnswerNextStepIdChange(answer.id, e.target.value);
+                  }}
+                  placeholder="Next Step ID (Optional)"
+                  className="affiliate-input" // 复用 affiliate-input 样式
+                  style={{ marginTop: '5px' }}
+                />
+                <div style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               padding: '8px 12px', backgroundColor: '#f0f0f0', borderRadius: '6px',
               marginTop: '5px', width: '100%', color: '#333',
@@ -1494,53 +1527,65 @@ const LinkSettingsComponent: React.FC<LinkSettingsComponentProps> = ({
   useEffect(() => {
     setLocalLink(finalRedirectLink);
     setLocalTracking(tracking);
-  }, [finalRedirectLink, tracking]);
+  setLocalWebhookUrl(leadCaptureWebhookUrl); 
+  }, [finalRedirectLink, tracking, leadCaptureWebhookUrl]);
   
   // 核心修复 3: 使用 useCallback 和 debounce 创建一个延迟通知父组件的函数
   const debouncedSetState = useCallback(
-    debounce((linkValue: string, trackingValue: string, webhookUrlValue: string, captureEnabled: boolean) => {
-      setFinalRedirectLink(linkValue);
-      setTracking(trackingValue);
-      setLeadCaptureWebhookUrl(webhookUrlValue);
-      setLeadCaptureEnabled(captureEnabled);
-    }, 300),
-    [setFinalRedirectLink, setTracking, setLeadCaptureWebhookUrl, setLeadCaptureEnabled] 
-  );
-
-  // 核心修复 4: 销毁时清除 debouncer
-  useEffect(() => {
-    return () => {
-      debouncedSetState.cancel();
-    };
-  }, [debouncedSetState]);
-
-   const handleLinkChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    // 立即更新本地状态 (保证输入框流畅)
-    setLocalLink(value);
-    // 延迟通知父组件
-    debouncedSetState(value, localTracking);
-  };
+        // 这里不需要所有参数，只需要调用父组件的 setXXX
+        debounce((linkValue: string, trackingValue: string, webhookUrlValue: string, captureEnabled: boolean) => {
+            // 这部分逻辑将延迟执行
+            setFinalRedirectLink(linkValue);
+            setTracking(trackingValue);
+            setLeadCaptureWebhookUrl(webhookUrlValue);
+            setLeadCaptureEnabled(captureEnabled);
+        }, 300), // 300ms 延迟，避免频繁触发 FunnelEditor 的 Firebase 保存
+        [setFinalRedirectLink, setTracking, setLeadCaptureWebhookUrl, setLeadCaptureEnabled] 
+    );
   
-  // 处理追踪参数输入变化
-  const handleTrackingChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    // 立即更新本地状态
-    setLocalTracking(value);
-    // 延迟通知父组件
-    debouncedSetState(localLink, value);
-  };
-  const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const checked = e.target.checked;
-      setLeadCaptureEnabled(checked);
-      // 【中文注释：修复：调用父组件传入的保存函数，并传入所有最新状态】
-      triggerSave(finalRedirectLink, tracking, leadCaptureWebhookUrl, checked); 
-  };
-  const handleWebhookChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setLocalWebhookUrl(value);
-    debouncedSetState(localLink, localTracking, value, leadCaptureEnabled);
-  };
+    // 【修复 4】: 组件卸载时清除 debouncer，防止内存泄漏
+    useEffect(() => {
+        return () => {
+            debouncedSetState.cancel();
+        };
+    }, [debouncedSetState]);
+
+    // 【修复 5】: 处理链接输入变化
+    const handleLinkChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        // 1. 立即更新本地状态 (保证输入框流畅)
+        setLocalLink(value);
+        // 2. 延迟通知父组件（传递本地状态的最新值和其余状态的当前值）
+        debouncedSetState(value, localTracking, localWebhookUrl, leadCaptureEnabled);
+    };
+    
+    // 【修复 6】: 处理追踪参数输入变化
+    const handleTrackingChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        // 1. 立即更新本地状态
+        setLocalTracking(value);
+        // 2. 延迟通知父组件
+        debouncedSetState(localLink, value, localWebhookUrl, leadCaptureEnabled);
+    };
+
+    // 【修复 7】: 处理 Webhook URL 变化
+    const handleWebhookChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        // 1. 立即更新本地状态
+        setLocalWebhookUrl(value);
+        // 2. 延迟通知父组件
+        debouncedSetState(localLink, localTracking, value, leadCaptureEnabled);
+    };
+    
+    // 【修复 8】: 处理 Checkbox 变化 (Checkbox 通常不需要防抖，立即更新即可)
+    const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const checked = e.target.checked;
+        // 立即更新父组件状态
+        setLeadCaptureEnabled(checked);
+        // 因为 setLeadCaptureEnabled 会触发 FunnelEditor 的 debouncedSave，所以这里不用额外调用 debouncedSetState
+        // 但为了确保保存能立即包含这个变化，我们可以强制 flush 输入的 debounced 状态
+        debouncedSetState.flush();
+    };
   return (
     <div className="link-settings-container">
       <h2>
@@ -1582,10 +1627,7 @@ const LinkSettingsComponent: React.FC<LinkSettingsComponentProps> = ({
           <input
             type="checkbox"
             checked={leadCaptureEnabled}
-            onChange={(e) => {
-                setLeadCaptureEnabled(e.target.checked);
-               
-            }}
+            onChange={handleCheckboxChange}
             style={{width: 'auto'}}
           />
         </label>
