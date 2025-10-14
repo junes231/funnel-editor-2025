@@ -507,8 +507,7 @@ const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData }) => 
    const currentSubView = urlParams.get('view') || 'mainEditorDashboard';
   const urlIndex = urlParams.get('index');
 // 如果 view 是 questionForm，则解析 index，否则设为 null
-const selectedQuestionIndex = (currentSubView === 'questionForm' && urlIndex !== null) ? parseInt(urlIndex) : null;
-  const questionToEdit = selectedQuestionIndex !== null ? questions[selectedQuestionIndex] : undefined;
+ const questionToEdit = selectedQuestionIndex !== null ? questions[selectedQuestionIndex] : undefined;
  const [selectedQuestionIndex, setSelectedQuestionIndex] = useState<number | null>(
   (currentSubView === 'questionForm' && urlIndex !== null) ? parseInt(urlIndex, 10) : null
 );
