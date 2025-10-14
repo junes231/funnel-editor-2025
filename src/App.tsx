@@ -507,10 +507,11 @@ const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData }) => 
    const currentSubView = urlParams.get('view') || 'mainEditorDashboard';
   const urlIndex = urlParams.get('index');
 // 如果 view 是 questionForm，则解析 index，否则设为 null
- const questionToEdit = selectedQuestionIndex !== null ? questions[selectedQuestionIndex] : undefined;
+ 
  const [selectedQuestionIndex, setSelectedQuestionIndex] = useState<number | null>(
   (currentSubView === 'questionForm' && urlIndex !== null) ? parseInt(urlIndex, 10) : null
 );
+ const questionToEdit = selectedQuestionIndex !== null ? questions[selectedQuestionIndex] : undefined;
   // 3. 驱动路由跳转的函数：仅操作 URL 参数
   const setCurrentSubView = useCallback((newView: string, index: number | null = null) => {
   const newParams = new URLSearchParams(location.search);
