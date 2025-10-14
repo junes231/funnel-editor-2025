@@ -1369,13 +1369,13 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
       });
       
       if (!localQuestion.title.trim()) {
-        alert("Question title cannot be empty!");
+        console.error("Question title cannot be empty!");
         setIsSaving(false);
         return;
       }
       
       if (!hasValidAnswer) {
-        alert("Please provide at least one answer option.");
+        console.error("Please provide at least one answer option.");
         setIsSaving(false);
         return;
       }
