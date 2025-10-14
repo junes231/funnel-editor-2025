@@ -509,7 +509,9 @@ const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData }) => 
 // 如果 view 是 questionForm，则解析 index，否则设为 null
 const selectedQuestionIndex = (currentSubView === 'questionForm' && urlIndex !== null) ? parseInt(urlIndex) : null;
   const questionToEdit = selectedQuestionIndex !== null ? questions[selectedQuestionIndex] : undefined;
-
+ const [selectedQuestionIndex, setSelectedQuestionIndex] = useState<number | null>(
+  (currentSubView === 'questionForm' && urlIndex !== null) ? parseInt(urlIndex, 10) : null
+);
   // 3. 驱动路由跳转的函数：仅操作 URL 参数
   const setCurrentSubView = useCallback((newView: string, index: number | null = null) => {
   const newParams = new URLSearchParams(location.search);
@@ -766,7 +768,7 @@ const handleSelectTemplate = async (templateName: string) => {
     setIsDeleting(true); // 开始动画
     const updatedQuestions = questions.filter((_, i) => i !== selectedQuestionIndex);
     setQuestions(updatedQuestions);
-    setSelectedQuestionIndex(null);
+    setSelectedQuestionIndex(null); 
     setCurrentSubView('quizEditorList');
     setNotification({ message: 'Question deleted.', type: 'success' });
 
