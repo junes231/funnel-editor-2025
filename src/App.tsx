@@ -508,9 +508,12 @@ const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData }) => 
   const urlIndex = urlParams.get('index');
 // 如果 view 是 questionForm，则解析 index，否则设为 null
  
- const [selectedQuestionIndex, setSelectedQuestionIndex] = useState<number | null>(
-  (currentSubView === 'questionForm' && urlIndex !== null) ? parseInt(urlIndex, 10) : null
-);
+ const [selectedQuestionIndex, setSelectedQuestionIndex] = useState<number | null>(null);
+
+useEffect(() => {
+  const newIndex = (currentSubView === 'questionForm' && urlIndex !== null) ? parseInt(urlIndex, 10) : null;
+  setSelectedQuestionIndex(newIndex);
+}, [currentSubView, urlIndex]);
  const questionToEdit = selectedQuestionIndex !== null ? questions[selectedQuestionIndex] : undefined;
   // 3. 驱动路由跳转的函数：仅操作 URL 参数
   const setCurrentSubView = useCallback((newView: string, index: number | null = null) => {
@@ -765,16 +768,15 @@ const handleSelectTemplate = async (templateName: string) => {
 
   const handleDeleteQuestion = () => {
   if (selectedQuestionIndex !== null) {
-    setIsDeleting(true); // 开始动画
+    setIsDeleting(true); 
     const updatedQuestions = questions.filter((_, i) => i !== selectedQuestionIndex);
     setQuestions(updatedQuestions);
-    setSelectedQuestionIndex(null); 
+    setSelectedQuestionIndex(null); // 确保是调用状态更新函数
     setCurrentSubView('quizEditorList');
     setNotification({ message: 'Question deleted.', type: 'success' });
 
     setTimeout(() => {
-      setIsDeleting(false); // 3秒后恢复
-      // 这里可做跳转或其它操作
+      setIsDeleting(false);
     }, 1000);
   }
 };
