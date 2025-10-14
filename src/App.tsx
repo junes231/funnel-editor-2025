@@ -1426,38 +1426,47 @@ const LinkSettingsComponent: React.FC<LinkSettingsComponentProps> = ({
   showNotification
 }) => {
  
-   const [localLink, setLocalLink] = useState(finalRedirectLink);
+    const [localLink, setLocalLink] = useState(finalRedirectLink);
+    const [localTracking, setLocalTracking] = useState(tracking);
+
   
   // 核心修复 2: 当父组件的 finalRedirectLink 变化时（例如：初次加载或从其他视图返回），同步到本地状态
   useEffect(() => {
     setLocalLink(finalRedirectLink);
-  }, [finalRedirectLink]);
+    setLocalTracking(tracking);
+  }, [finalRedirectLink, tracking]);
   
   // 核心修复 3: 使用 useCallback 和 debounce 创建一个延迟通知父组件的函数
-  const debouncedSetFinalRedirectLink = useCallback(
-    debounce((value: string) => {
-      // 只有当输入停止 300ms 后，才真正调用父组件的更新函数
-      // 这将触发 FunnelEditor 的状态更新，进而触发 debouncedSave 逻辑
-      setFinalRedirectLink(value);
+  const debouncedSetState = useCallback(
+    debounce((linkValue: string, trackingValue: string) => {
+      setFinalRedirectLink(linkValue);
+      setTracking(trackingValue);
     }, 300),
-    [setFinalRedirectLink] // 依赖项只包括外部更新函数
+    [setFinalRedirectLink, setTracking] // 依赖项只包括外部更新函数
   );
 
   // 核心修复 4: 销毁时清除 debouncer
   useEffect(() => {
     return () => {
-      debouncedSetFinalRedirectLink.cancel();
+      debouncedSetState.cancel();
     };
-  }, [debouncedSetFinalRedirectLink]);
+  }, [debouncedSetState]);
 
-  const handleLinkChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+   const handleLinkChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    
-    // 立即更新本地状态 (确保输入框是流畅的，不会卡顿)
+    // 立即更新本地状态 (保证输入框流畅)
     setLocalLink(value);
-    
-    // 延迟通知父组件和自动保存逻辑
-    debouncedSetFinalRedirectLink(value);
+    // 延迟通知父组件
+    debouncedSetState(value, localTracking);
+  };
+  
+  // 处理追踪参数输入变化
+  const handleTrackingChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    // 立即更新本地状态
+    setLocalTracking(value);
+    // 延迟通知父组件
+    debouncedSetState(localLink, value);
   };
   return (
     <div className="link-settings-container">
@@ -1481,8 +1490,8 @@ const LinkSettingsComponent: React.FC<LinkSettingsComponentProps> = ({
         <label>Optional: Tracking Parameters:</label>
         <input
           type="text"
-          value={tracking}
-          onChange={(e) => setTracking(e.target.value)}
+          value={localTracking｝ // 绑定到本地状态
+          onChange={handleTrackingChange}
           placeholder="utm_source=funnel&utm_campaign=..."
         />
       </div>
@@ -1503,8 +1512,7 @@ const LinkSettingsComponent: React.FC<LinkSettingsComponentProps> = ({
     <span role="img" aria-label="save">💾</span> Apply & Return to Editor
   </BackButton>
   
-  {/* 移除功能冗余的 Back to Editor 按钮 */}
-</div>
+  </div>
     </div>
   );
 };
