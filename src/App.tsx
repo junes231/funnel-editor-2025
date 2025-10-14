@@ -1281,65 +1281,61 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
   
   // 2. 当父组件的 question 属性改变时，同步到本地状态 (即切换问题时)
   useEffect(() => {
+    //
+    setLocalQuestion(question);
     setAffiliateLinks(question?.data?.affiliateLinks || []);
   }, [question]);
 
- 
-  
-  // 4. 输入事件处理函数：更新本地状态，并触发防抖的父组件更新
+  // 4. 输入事件处理函数：现在只更新本地状态，不再立即调用 onUpdate
     const handleTitleChange = (newTitle: string) => {
-    if (question) {
-      // 构造新的 Question 对象，并立即传给父组件
-      const updatedQuestion: Question = { ...question, title: newTitle };
-      onUpdate(updatedQuestion); 
-    }
-  };
+        if (!localQuestion) return;
+        const updatedQuestion = { ...localQuestion, title: newTitle };
+        setLocalQuestion(updatedQuestion);
+        onUpdate(updatedQuestion); 
+    };
 
-  // 【中文注释：答案文本输入事件处理函数：立即更新父组件状态】
   const handleAnswerTextChange = (answerId: string, newText: string) => {
-    if (question) {
+      if (!localQuestion) return;
       const updatedAnswers = {
-        ...question.answers,
-        [answerId]: { ...question.answers[answerId], text: newText },
+        ...localQuestion.answers,
+        [answerId]: { ...localQuestion.answers[answerId], text: newText },
       };
-      const updatedQuestion: Question = { ...question, answers: updatedAnswers };
+      const updatedQuestion = { ...localQuestion, answers: updatedAnswers };
+      setLocalQuestion(updatedQuestion);
       onUpdate(updatedQuestion);
-    }
   };
 
-  // 【中文注释：联盟链接处理函数：立即更新父组件状态（包含最新的 links）】
   const handleLinkChange = (index: number, value: string) => {
-      if (!question) return;
+      if (!localQuestion) return;
 
-      // 1. 更新本地 UI 状态
       const newLinks = [...affiliateLinks];
       newLinks[index] = value;
       setAffiliateLinks(newLinks);
       
-      // 2. 立即更新父组件，将新的 links 数据嵌入到 data 字段
-       onUpdate({
-            ...question,
-            // 确保 data 字段是完整的，不丢失其他 data 属性
-            data: { ...question.data, affiliateLinks: newLinks } 
-       });
-  };
-  const handleAnswerNextStepIdChange = (answerId: string, newNextStepId: string) => {
-    if (question) {
-      // 撤销昨天的修复，直接保存用户输入的值 (精简 ID 或完整 ID)
-      const standardizedId = newNextStepId.trim(); 
-      
-      const updatedAnswers = {
-        ...question.answers,
-        [answerId]: { ...question.answers[answerId], nextStepId: standardizedId },
+      const updatedQuestion = {
+            ...localQuestion,
+            data: { ...localQuestion.data, affiliateLinks: newLinks } 
       };
-      const updatedQuestion: Question = { ...question, answers: updatedAnswers };
+      setLocalQuestion(updatedQuestion);
       onUpdate(updatedQuestion);
-    }
+  };
+    
+  const handleAnswerNextStepIdChange = (answerId: string, newNextStepId: string) => {
+    if (!localQuestion) return;
+    
+    const standardizedId = newNextStepId.trim(); 
+    const updatedAnswers = {
+      ...localQuestion.answers,
+      [answerId]: { ...localQuestion.answers[answerId], nextStepId: standardizedId },
+    };
+    const updatedQuestion = { ...localQuestion, answers: updatedAnswers };
+    setLocalQuestion(updatedQuestion);
+    onUpdate(updatedQuestion);
   };
   
   // 5. handleSave 现在使用本地状态，并直接（非防抖）调用 onUpdate
   const handleSave = async () => {
-    if (!question) return;
+    if (!localQuestion) return;
 
     setIsSaving(true);
     try {
@@ -1347,8 +1343,7 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
       const newAnswersMap: { [answerId: string]: Answer } = {};
       let hasValidAnswer = false;
       
-      // 使用当前最新的 question prop (它包含了最新的 title/text)
-      Object.values(question.answers).forEach((answer) => {
+      Object.values(localQuestion.answers).forEach((answer) => {
           const currentText = answer.text.trim();
           
           if (currentText !== "") {
@@ -1360,7 +1355,7 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
           }
       });
       
-      if (!question.title.trim()) {
+      if (!localQuestion.title.trim()) {
         console.error("Question title cannot be empty!");
         setIsSaving(false);
         return;
@@ -1372,14 +1367,12 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
         return;
       }
 
-      // 使用本地最新的 affiliateLinks
       const cleanAffiliateLinks = Array.from({ length: 4 }).map((_, index) => affiliateLinks[index] || '');
       
       await new Promise((resolve) => setTimeout(resolve, 1000));
       
-      // 最终同步更新，确保数据结构正确
       onUpdate({
-        ...question,
+        ...localQuestion,
         answers: newAnswersMap, 
         data: { affiliateLinks: cleanAffiliateLinks },
       });
@@ -1393,28 +1386,24 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
     }
   };
   
-
   const handleDelete = () => {
-  setIsDeleting(true);
-  const button = document.querySelector('.delete-button');
-  if (button) {
-    button.classList.add('animate-out');
-  }
-  setTimeout(() => {
-    onDelete();
-  }, 1000);
-};
+    setIsDeleting(true);
+    const button = document.querySelector('.delete-button');
+    if (button) {
+      button.classList.add('animate-out');
+    }
+    setTimeout(() => {
+      onDelete();
+    }, 1000);
+  };
 
-  // 防御性检查: 如果没有本地 question，则显示加载中
-   if (!question) {
+  if (!localQuestion) {
     return <div>Loading question...</div>;
   }
 
-  // 7. JSX 渲染现在使用 localQuestion
-    const stableAnswers = React.useMemo(() => {
-      // 保证渲染顺序稳定
-      return Object.values(question.answers).sort((a, b) => a.id.localeCompare(b.id));
-    }, [question]);  // 仅在 localQuestion 改变时重新计算
+  const stableAnswers = React.useMemo(() => {
+      return Object.values(localQuestion.answers).sort((a, b) => a.id.localeCompare(b.id));
+    }, [localQuestion]); // 仅在 localQuestion 改变时重新计算
 
   return (
     <div className="question-form-container">
@@ -1430,7 +1419,7 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
         <label>Question Title:</label>
         <input
           type="text"
-          value={question.title || ''} 
+          value={localQuestion.title || ''} 
           onChange={(e) => handleTitleChange(e.target.value)}
           placeholder="e.g., What's your biggest health concern?"
         />
@@ -1463,11 +1452,10 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
                   type="text"
                   value={answer.nextStepId || ''}
                   onChange={(e) => {
-                    // 【中文注释：调用新的更新函数来设置 nextStepId】
                     handleAnswerNextStepIdChange(answer.id, e.target.value);
                   }}
                   placeholder="Next Step ID (Optional)"
-                  className="affiliate-input" // 复用 affiliate-input 样式
+                  className="affiliate-input"
                   style={{ marginTop: '5px' }}
                 />
                 <div style={{
@@ -1484,7 +1472,6 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
       </div>
       
       <div className="form-actions">
-        {/* --- UNCHANGED: Buttons and their handlers are the same --- */}
         <button className="save-button" onClick={handleSave}>
           <span role="img" aria-label="save">💾</span> Save Question
         </button>
