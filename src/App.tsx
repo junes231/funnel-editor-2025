@@ -1189,80 +1189,80 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
   question,
   questionIndex,
   onSave: onSaveAndClose,
-  onCancel, // --- MODIFIED: Renamed from onClose for clarity if needed, or keep as is.
+  onCancel,
   onDelete,
-  onUpdate,
+  onUpdate, 
 }) => {
-  // --- UNCHANGED: Navigation logic remains the same ---
   const navigate = useNavigate();
-
-  // --- REMOVED: Internal state for title, answers, and answerOrder are removed ---
-  // const [title, setTitle] = useState(...);
-  // const [answers, setAnswers] = useState(...);
-  // const [answerOrder, setAnswerOrder] = useState(...);
-
-  // --- UNCHANGED: State for UI effects and affiliate links is kept ---
+  
+  // 1. 引入本地状态来管理所有表单输入，以确保输入流畅
+  const [localQuestion, setLocalQuestion] = useState<Question | undefined>(question);
   const [affiliateLinks, setAffiliateLinks] = useState<string[]>(
     question?.data?.affiliateLinks || []
   );
+  
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   
-  // --- REMOVED: The complex useEffect for syncing props to state is no longer needed ---
-  // useEffect(() => { ... }, [question]);
-
-  // --- MODIFIED: Create a stable, sorted array for rendering ---
-  // This solves the "answer order is messy" problem permanently.
-  // It directly uses the 'question' prop, solving the "uploaded file not showing" problem.
-  // 中文注释：移除 .sort(...) 部分，以解决移动端输入问题
-const stableAnswers = React.useMemo(() => {
-    if (!question) return [];
-    return Object.values(question.answers).sort((a, b) => a.id.localeCompare(b.id));
+  // 2. 当父组件的 question 属性改变时，同步到本地状态 (即切换问题时)
+  useEffect(() => {
+    setLocalQuestion(question);
+    setAffiliateLinks(question?.data?.affiliateLinks || []);
   }, [question]);
 
-
-  // --- UNCHANGED: Helper functions can be kept if used elsewhere, but are not needed for rendering now ---
-  const convertAnswersArrayToObject = (answersArray: Answer[]): { [answerId: string]: Answer } => {
-    const answersObj: { [answerId: string]: Answer } = {};
-    answersArray.forEach(answer => {
-      answersObj[answer.id] = answer;
-    });
-    return answersObj;
-  };
-
-  const convertAnswersObjectToArray = (answersObj: { [answerId:string]: Answer }): Answer[] => {
-    return Object.values(answersObj);
-  };
+  // 3. 定义一个**防抖函数**来调用父组件的 onUpdate
+  // 这样只有在用户停止输入 300 毫秒后，才会触发 FunnelEditor 的状态更新和随后的 Firestore 自动保存
+  const debouncedOnUpdate = React.useCallback(
+    debounce((updatedQuestion: Question, updatedLinks: string[]) => {
+      // 合并本地的 affiliateLinks 到 question.data 结构中
+      const finalUpdate = { 
+          ...updatedQuestion, 
+          data: { 
+              ...updatedQuestion.data, 
+              affiliateLinks: updatedLinks 
+          } 
+      };
+      onUpdate(finalUpdate);
+    }, 300), 
+    [onUpdate]
+  );
   
-  // --- MODIFIED: Event handlers now create an updated question object and pass it up ---
+  // 4. 输入事件处理函数：更新本地状态，并触发防抖的父组件更新
   const handleTitleChange = (newTitle: string) => {
-    if (question) {
-      onUpdate({ ...question, title: newTitle });
+    if (localQuestion) {
+      const updated = { ...localQuestion, title: newTitle };
+      setLocalQuestion(updated); // 立即更新本地状态 (UI流畅)
+      debouncedOnUpdate(updated, affiliateLinks); // 延迟通知父组件
     }
   };
 
   const handleAnswerTextChange = (answerId: string, newText: string) => {
-    if (question) {
+    if (localQuestion) {
       const updatedAnswers = {
-        ...question.answers,
-        [answerId]: { ...question.answers[answerId], text: newText },
+        ...localQuestion.answers,
+        [answerId]: { ...localQuestion.answers[answerId], text: newText },
       };
-      onUpdate({ ...question, answers: updatedAnswers });
+      const updated = { ...localQuestion, answers: updatedAnswers };
+      setLocalQuestion(updated); // 立即更新本地状态 (UI流畅)
+      debouncedOnUpdate(updated, affiliateLinks); // 延迟通知父组件
     }
   };
 
-  // --- UNCHANGED: Affiliate link logic remains the same ---
   const handleLinkChange = (index: number, value: string) => {
-  if (!question || !stableAnswers[index]) return;
+    if (!localQuestion) return;
 
-  // 仅更新本地的 affiliateLinks 数组状态
-  const newLinks = [...affiliateLinks];
-  newLinks[index] = value;
-  setAffiliateLinks(newLinks);
-};
+    // 仅更新本地的 affiliateLinks 数组状态
+    const newLinks = [...affiliateLinks];
+    newLinks[index] = value;
+    setAffiliateLinks(newLinks);
+    
+    // 延迟通知父组件，并将当前的 localQuestion 状态传递过去
+    debouncedOnUpdate(localQuestion, newLinks);
+  };
   
-const handleSave = async () => {
-    if (!question) return;
+  // 5. handleSave 现在使用本地状态，并直接（非防抖）调用 onUpdate
+  const handleSave = async () => {
+    if (!localQuestion) return;
 
     setIsSaving(true);
     try {
@@ -1270,23 +1270,22 @@ const handleSave = async () => {
       const newAnswersMap: { [answerId: string]: Answer } = {};
       let hasValidAnswer = false;
       
-      // 1. 迭代 stableAnswers（这个数组包含了最新的文本和 clickCount）
-      // stableAnswers 是通过 React.useMemo 从 question.answers 派生的，包含所有属性
-      stableAnswers.forEach((answer) => {
+      // 1. 迭代 localQuestion 的答案
+      Object.values(localQuestion.answers).forEach((answer) => {
           const currentText = answer.text.trim();
           
           if (currentText !== "") {
               // 2. 关键修复：将完整的 Answer 对象（包括 clickCount）传播到新的 Map 中
               newAnswersMap[answer.id] = {
-                  ...answer, // 这一行至关重要：它继承了 clickCount 属性
-                  text: currentText, // 确保使用最新的、已修剪的文本
+                  ...answer, 
+                  text: currentText, 
               };
               hasValidAnswer = true;
           }
       });
       
       // 检查标题和答案数量...
-      if (!question.title.trim()) {
+      if (!localQuestion.title.trim()) {
         console.error("Question title cannot be empty!");
         setIsSaving(false);
         return;
@@ -1303,10 +1302,10 @@ const handleSave = async () => {
       
       await new Promise((resolve) => setTimeout(resolve, 1000));
       
-      // The final object is passed up to the parent component
+      // The final object is passed up to the parent component (非防抖，强制立即更新)
       onUpdate({
-        ...question,
-        answers: newAnswersMap, // 使用安全构建的 Map
+        ...localQuestion,
+        answers: newAnswersMap, 
         data: { affiliateLinks: cleanAffiliateLinks },
       });
 
@@ -1318,26 +1317,35 @@ const handleSave = async () => {
       setIsSaving(false);
     }
   };
-  
-  // --- UNCHANGED: Cancel and Delete logic remains the same ---
-  
-  // --- 恢复您设计的 Delete 按钮动画和跳转逻辑 ---
-   const handleDelete = () => {
+
+  // 6. 清理函数：在组件卸载时取消任何待执行的 debouncedOnUpdate
+  React.useEffect(() => {
+    return () => {
+      debouncedOnUpdate.cancel();
+    };
+  }, [debouncedOnUpdate]);
+
+  const handleDelete = () => {
   setIsDeleting(true);
   const button = document.querySelector('.delete-button');
   if (button) {
     button.classList.add('animate-out');
   }
   setTimeout(() => {
-    onDelete();  // 使用props的onDelete，而不是setFunnelData
+    onDelete();
   }, 1000);
 };
-  // Defensive check: If for some reason no question is provided, render nothing.
-  if (!question) {
+
+  // 防御性检查: 如果没有本地 question，则显示加载中
+  if (!localQuestion) {
     return <div>Loading question...</div>;
   }
 
-  // --- MODIFIED: The JSX now reads directly from `question` prop and `sortedAnswers` array ---
+  // 7. JSX 渲染现在使用 localQuestion
+  const stableAnswers = React.useMemo(() => {
+      return Object.values(localQuestion.answers).sort((a, b) => a.id.localeCompare(b.id));
+    }, [localQuestion]); // 仅在 localQuestion 改变时重新计算
+
   return (
     <div className="question-form-container">
       <h2>
@@ -1352,26 +1360,34 @@ const handleSave = async () => {
         <label>Question Title:</label>
         <input
           type="text"
-          value={question?.title || ''} 
-    onChange={(e) => handleTitleChange(e.target.value)}
-    placeholder="e.g., What's your biggest health concern?"
+          value={localQuestion.title || ''} 
+          onChange={(e) => handleTitleChange(e.target.value)}
+          placeholder="e.g., What's your biggest health concern?"
         />
       </div>
       <div className="form-group">
         <label>Question Type:</label>
-        <select value={question?.type || 'single-choice'} onChange={() => {}} disabled>
-    <option>Single Choice</option>
+        <select value={localQuestion.type || 'single-choice'} onChange={() => {}} disabled>
+          <option>Single Choice</option>
           <option>Multiple Choice (Coming Soon)</option>
           <option>Text Input (Coming Soon)</option>
         </select>
       </div>
       <div className="answer-options-section">
         <p>Answer Options (Max 4):</p>
-        {/* Use the stable sortedAnswers array for rendering */}
         {stableAnswers.map((answer, index) => (
           <div key={answer.id} className="answer-input-group">
-    <input type="text" value={answer.text || ''}  onChange={(e) => handleAnswerTextChange(answer.id, e.target.value)} />
-    <input type="url" value={affiliateLinks[index] || ''} onChange={(e) => handleLinkChange(index, e.target.value)} placeholder="Affiliate link (optional)" />
+            <input 
+              type="text" 
+              value={answer.text || ''}  
+              onChange={(e) => handleAnswerTextChange(answer.id, e.target.value)} 
+            />
+            <input 
+              type="url" 
+              value={affiliateLinks[index] || ''} 
+              onChange={(e) => handleLinkChange(index, e.target.value)} 
+              placeholder="Affiliate link (optional)" 
+            />
             <div style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               padding: '8px 12px', backgroundColor: '#f0f0f0', borderRadius: '6px',
@@ -1384,6 +1400,7 @@ const handleSave = async () => {
           </div>
         ))}
       </div>
+      
       <div className="form-actions">
         {/* --- UNCHANGED: Buttons and their handlers are the same --- */}
         <button className="save-button" onClick={handleSave}>
