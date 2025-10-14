@@ -612,7 +612,8 @@ useEffect(() => {
     backgroundColor,
     textColor,
   };
-  
+   (window as any).__funnelData = latestData;
+
   // 调用防抖动的保存函数，传入最新数据
   debouncedSave(latestData);
 
@@ -961,21 +962,7 @@ case 'analytics':
            );
             }
            };
-            if (!funnelId) {
-        return (
-            <p className="loading-message">
-                <span className="loading-spinner"></span> Missing Funnel ID...
-            </p>
-        );
-    }
-   
-   if (!isDataLoaded) {
-       return (
-          <p className="loading-message">
-              <span className="loading-spinner"></span> Loading Funnel Data...
-          </p>
-       );
-   }
+
            return <div className="App">{renderEditorContent()}</div>;
            };
 
