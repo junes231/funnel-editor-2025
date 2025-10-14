@@ -1293,9 +1293,9 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
   );
    useEffect(() => {
   return () => {
-    debouncedOnUpdate.cancel();
+    debouncedUpdate.cancel();
   };
-}, [debouncedOnUpdate]);
+}, [debouncedUpdate]);
   // 4️⃣ 各类输入处理函数（全部防抖）
   const handleTitleChange = (newTitle: string) => {
     if (!localQuestion) return;
