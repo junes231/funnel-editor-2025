@@ -503,20 +503,31 @@ const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData }) => 
   
   const [templateFiles, setTemplateFiles] = useState<string[]>([]);
   const [debugLinkValue, setDebugLinkValue] = useState('Debug: N/A');
-   const urlParams = new URLSearchParams(location.search);
-   const currentSubView = urlParams.get('view') || 'mainEditorDashboard';
+  const urlParams = new URLSearchParams(location.search);
+  const currentSubView = urlParams.get('view') || 'mainEditorDashboard';
   const urlIndex = urlParams.get('index');
-// 如果 view 是 questionForm，则解析 index，否则设为 null
- 
- const [selectedQuestionIndex, setSelectedQuestionIndex] = useState<number | null>(null);
 
-useEffect(() => {
-  const newIndex = (currentSubView === 'questionForm' && urlIndex !== null) ? parseInt(urlIndex, 10) : null;
-  setSelectedQuestionIndex(newIndex);
-}, [currentSubView, urlIndex]);
- const questionToEdit = selectedQuestionIndex !== null ? questions[selectedQuestionIndex] : undefined;
-  // 3. 驱动路由跳转的函数：仅操作 URL 参数
+  const [selectedQuestionIndex, setSelectedQuestionIndex] = useState<number | null>(null);
+
+  useEffect(() => {
+    // 这个 Effect 专门负责监听 URL 的变化，并更新我们的 state
+    const indexFromUrl = urlIndex !== null ? parseInt(urlIndex, 10) : null;
+    if (currentSubView === 'questionForm' && indexFromUrl !== null) {
+        setSelectedQuestionIndex(indexFromUrl);
+    } else {
+        // 如果我们不在 questionForm 视图，就重置 index
+        setSelectedQuestionIndex(null);
+    }
+  }, [currentSubView, urlIndex]); // 依赖项是 URL 参数
+
+  // 在 state 声明之后，安全地派生出 questionToEdit
+  const questionToEdit = selectedQuestionIndex !== null && questions[selectedQuestionIndex]
+    ? questions[selectedQuestionIndex]
+    : undefined;
+
+  // 3. 驱动路由跳转的函数 (保持不变)
   const setCurrentSubView = useCallback((newView: string, index: number | null = null) => {
+  // --- END: NEW REPLACEMENT CODE ---
   const newParams = new URLSearchParams(location.search);
 
   if (newView !== 'mainEditorDashboard') {
@@ -853,11 +864,10 @@ const handleImportQuestions = (importedQuestions: Question[]) => {
             />
         );
       case 'questionForm':
-        if (!questionToEdit && selectedQuestionIndex !== null) {
-            console.error('Question to edit not found, redirecting to list.');
-            setCurrentSubView('quizEditorList');
-            return null;
-             }
+        if (selectedQuestionIndex === null || !questionToEdit) {
+            // 当状态正在同步或数据还未加载时，显示加载中...
+            return <div>Loading question...</div>; 
+        }
           return (
           <QuestionFormComponent
             question={questionToEdit}
