@@ -1451,11 +1451,9 @@ return (
         {/* --- 答案选项 --- */}
         <div className="answer-options-section">
             <p>Answer Options (Max 4):</p>
-            {/* ⚠️ 注意：这里假设 localQuestion.answers 是一个数组，如您原始代码所示。 
-               如果它是对象映射，请改用 Object.values(localQuestion.answers) 或 stableAnswers。
-            */}
-            {(localQuestion.answers || []).map((answer, index) => (
-                <div key={answer.id} className="answer-input-group">
+           {stableAnswers.map (answer, index) => (
+          <div key={answer.id} 
+            className="answer-input-group">
                     
                     {/* 选项文字 (Answer Text) */}
                     {/* ✅ 替换为 OptimizedTextInput */}
