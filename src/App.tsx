@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef, ChangeEvent } from 'react';
+import React, { useState, useEffect, useCallback, useRef, ChangeEvent, useMemo } from 'react';
 import { getAuth, onAuthStateChanged, User, signOut } from 'firebase/auth';
 import { FunnelData, FunnelComponent, Answer, Question } from './types/funnel.ts'; 
 import debounce from 'lodash.debounce'; 
@@ -12,6 +12,7 @@ import BackButton from './components/BackButton.tsx';
 import SmartAnalysisReport from './components/SmartAnalysisReport.tsx';
 import './components/SmartAnalysisReport.css';
 import { useNavigate, useParams, Routes, Route, useLocation } from 'react-router-dom';
+import OptimizedTextInput from './components/OptimizedTextInput.tsx';
 import {
   collection,
   doc,
@@ -913,7 +914,6 @@ const handleImportQuestions = (importedQuestions: Question[]) => {
             setLeadCaptureEnabled={setLeadCaptureEnabled}
             leadCaptureWebhookUrl={leadCaptureWebhookUrl}
             setLeadCaptureWebhookUrl={setLeadCaptureWebhookUrl}
-             debouncedSetState={debouncedSave} 
             onBack={() => setCurrentSubView('mainEditorDashboard')}
           />
         );
@@ -1269,126 +1269,114 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
   onUpdate, 
 }) => {
    const navigate = useNavigate();
-
-  // 1️⃣ 本地状态（输入流畅）
-  const [localQuestion, setLocalQuestion] = useState<Question | undefined>(question);
-  const [affiliateLinks, setAffiliateLinks] = useState<string[]>(
-    question?.data?.affiliateLinks || []
-  );
+  
+  // 1. 使用 localQuestion 作为数据的唯一源，用于渲染
+  const [localQuestion, setLocalQuestion] = useState<Question>(question);
+  
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-
-  // 2️⃣ 父组件切换问题时同步
   
-
-  // 3️⃣ ✅ 防抖更新函数（父组件仅在输入停止 300ms 后更新）
-  const debouncedUpdate = useCallback(
-    debounce(onUpdate, 300), 
-    [onUpdate] 
-  );
+  // 2. 外部状态变化时同步 localQuestion
   useEffect(() => {
     setLocalQuestion(question);
-    setAffiliateLinks(question?.data?.affiliateLinks || []);
   }, [question]);
-  useEffect(() => {
-  return () => {
-    debouncedUpdate.cancel();
-  };
-}, [debouncedUpdate]);
-  // 4️⃣ 各类输入处理函数（全部防抖）
-  const handleTitleChange = (newTitle: string) => {
-    if (!localQuestion) return;
-    const updatedQuestion = { ...localQuestion, title: newTitle };
-    setLocalQuestion(updatedQuestion);
-    debouncedUpdate(updatedQuestion);
-  };
+  
+  // 3. 核心更新逻辑：接收到 OptimizedTextInput 传来的 debounced 值后，
+  //    更新 localQuestion (用于渲染) 并通知父组件 (onUpdate)
+  
+  const updateLocalAndParent = useCallback((updatedQuestion: Question) => {
+    // 仅在 ID 匹配时才更新，防止异步更新混乱
+    if (updatedQuestion.id === localQuestion.id) {
+        setLocalQuestion(updatedQuestion);
+        onUpdate(updatedQuestion); // 触发父组件的 debouncedSave
+    }
+  }, [localQuestion, onUpdate]);
 
-  const handleAnswerTextChange = (answerId: string, newText: string) => {
-    if (!localQuestion) return;
+  const handleTitleUpdate = useCallback((newTitle: string) => {
+    const updatedQuestion: Question = { ...localQuestion, title: newTitle };
+    updateLocalAndParent(updatedQuestion);
+  }, [localQuestion, updateLocalAndParent]);
+
+  const handleAnswerTextUpdate = useCallback((answerId: string, newText: string) => {
     const updatedAnswers = {
       ...localQuestion.answers,
       [answerId]: { ...localQuestion.answers[answerId], text: newText },
     };
-    const updatedQuestion = { ...localQuestion, answers: updatedAnswers };
-    setLocalQuestion(updatedQuestion);
-    debouncedUpdate(updatedQuestion);
-  };
+    const updatedQuestion: Question = { ...localQuestion, answers: updatedAnswers };
+    updateLocalAndParent(updatedQuestion);
+  }, [localQuestion, updateLocalAndParent]);
 
-  const handleLinkChange = (index: number, value: string) => {
-    if (!localQuestion) return;
-    const newLinks = [...affiliateLinks];
-    newLinks[index] = value;
-    setAffiliateLinks(newLinks);
-
-    const updatedQuestion = {
-      ...localQuestion,
-      data: { ...localQuestion.data, affiliateLinks: newLinks },
-    };
-    setLocalQuestion(updatedQuestion);
-    debouncedUpdate(updatedQuestion);
-  };
-
-  const handleAnswerNextStepIdChange = (answerId: string, newNextStepId: string) => {
-    if (!localQuestion) return;
+  const handleAnswerNextStepIdUpdate = useCallback((answerId: string, newNextStepId: string) => {
     const standardizedId = newNextStepId.trim();
     const updatedAnswers = {
       ...localQuestion.answers,
       [answerId]: { ...localQuestion.answers[answerId], nextStepId: standardizedId },
     };
-    const updatedQuestion = { ...localQuestion, answers: updatedAnswers };
-    setLocalQuestion(updatedQuestion);
-    debouncedUpdate(updatedQuestion);
-  };
+    const updatedQuestion: Question = { ...localQuestion, answers: updatedAnswers };
+    updateLocalAndParent(updatedQuestion);
+  }, [localQuestion, updateLocalAndParent]);
 
-  // 5️⃣ 保存按钮逻辑（立即触发保存，不防抖）
-const handleSave = async () => {
-  if (!localQuestion) return;
-
-  setIsSaving(true);
-  try {
-    const newAnswersMap: { [answerId: string]: Answer } = {};
-    let hasValidAnswer = false;
-
-    Object.values(localQuestion.answers).forEach((answer) => {
-      const currentText = answer.text.trim();
-      if (currentText !== "") {
-        newAnswersMap[answer.id] = { ...answer, text: currentText };
-        hasValidAnswer = true;
-      }
-    });
-
-    if (!localQuestion.title.trim()) {
-      console.error("Question title cannot be empty!");
-      setIsSaving(false);
-      return;
-    }
-
-    if (!hasValidAnswer) {
-      console.error("Please provide at least one answer option.");
-      setIsSaving(false);
-      return;
-    }
-
-    const cleanAffiliateLinks = Array.from({ length: 4 }).map(
-      (_, index) => affiliateLinks[index] || ""
-    );
-       debouncedUpdate.flush(); 
-    // ✅ 可选延迟模拟保存中状态
-    await new Promise((resolve) => setTimeout(resolve, 100));
-
-    onUpdate({
+  const handleLinkUpdate = useCallback((index: number, value: string) => {
+    const newLinks = [...localQuestion.data?.affiliateLinks || []];
+    newLinks[index] = value;
+    
+    const updatedQuestion: Question = {
       ...localQuestion,
-      answers: newAnswersMap,
-      data: { affiliateLinks: cleanAffiliateLinks },
-    });
+      data: { ...localQuestion.data, affiliateLinks: newLinks },
+    };
+    updateLocalAndParent(updatedQuestion);
+  }, [localQuestion, updateLocalAndParent]);
+  
+  
+  const handleSave = async () => {
+    if (!localQuestion) return;
 
-    onSaveAndClose();
-  } catch (error) {
-    console.error("Error saving question:", error);
-  } finally {
-    setIsSaving(false);
-  }
-};
+    setIsSaving(true);
+    try {
+      // 1. 强制所有输入组件完成任何待处理的防抖更新
+      // 由于 OptimizedTextInput 无法直接从外部 flush，我们依赖它在 300ms 内完成，
+      // 并确保 localQuestion 已经是最新的。
+      
+      const newAnswersMap: { [answerId: string]: Answer } = {};
+      let hasValidAnswer = false;
+      
+      Object.values(localQuestion.answers).forEach((answer) => {
+          const currentText = answer.text.trim();
+          
+          // ... (验证逻辑保持不变)
+          if (currentText !== "") {
+              newAnswersMap[answer.id] = { ...answer, text: currentText };
+              hasValidAnswer = true;
+          }
+      });
+      
+      if (!localQuestion.title.trim()) {
+        console.error("Question title cannot be empty!");
+        setIsSaving(false);
+        return;
+      }
+      
+      if (!hasValidAnswer) {
+        console.error("Please provide at least one answer option.");
+        setIsSaving(false);
+        return;
+      }
+      // 2. 调用 onUpdate 确保父组件在跳转前获得最终的干净状态
+      onUpdate({
+        ...localQuestion,
+        answers: newAnswersMap, 
+        data: { affiliateLinks: localQuestion.data.affiliateLinks || [] },
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 100)); // 留出时间给 React 和 Firestore 更新
+      onSaveAndClose();
+
+    } catch (error) {
+      console.error("Error saving question:", error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
   
   const handleDelete = () => {
     setIsDeleting(true);
@@ -1405,9 +1393,10 @@ const handleSave = async () => {
     return <div>Loading question...</div>;
   }
 
-  const stableAnswers = React.useMemo(() => {
+  const stableAnswers = useMemo(() => {
+      // 确保答案按 ID 稳定排序
       return Object.values(localQuestion.answers).sort((a, b) => a.id.localeCompare(b.id));
-    }, [localQuestion]); // 仅在 localQuestion 改变时重新计算
+    }, [localQuestion]); 
 
   return (
     <div className="question-form-container">
@@ -1421,11 +1410,14 @@ const handleSave = async () => {
       </p>
       <div className="form-group">
         <label>Question Title:</label>
-        <input
-          type="text"
-          value={localQuestion.title || ''} 
-          onChange={(e) => handleTitleChange(e.target.value)}
+        {/* 替换为 OptimizedTextInput (textarea version) */}
+        <OptimizedTextInput
+          isTextArea={true} // 明确标记为 textarea
+          initialValue={localQuestion.title || ''}
+          onUpdate={handleTitleUpdate}
           placeholder="e.g., What's your biggest health concern?"
+          // 传递必要的样式，确保外观正确
+          style={{ width: '100%', padding: '10px', border: '1px solid #ccc', borderRadius: '4px', boxSizing: 'border-box', minHeight: '80px' }}
         />
       </div>
       <div className="form-group">
@@ -1440,29 +1432,33 @@ const handleSave = async () => {
         <p>Answer Options (Max 4):</p>
         {stableAnswers.map((answer, index) => (
           <div key={answer.id} className="answer-input-group">
-            <input 
-              type="text" 
-              value={answer.text || ''}  
-              onChange={(e) => handleAnswerTextChange(answer.id, e.target.value)} 
+             {/* Answer Text Input - 使用 OptimizedTextInput */}
+            <OptimizedTextInput
+              className="answer-input-group"
+              initialValue={answer.text || ''}  
+              onUpdate={(newText) => handleAnswerTextUpdate(answer.id, newText)}
+              placeholder="Enter answer text"
+              style={{ flex: 2 }} 
             />
-            <input 
+            {/* Affiliate Link Input - 使用 OptimizedTextInput */}
+            <OptimizedTextInput
               type="url" 
-              value={affiliateLinks[index] || ''} 
-              onChange={(e) => handleLinkChange(index, e.target.value)} 
+              initialValue={localQuestion.data?.affiliateLinks?.[index] || ''} 
+              onUpdate={(value) => handleLinkUpdate(index, value)} 
               placeholder="Affiliate link (optional)" 
+              className="affiliate-link-input"
+              style={{ marginTop: '5px', flex: 1, fontSize: '0.85em', padding: '8px' }}
             />
 
-              <input
-                  type="text"
-                  value={answer.nextStepId || ''}
-                  onChange={(e) => {
-                    handleAnswerNextStepIdChange(answer.id, e.target.value);
-                  }}
-                  placeholder="Next Step ID (Optional)"
-                  className="affiliate-input"
-                  style={{ marginTop: '5px' }}
-                />
-                <div style={{
+            {/* Next Step ID Input - 使用 OptimizedTextInput */}
+            <OptimizedTextInput
+                initialValue={answer.nextStepId || ''}
+                onUpdate={(newNextStepId) => handleAnswerNextStepIdUpdate(answer.id, newNextStepId)}
+                placeholder="Next Step ID (Optional)"
+                className="affiliate-input"
+                style={{ marginTop: '5px', flex: 1, fontSize: '0.85em', padding: '8px' }}
+            />
+            <div style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               padding: '8px 12px', backgroundColor: '#f0f0f0', borderRadius: '6px',
               marginTop: '5px', width: '100%', color: '#333',
@@ -1505,7 +1501,7 @@ interface LinkSettingsComponentProps {
   leadCaptureWebhookUrl: string;
   setLeadCaptureWebhookUrl: React.Dispatch<React.SetStateAction<string>>;
   onBack: (event: React.MouseEvent<HTMLButtonElement>) => void;
-  showNotification: (message: string, type?: 'success' | 'error') => void;
+  
 }
 
 // 2. 然后用这个接口来创建组件函数
@@ -1521,76 +1517,14 @@ const LinkSettingsComponent: React.FC<LinkSettingsComponentProps> = ({
   leadCaptureWebhookUrl,
   setLeadCaptureWebhookUrl,
   onBack,
-  showNotification
+  
 }) => {
  
-    const [localLink, setLocalLink] = useState(finalRedirectLink);
-    const [localTracking, setLocalTracking] = useState(tracking);
-    const [localWebhookUrl, setLocalWebhookUrl] = useState(leadCaptureWebhookUrl); 
   
-  // 核心修复 2: 当父组件的 finalRedirectLink 变化时（例如：初次加载或从其他视图返回），同步到本地状态
-  useEffect(() => {
-    setLocalLink(finalRedirectLink);
-    setLocalTracking(tracking);
-  setLocalWebhookUrl(leadCaptureWebhookUrl); 
-  }, [finalRedirectLink, tracking, leadCaptureWebhookUrl]);
-  
-  // 核心修复 3: 使用 useCallback 和 debounce 创建一个延迟通知父组件的函数
-  const debouncedSetState = useCallback(
-        // 这里不需要所有参数，只需要调用父组件的 setXXX
-        debounce((linkValue: string, trackingValue: string, webhookUrlValue: string, captureEnabled: boolean) => {
-            // 这部分逻辑将延迟执行
-            setFinalRedirectLink(linkValue);
-            setTracking(trackingValue);
-            setLeadCaptureWebhookUrl(webhookUrlValue);
-            setLeadCaptureEnabled(captureEnabled);
-        }, 300), // 300ms 延迟，避免频繁触发 FunnelEditor 的 Firebase 保存
-        [setFinalRedirectLink, setTracking, setLeadCaptureWebhookUrl, setLeadCaptureEnabled] 
-    );
-  
-    // 【修复 4】: 组件卸载时清除 debouncer，防止内存泄漏
-    useEffect(() => {
-        return () => {
-            debouncedSetState.cancel();
-        };
-    }, [debouncedSetState]);
-
-    // 【修复 5】: 处理链接输入变化
-    const handleLinkChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const value = e.target.value;
-        // 1. 立即更新本地状态 (保证输入框流畅)
-        setLocalLink(value);
-        // 2. 延迟通知父组件（传递本地状态的最新值和其余状态的当前值）
-        debouncedSetState(value, localTracking, localWebhookUrl, leadCaptureEnabled);
-    };
-    
-    // 【修复 6】: 处理追踪参数输入变化
-    const handleTrackingChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const value = e.target.value;
-        // 1. 立即更新本地状态
-        setLocalTracking(value);
-        // 2. 延迟通知父组件
-        debouncedSetState(localLink, value, localWebhookUrl, leadCaptureEnabled);
-    };
-
-    // 【修复 7】: 处理 Webhook URL 变化
-    const handleWebhookChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const value = e.target.value;
-        // 1. 立即更新本地状态
-        setLocalWebhookUrl(value);
-        // 2. 延迟通知父组件
-        debouncedSetState(localLink, localTracking, value, leadCaptureEnabled);
-    };
-    
-    // 【修复 8】: 处理 Checkbox 变化 (Checkbox 通常不需要防抖，立即更新即可)
     const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const checked = e.target.checked;
-        // 立即更新父组件状态
-        setLeadCaptureEnabled(checked);
-        // 因为 setLeadCaptureEnabled 会触发 FunnelEditor 的 debouncedSave，所以这里不用额外调用 debouncedSetState
-        // 但为了确保保存能立即包含这个变化，我们可以强制 flush 输入的 debounced 状态
-        debouncedSetState.flush();
-    };
+    const checked = e.target.checked;
+    setLeadCaptureEnabled(checked);
+  };
   return (
     <div className="link-settings-container">
       <h2>
@@ -1602,20 +1536,24 @@ const LinkSettingsComponent: React.FC<LinkSettingsComponentProps> = ({
       <p>This is the custom link where users will be redirected after completing the quiz.</p>
       <div className="form-group">
         <label>Custom Final Redirect Link:</label>
-        <input
+        {/* 替换为 OptimizedTextInput */}
+        <OptimizedTextInput
           type="text"
-          value={localLink}
-          onChange={handleLinkChange}
+          initialValue={finalRedirectLink}
+          onUpdate={setFinalRedirectLink} // 直接将 setFinalRedirectLink 作为回调
           placeholder="https://your-custom-product-page.com"
+          style={{ width: '100%', padding: '10px', border: '1px solid #ccc', borderRadius: '4px', boxSizing: 'border-box', marginTop: '5px' }}
         />
       </div>
       <div className="form-group">
         <label>Optional: Tracking Parameters:</label>
-        <input
+        {/* 替换为 OptimizedTextInput */}
+        <OptimizedTextInput
           type="text"
-          value={localTracking} 
-          onChange={handleTrackingChange}
+          initialValue={tracking} 
+          onUpdate={setTracking} // 直接将 setTracking 作为回调
           placeholder="utm_source=funnel&utm_campaign=..."
+          style={{ width: '100%', padding: '10px', border: '1px solid #ccc', borderRadius: '4px', boxSizing: 'border-box', marginTop: '5px' }}
         />
       </div>
       <div className="form-group">
@@ -1642,11 +1580,13 @@ const LinkSettingsComponent: React.FC<LinkSettingsComponentProps> = ({
       {leadCaptureEnabled && (
           <div className="form-group">
             <label>Webhook URL (Data Destination):</label>
-            <input
+             {/* 替换为 OptimizedTextInput */}
+            <OptimizedTextInput
               type="url"
-              value={localWebhookUrl}
-              onChange={handleWebhookChange}
+              initialValue={leadCaptureWebhookUrl}
+              onUpdate={setLeadCaptureWebhookUrl} // 直接将 setLeadCaptureWebhookUrl 作为回调
               placeholder="https://your-crm-webhook.com/endpoint"
+              style={{ width: '100%', padding: '10px', border: '1px solid #ccc', borderRadius: '4px', boxSizing: 'border-box', marginTop: '5px' }}
             />
           </div>
           )}
