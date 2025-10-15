@@ -447,7 +447,10 @@ const FunnelDashboard: React.FC<FunnelDashboardProps> = ({ db, user, isAdmin, fu
         </button>
       </div>
       {isLoading ? (
-        <p className="loading-message">Loading funnels...</p>
+        <p className="loading-message">
+    <span className="loading-spinner"></span>
+    Loading funnels...
+  </p>
       ) : error ? (
         <p className="error-message">{error}</p>
       ) : funnels.length === 0 ? (
