@@ -1279,17 +1279,18 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
   const [isDeleting, setIsDeleting] = useState(false);
 
   // 2️⃣ 父组件切换问题时同步
-  useEffect(() => {
-    setLocalQuestion(question);
-    setAffiliateLinks(question?.data?.affiliateLinks || []);
-  }, [question]);
+  
 
   // 3️⃣ ✅ 防抖更新函数（父组件仅在输入停止 300ms 后更新）
   const debouncedUpdate = useCallback(
     debounce(onUpdate, 300), 
     [onUpdate] 
   );
-   useEffect(() => {
+  useEffect(() => {
+    setLocalQuestion(question);
+    setAffiliateLinks(question?.data?.affiliateLinks || []);
+  }, [question]);
+  useEffect(() => {
   return () => {
     debouncedUpdate.cancel();
   };
