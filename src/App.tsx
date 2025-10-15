@@ -1298,44 +1298,62 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
 
   // ⚠️ 修正: 将 localQuestion 替换为 questionId 作为依赖项
   const handleTitleUpdate = useCallback((newTitle: string) => {
-    const updatedQuestion: Question = { ...localQuestion, title: newTitle };
-    updateLocalAndParent(updatedQuestion);
-  }, [localQuestion, updateLocalAndParent]);
+  setLocalQuestion((prevQuestion) => {
+    const updatedQuestion: Question = { ...prevQuestion, title: newTitle };
+    // 直接更新父级 state（父级 FunnelEditor 会负责 debouncedSave）
+    onUpdate(updatedQuestion); 
+    return updatedQuestion;
+  });
+}, [onUpdate]);
 
   // ⚠️ 修正: 将 localQuestion 替换为 questionId 作为依赖项
   const handleAnswerTextUpdate = useCallback((answerId: string, newText: string) => {
+  setLocalQuestion((prevQuestion) => {
     const updatedAnswers = {
-      ...localQuestion.answers,
-      [answerId]: { ...localQuestion.answers[answerId], text: newText },
+      ...prevQuestion.answers,
+      [answerId]: { ...prevQuestion.answers[answerId], text: newText },
     };
-    const updatedQuestion: Question = { ...localQuestion, answers: updatedAnswers };
-    updateLocalAndParent(updatedQuestion);
-  }, [localQuestion, updateLocalAndParent]);
+    const updatedQuestion: Question = { ...prevQuestion, answers: updatedAnswers };
+    onUpdate(updatedQuestion);
+    return updatedQuestion;
+  });
+}, [onUpdate]);
 
   // ⚠️ 修正: 将 localQuestion 替换为 questionId 作为依赖项
   const handleAnswerNextStepIdUpdate = useCallback((answerId: string, newNextStepId: string) => {
+  setLocalQuestion((prevQuestion) => {
     const standardizedId = newNextStepId.trim();
     const updatedAnswers = {
-      ...localQuestion.answers,
-      [answerId]: { ...localQuestion.answers[answerId], nextStepId: standardizedId },
+      ...prevQuestion.answers,
+      [answerId]: { ...prevQuestion.answers[answerId], nextStepId: standardizedId },
     };
-    const updatedQuestion: Question = { ...localQuestion, answers: updatedAnswers };
-    updateLocalAndParent(updatedQuestion);
-  }, [localQuestion, updateLocalAndParent]);
+    const updatedQuestion: Question = { ...prevQuestion, answers: updatedAnswers };
+    
+    // 通知父组件更新，确保最新状态被传递和保存
+    onUpdate(updatedQuestion); 
+    return updatedQuestion;
+  });
+}, [onUpdate]); // 依赖项改为只依赖 onUpdate，这是一个稳定的函数
 
   // ⚠️ 修正: 将 localQuestion 替换为 questionId 作为依赖项，并修正 data 对象的初始化
   const handleLinkUpdate = useCallback((index: number, value: string) => {
-    const currentData = localQuestion.data || {};
+  setLocalQuestion((prevQuestion) => {
+    const currentData = prevQuestion.data || {};
     const currentLinks = currentData.affiliateLinks || [];
     const newLinks = [...currentLinks];
     newLinks[index] = value;
 
     const updatedQuestion: Question = {
-      ...localQuestion,
-      data: { ...currentData, affiliateLinks: newLinks }, // 确保 data 存在且合并
+      ...prevQuestion,
+      // 使用最新的 currentData 和新链接合并
+      data: { ...currentData, affiliateLinks: newLinks },
     };
-    updateLocalAndParent(updatedQuestion);
-  }, [localQuestion, updateLocalAndParent]);
+    
+    // 通知父组件更新，确保最新状态被传递和保存
+    onUpdate(updatedQuestion);
+    return updatedQuestion;
+  });
+}, [onUpdate]); // 依赖项改为只依赖 onUpdate
 
 
   const handleSave = async () => {
