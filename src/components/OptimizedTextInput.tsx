@@ -28,14 +28,7 @@ const OptimizedTextInput: React.FC<OptimizedTextInputProps> = ({
     [onUpdate, debounceTime]
   );
 
-  useEffect(() => {
-    if (initialValue !== localValue) {
-      setLocalValue(initialValue);
-      debouncedUpdate.cancel();
-    }
-  }, [initialValue, localValue, debouncedUpdate]); 
-
-  useEffect(() => {
+   useEffect(() => {
     return () => {
       debouncedUpdate.cancel();
     };
