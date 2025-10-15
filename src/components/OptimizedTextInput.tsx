@@ -17,7 +17,7 @@ interface OptimizedTextInputProps {
 const OptimizedTextInput: React.FC<OptimizedTextInputProps> = ({
   initialValue,
   onUpdate,
-  debounceTime = 300,
+  debounceTime = 100,
   isTextArea = false,
   ...rest
 }) => {
