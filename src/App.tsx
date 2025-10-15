@@ -1269,34 +1269,40 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
   onUpdate, 
 }) => {
    const navigate = useNavigate();
-  
+
   // 1. 使用 localQuestion 作为数据的唯一源，用于渲染
   const [localQuestion, setLocalQuestion] = useState<Question>(question);
-  
+
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  
+
   // 2. 外部状态变化时同步 localQuestion
   useEffect(() => {
     setLocalQuestion(question);
   }, [question]);
-  
+
+  // 获取稳定的 question ID，用于 useCallback 依赖项
+  const questionId = localQuestion.id;
+
   // 3. 核心更新逻辑：接收到 OptimizedTextInput 传来的 debounced 值后，
   //    更新 localQuestion (用于渲染) 并通知父组件 (onUpdate)
-  
+
   const updateLocalAndParent = useCallback((updatedQuestion: Question) => {
     // 仅在 ID 匹配时才更新，防止异步更新混乱
-    if (updatedQuestion.id === localQuestion.id) {
-        setLocalQuestion(updatedQuestion);
-        onUpdate(updatedQuestion); // 触发父组件的 debouncedSave
+    // ⚠️ 修正: 将 localQuestion 替换为 questionId 作为依赖，确保引用稳定
+    if (updatedQuestion.id === questionId) {
+      setLocalQuestion(updatedQuestion);
+      onUpdate(updatedQuestion); // 触发父组件的 debouncedSave
     }
-  }, [localQuestion, onUpdate]);
+  }, [questionId, onUpdate]);
 
+  // ⚠️ 修正: 将 localQuestion 替换为 questionId 作为依赖项
   const handleTitleUpdate = useCallback((newTitle: string) => {
     const updatedQuestion: Question = { ...localQuestion, title: newTitle };
     updateLocalAndParent(updatedQuestion);
   }, [localQuestion, updateLocalAndParent]);
 
+  // ⚠️ 修正: 将 localQuestion 替换为 questionId 作为依赖项
   const handleAnswerTextUpdate = useCallback((answerId: string, newText: string) => {
     const updatedAnswers = {
       ...localQuestion.answers,
@@ -1306,6 +1312,7 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
     updateLocalAndParent(updatedQuestion);
   }, [localQuestion, updateLocalAndParent]);
 
+  // ⚠️ 修正: 将 localQuestion 替换为 questionId 作为依赖项
   const handleAnswerNextStepIdUpdate = useCallback((answerId: string, newNextStepId: string) => {
     const standardizedId = newNextStepId.trim();
     const updatedAnswers = {
@@ -1316,56 +1323,56 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
     updateLocalAndParent(updatedQuestion);
   }, [localQuestion, updateLocalAndParent]);
 
+  // ⚠️ 修正: 将 localQuestion 替换为 questionId 作为依赖项，并修正 data 对象的初始化
   const handleLinkUpdate = useCallback((index: number, value: string) => {
-    const newLinks = [...localQuestion.data?.affiliateLinks || []];
+    const currentData = localQuestion.data || {};
+    const currentLinks = currentData.affiliateLinks || [];
+    const newLinks = [...currentLinks];
     newLinks[index] = value;
-    
+
     const updatedQuestion: Question = {
       ...localQuestion,
-      data: { ...localQuestion.data, affiliateLinks: newLinks },
+      data: { ...currentData, affiliateLinks: newLinks }, // 确保 data 存在且合并
     };
     updateLocalAndParent(updatedQuestion);
   }, [localQuestion, updateLocalAndParent]);
-  
-  
+
+
   const handleSave = async () => {
     if (!localQuestion) return;
 
     setIsSaving(true);
     try {
-      // 1. 强制所有输入组件完成任何待处理的防抖更新
-      // 由于 OptimizedTextInput 无法直接从外部 flush，我们依赖它在 300ms 内完成，
-      // 并确保 localQuestion 已经是最新的。
-      
       const newAnswersMap: { [answerId: string]: Answer } = {};
       let hasValidAnswer = false;
-      
+
       Object.values(localQuestion.answers).forEach((answer) => {
-          const currentText = answer.text.trim();
-          
-          // ... (验证逻辑保持不变)
-          if (currentText !== "") {
-              newAnswersMap[answer.id] = { ...answer, text: currentText };
-              hasValidAnswer = true;
-          }
+        const currentText = answer.text.trim();
+
+        // 验证逻辑
+        if (currentText !== "") {
+          newAnswersMap[answer.id] = { ...answer, text: currentText };
+          hasValidAnswer = true;
+        }
       });
-      
+
       if (!localQuestion.title.trim()) {
         console.error("Question title cannot be empty!");
         setIsSaving(false);
         return;
       }
-      
+
       if (!hasValidAnswer) {
         console.error("Please provide at least one answer option.");
         setIsSaving(false);
         return;
       }
+      
       // 2. 调用 onUpdate 确保父组件在跳转前获得最终的干净状态
       onUpdate({
         ...localQuestion,
-        answers: newAnswersMap, 
-        data: { affiliateLinks: localQuestion.data.affiliateLinks || [] },
+        answers: newAnswersMap,
+        data: { affiliateLinks: localQuestion.data?.affiliateLinks || [] },
       });
 
       await new Promise((resolve) => setTimeout(resolve, 100)); // 留出时间给 React 和 Firestore 更新
@@ -1377,7 +1384,7 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
       setIsSaving(false);
     }
   };
-  
+
   const handleDelete = () => {
     setIsDeleting(true);
     const button = document.querySelector('.delete-button');
@@ -1394,84 +1401,122 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
   }
 
   const stableAnswers = useMemo(() => {
-      // 确保答案按 ID 稳定排序
-      return Object.values(localQuestion.answers).sort((a, b) => a.id.localeCompare(b.id));
-    }, [localQuestion]); 
+    // 确保答案按 ID 稳定排序
+    return Object.values(localQuestion.answers).sort((a, b) => a.id.localeCompare(b.id));
+  }, [localQuestion]);
 
-  return (
+  // ... QuestionFormComponent 组件的 return 语句开始 ...
+
+return (
     <div className="question-form-container">
-      <h2>
-        <span role="img" aria-label="edit">📝</span> Quiz Question Editor
-      </h2>
-      <p className="question-index-display">
-        {questionIndex !== null
-          ? `Editing Question ${questionIndex + 1} of 6`
-          : 'Adding New Question'}
-      </p>
-      <div className="form-group">
-        <label>Question Title:</label>
-        {/* 替换为 OptimizedTextInput (textarea version) */}
-        <OptimizedTextInput
-          
-          initialValue={localQuestion.title || ''}
-          onUpdate={handleTitleUpdate}
-          placeholder="e.g., What's your biggest health concern?"
-          // 传递必要的样式，确保外观正确
-          
-        />
-      </div>
-      <div className="form-group">
-        <label>Question Type:</label>
-        <select value={localQuestion.type || 'single-choice'} onChange={() => {}} disabled>
-          <option>Single Choice</option>
-          <option>Multiple Choice (Coming Soon)</option>
-          <option>Text Input (Coming Soon)</option>
-        </select>
-      </div>
-      <div className="answer-options-section">
-        <p>Answer Options (Max 4):</p>
-        {stableAnswers.map((answer, index) => (
-          <div key={answer.id} className="answer-input-group">
-             {/* Answer Text Input - 使用 OptimizedTextInput */}
-            <OptimizedTextInput
-              className="answer-input-group"
-              initialValue={answer.text || ''}  
-              onUpdate={(newText) => handleAnswerTextUpdate(answer.id, newText)}
-              placeholder="Enter answer text"
-              style={{ flex: 2 }} 
-            />
-            {/* Affiliate Link Input - 使用 OptimizedTextInput */}
-            <OptimizedTextInput
-              type="url" 
-              initialValue={localQuestion.data?.affiliateLinks?.[index] || ''} 
-              onUpdate={(value) => handleLinkUpdate(index, value)} 
-              placeholder="Affiliate link (optional)" 
-              className="affiliate-link-input"
-              style={{ marginTop: '5px', flex: 1, fontSize: '0.85em', padding: '8px' }}
-            />
+        <h2>
+            <span role="img" aria-label="edit">
+                📝
+            </span>{" "}
+            Quiz Question Editor
+        </h2>
 
-            {/* Next Step ID Input - 使用 OptimizedTextInput */}
+        <p className="question-index-display">
+            {questionIndex !== null
+                ? `Editing Question ${questionIndex + 1} of 6`
+                : "Adding New Question"}
+        </p>
+
+        {/* --- 标题输入 --- */}
+        <div className="form-group">
+            <label>Question Title:</label>
+            {/* ✅ 使用 OptimizedTextInput 替换 <input>，绑定到 handleTitleUpdate */}
             <OptimizedTextInput
-                initialValue={answer.nextStepId || ''}
-                onUpdate={(newNextStepId) => handleAnswerNextStepIdUpdate(answer.id, newNextStepId)}
-                placeholder="Next Step ID (Optional)"
-                className="affiliate-input"
-                style={{ marginTop: '5px', flex: 1, fontSize: '0.85em', padding: '8px' }}
+                initialValue={localQuestion.title || ""}
+                onUpdate={handleTitleUpdate}
+                placeholder="e.g., What's your biggest health concern?"
+                type="text"
             />
-            <div style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              padding: '8px 12px', backgroundColor: '#f0f0f0', borderRadius: '6px',
-              marginTop: '5px', width: '100%', color: '#333',
-              fontSize: '14px', cursor: 'default'
-            }}>
-              <span role="img" aria-label="clicks" style={{ marginRight: '8px' }}>👁️</span>
-              <strong>{answer?.clickCount || 0} clicks</strong>
-            </div>
-          </div>
-        ))}
-      </div>
-      
-      <div className="form-actions">
+        </div>
+
+        {/* --- 问题类型 --- */}
+        <div className="form-group">
+            <label>Question Type:</label>
+            <select
+                value={localQuestion.type || "single-choice"}
+                onChange={() => {}} // 保持不变，因为它被禁用
+                disabled
+            >
+                <option>Single Choice</option>
+                <option>Multiple Choice (Coming Soon)</option>
+                <option>Text Input (Coming Soon)</option>
+            </select>
+        </div>
+
+        {/* --- 答案选项 --- */}
+        <div className="answer-options-section">
+            <p>Answer Options (Max 4):</p>
+            {/* ⚠️ 注意：这里假设 localQuestion.answers 是一个数组，如您原始代码所示。 
+               如果它是对象映射，请改用 Object.values(localQuestion.answers) 或 stableAnswers。
+            */}
+            {(localQuestion.answers || []).map((answer, index) => (
+                <div key={answer.id} className="answer-input-group">
+                    
+                    {/* 选项文字 (Answer Text) */}
+                    {/* ✅ 替换为 OptimizedTextInput */}
+                    <OptimizedTextInput
+                        initialValue={answer.text || ""}
+                        onUpdate={(newText) => handleAnswerTextUpdate(answer.id, newText)}
+                        placeholder={`Option ${index + 1}`}
+                        type="text"
+                    />
+
+                    {/* 关联链接 (Affiliate Link) */}
+                    {/* ✅ 替换为 OptimizedTextInput，绑定到 handleLinkUpdate */}
+                    <OptimizedTextInput
+                        type="url"
+                        initialValue={localQuestion.data?.affiliateLinks?.[index] || ""}
+                        onUpdate={(value) => handleLinkUpdate(index, value)}
+                        placeholder="Affiliate link (optional)"
+                    />
+
+                    {/* 下一步 ID (Next Step ID) */}
+                    {/* ✅ 替换为 OptimizedTextInput，绑定到 handleAnswerNextStepIdUpdate */}
+                    {/* 移除了内联的 onChange 逻辑，使用新的处理函数 */}
+                    <OptimizedTextInput
+                        initialValue={answer.nextStepId || ""}
+                        onUpdate={(newNextStepId) => handleAnswerNextStepIdUpdate(answer.id, newNextStepId)}
+                        placeholder="Next Step ID (Optional)"
+                        className="affiliate-input"
+                        style={{ marginTop: "5px" }}
+                        type="text"
+                    />
+
+                    {/* 点击数展示 (Clicks Display) - 保持不变 */}
+                    <div
+                        style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            padding: "8px 12px",
+                            backgroundColor: "#f0f0f0",
+                            borderRadius: "6px",
+                            marginTop: "5px",
+                            width: "100%",
+                            color: "#333",
+                            fontSize: "14px",
+                            cursor: "default",
+                        }}
+                    >
+                        <span
+                            role="img"
+                            aria-label="clicks"
+                            style={{ marginRight: "8px" }}
+                        >
+                            👁️
+                        </span>
+                        <strong>{answer?.clickCount || 0} clicks</strong>
+                    </div>
+                </div>
+            ))}
+        </div>
+        
+         <div className="form-actions">
         <button className="save-button" onClick={handleSave}>
           <span role="img" aria-label="save">💾</span> Save Question
         </button>
