@@ -1451,7 +1451,7 @@ return (
         {/* --- 答案选项 --- */}
         <div className="answer-options-section">
             <p>Answer Options (Max 4):</p>
-           {stableAnswers.map (answer, index) => (
+           {stableAnswers.map（(answer, index) => (
           <div key={answer.id} 
             className="answer-input-group">
                     
