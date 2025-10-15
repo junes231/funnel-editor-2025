@@ -1412,12 +1412,12 @@ const QuestionFormComponent: React.FC<QuestionFormComponentProps> = ({
         <label>Question Title:</label>
         {/* 替换为 OptimizedTextInput (textarea version) */}
         <OptimizedTextInput
-          type="text"
+          
           initialValue={localQuestion.title || ''}
           onUpdate={handleTitleUpdate}
           placeholder="e.g., What's your biggest health concern?"
           // 传递必要的样式，确保外观正确
-          style={{ width: '100%', padding: '10px', border: '1px solid #ccc', borderRadius: '4px', boxSizing: 'border-box', minHeight: '80px' }}
+          
         />
       </div>
       <div className="form-group">
