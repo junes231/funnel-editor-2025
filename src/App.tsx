@@ -491,7 +491,7 @@ interface FunnelEditorProps {
 }
 
 
-const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData }) => {
+const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, storage, updateFunnelData }) => {
   const { funnelId } = useParams<{ funnelId: string }>();
   const navigate = useNavigate();
   const location = useLocation(); 
