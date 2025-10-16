@@ -1014,7 +1014,17 @@ const handleImportQuestions = (importedQuestions: Question[]) => {
               <p>Customize theme colors for this funnel.</p>
             </div>
 
-            {/* 新增：结果配置卡片 (OutcomeSettingsComponent 的入口) */}
+           <div className="dashboard-card" onClick={() => setCurrentSubView('analytics')}>
+            <h3>
+            <span role="img" aria-label="analytics">
+             🚀
+           </span>{' '}
+           Smart Analysis
+           </h3>
+          <p>Get data-driven insights to boost your funnel's performance.</p>
+          </div>
+
+              {/* 新增：结果配置卡片 (OutcomeSettingsComponent 的入口) */}
             <div className="dashboard-card" onClick={() => setCurrentSubView('outcomeSettings')}>
             <h3>
             <span role="img" aria-label="trophy">
@@ -1035,16 +1045,6 @@ const handleImportQuestions = (importedQuestions: Question[]) => {
            </h3>
           <p>Map cumulative quiz scores to specific exclusive result pages.</p>
           </div>
-            <div className="dashboard-card" onClick={() => setCurrentSubView('analytics')}>
-            <h3>
-            <span role="img" aria-label="analytics">
-             🚀
-           </span>{' '}
-           Smart Analysis
-           </h3>
-          <p>Get data-driven insights to boost your funnel's performance.</p>
-          </div>
-
          <div style={{ marginTop: '40px', textAlign: 'center' }}>
             <BackButton to="/" data-testid="back-button"> 
               <span role="img" aria-label="back">←</span> Back to All Funnels
