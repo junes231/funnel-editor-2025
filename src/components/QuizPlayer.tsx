@@ -379,22 +379,7 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ db }) => {
     }, 500);
   };
         
-        // 【中文注释：否则，执行最终重定向】
-        const redirectLink = funnelData.finalRedirectLink;
-        if (redirectLink && redirectLink.trim() !== "") {
-          handleFinalRedirect(redirectLink);
-        } else {
-          console.log("Quiz complete! No final redirect link set.");
-        }
-        return;
-      }
-
-      setCurrentQuestionIndex(currentQuestionIndex + 1);
-    }, 500);
-  };
-
-
-  // [中文注释] 组件的 JSX 渲染部分
+ // [中文注释] 组件的 JSX 渲染部分
   if (isLoading) {
     // ... (Loading UI)
     return (
