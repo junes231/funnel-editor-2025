@@ -71,9 +71,9 @@ const SmartAnalysisReport: React.FC<SmartAnalysisReportProps> = ({ questions, fi
   const avgClicks = totalLinksFound > 0 ? totalClicks / totalLinksFound : 0;
   
   if (totalClicks === 0 && totalLinksFound > 0) {
-    report.monetization.suggestions.push("⚠️ 警告：您的漏斗已设置链接，但总点击次数为 0。请确保您的 Cloud Run 服务 (track-click) 已正确部署，并且权限无误。");
+    report.monetization.suggestions.push("⚠️ Warning: Your funnel is linked, but the total number of clicks is 0. Please ensure that your Cloud Run service (track-click) It is deployed correctly and the permissions are correct.");
   } else if (totalLinksFound === 0) {
-    report.monetization.suggestions.push("❌ 严重：没有为任何答案设置联盟链接。您需要至少设置一个链接才能追踪变现潜力。");
+    report.monetization.suggestions.push("❌ Serious: No affiliate links are set for any answers. You need to set at least one link to track monetization potential.");
   } else {
     questions.forEach((q, qIndex) => {
       Object.values(q.answers).forEach((a, aIndex) => {
@@ -81,14 +81,14 @@ const SmartAnalysisReport: React.FC<SmartAnalysisReportProps> = ({ questions, fi
         const clicks = a.clickCount || 0;
         
         if (isLinked && clicks < avgClicks * 0.5 && avgClicks > 0.5) {
-          report.monetization.suggestions.push(`优化机会：问题 ${qIndex + 1} 的答案 "${a.text}" 点击数 (${clicks}) 远低于平均值 (${avgClicks.toFixed(1)})。考虑优化文案或提供更诱人的报价。`);
+          report.monetization.suggestions.push(`Optimization Opportunities: Problems ${qIndex + 1} The answer"${a.text}" Number of clicks (${clicks}) Well below average (${avgClicks.toFixed(1)})。Consider optimizing your copy or making a more enticing offer.`);
         } else if (isLinked && clicks === 0 && avgClicks > 0) {
-          report.monetization.suggestions.push(`重点优化：问题 ${qIndex + 1} 的答案 "${a.text}" 存在链接但点击数为 0。这是当前变现链中的一个弱点。`);
+          report.monetization.suggestions.push(`Key optimization: Problems ${qIndex + 1} The answer "${a.text}" The link exists but the number of clicks is 0。This is a weakness in the current monetization chain.`);
         }
       });
     });
     if (report.monetization.suggestions.length === 0) {
-        report.monetization.suggestions.push(`✅ 变现设置看起来很棒，并且您已经获得了 ${totalClicks} 次总点击。请继续推广！`);
+        report.monetization.suggestions.push(`✅ The monetization setup looks great and you've got ${totalClicks} Total clicks. Please continue to promote!`);
     }
   }
 
@@ -105,7 +105,7 @@ const SmartAnalysisReport: React.FC<SmartAnalysisReportProps> = ({ questions, fi
   }
   report.engagement.score = Math.max(0, engagementScore);
   if (report.engagement.suggestions.length === 0 && questions.length > 0) {
-       report.engagement.suggestions.push("✅ 测验长度和措辞多样性表现优秀。");
+       report.engagement.suggestions.push("✅ The quizzes were excellent in terms of length and wording variety.");
   }
 
   // 清晰度 (增加强制链接检查)
@@ -113,7 +113,7 @@ const SmartAnalysisReport: React.FC<SmartAnalysisReportProps> = ({ questions, fi
   questions.forEach((q, index) => {
     if (q.title.split(' ').length > 15) {
       clarityScore -= 10;
-      report.clarity.suggestions.push(`问题 ${index + 1}'s title is very long. Consider simplifying it.`);
+      report.clarity.suggestions.push(`question ${index + 1}'s title is very long. Consider simplifying it.`);
     }
      if (Object.values(q.answers).some(a => a.text.split(' ').length > 7)) {
       clarityScore -= 5;
@@ -130,12 +130,12 @@ const SmartAnalysisReport: React.FC<SmartAnalysisReportProps> = ({ questions, fi
   
   if (totalLinksFound === 0) {
       clarityScore -= 30; // 如果没有设置任何联盟链接，降低清晰度得分
-      report.clarity.suggestions.push("⚠️ 警告：没有在任何答案中设置联盟链接。这意味着用户完成测验后，转化路径是缺失的。");
+      report.clarity.suggestions.push("⚠️ Warning: There are no affiliate links in any of the answers. This means that the conversion path after the user completes the quiz is missing.");
   }
 
   report.clarity.score = Math.max(0, clarityScore);
   if (report.clarity.suggestions.length === 0) {
-      report.clarity.suggestions.push("✅ 内容和转化终点设置清晰明确。");
+      report.clarity.suggestions.push("✅ The content and conversion endpoints are clearly defined.");
   }
 
   return report;
