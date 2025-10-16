@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef, ChangeEvent, useMemo }
 import { getAuth, onAuthStateChanged, User, signOut } from 'firebase/auth';
 import { FunnelData, FunnelComponent, Answer, Question, FunnelOutcome } from './types/funnel.ts'; 
 import debounce from 'lodash.debounce'; 
-import { FirebaseStorage } from 'firebase/storage';
+import { FirebaseStorage, getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import QuizPlayer from './components/QuizPlayer.tsx';
 import ResetPage from './pages/reset.tsx';
 import LoginPage from "./pages/Login.tsx";
@@ -503,6 +503,7 @@ const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData }) => 
   const [textColor, setTextColor] = useState(defaultFunnelData.textColor);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [outcomes, setOutcomes] = useState<FunnelOutcome[]>(defaultFunnelData.outcomes);
   const [leadCaptureEnabled, setLeadCaptureEnabled] = useState(false);
   const [leadCaptureWebhookUrl, setLeadCaptureWebhookUrl] = useState('');
   
@@ -605,6 +606,7 @@ const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData }) => 
       setTextColor(funnel.data.textColor || defaultFunnelData.textColor);
       setLeadCaptureEnabled(funnel.data.enableLeadCapture || false); 
       setLeadCaptureWebhookUrl(funnel.data.leadCaptureWebhookUrl || '');
+      setOutcomes(funnel.data.outcomes || defaultFunnelData.outcomes);
       setIsDataLoaded(true);  // 总是设置为true，确保保存能触发
       setDebugLinkValue(`<strong>DEBUG:</strong> <br /> ${loadedLink || 'N/A'}`);
       console.log('✅ Firestore data loaded and state updated. Questions length:', compatibleQuestions.length);
@@ -634,6 +636,7 @@ const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData }) => 
     ...currentData,
     enableLeadCapture: leadCaptureEnabled, // 【中文注释：保存 Lead Capture 状态】
     leadCaptureWebhookUrl: leadCaptureWebhookUrl, // 【中文注释：保存 Webhook URL 状态】
+    outcomes: outcomes,
   };
   updateFunnelData(funnelId, dataToSave);
   console.log('✅ Auto-Save triggered.');
@@ -681,6 +684,7 @@ useEffect(() => {
   textColor,
   leadCaptureEnabled, 
   leadCaptureWebhookUrl,
+  outcomes,
   isDataLoaded,
   debouncedSave 
 ]);
@@ -935,9 +939,19 @@ const handleImportQuestions = (importedQuestions: Question[]) => {
             onBack={() => setCurrentSubView('mainEditorDashboard')}
           />
         );
-        // ...
-case 'analytics':
-  return (
+
+         case 'outcomeSettings': // <--- 新增视图
+        return (
+          <OutcomeSettingsComponent
+            outcomes={outcomes}
+            setOutcomes={setOutcomes}
+            funnelId={funnelId!}
+            storage={storage} // 传入 storage 实例
+            onBack={() => setCurrentSubView('mainEditorDashboard')}
+          />
+        );
+      case 'analytics':
+       return (
     <SmartAnalysisReport
       questions={questions}
       finalRedirectLink={finalRedirectLink}
@@ -991,8 +1005,18 @@ case 'analytics':
            </h3>
           <p>Get data-driven insights to boost your funnel's performance.</p>
           </div>
-            
-         <div style={{ marginTop: '40px', textAlign: 'center' }}>
+
+            <div className="dashboard-card" onClick={() => setCurrentSubView('outcomeSettings')}>
+            <h3>
+            <span role="img" aria-label="trophy">
+             🏆
+           </span>{' '}
+           Exclusive Results Mapping
+           </h3>
+          <p>Configure personalized results, images, and unique CTA links based on quiz answers.</p>
+          </div>
+       
+            <div style={{ marginTop: '40px', textAlign: 'center' }}>
             <BackButton to="/" data-testid="back-button"> 
               <span role="img" aria-label="back">←</span> Back to All Funnels
             </BackButton>
@@ -1723,6 +1747,143 @@ const ColorCustomizerComponent: React.FC<ColorCustomizerComponentProps> = ({
   
   
 </div>
+    </div>
+  );
+};
+
+interface OutcomeSettingsComponentProps {
+  outcomes: FunnelOutcome[];
+  setOutcomes: React.Dispatch<React.SetStateAction<FunnelOutcome[]>>;
+  funnelId: string;
+  storage: FirebaseStorage;
+  onBack: (event: React.MouseEvent<HTMLButtonElement>) => void;
+}
+
+const OutcomeSettingsComponent: React.FC<OutcomeSettingsComponentProps> = ({
+  outcomes,
+  setOutcomes,
+  funnelId,
+  storage,
+  onBack,
+}) => {
+  const [uploadingId, setUploadingId] = useState<string | null>(null);
+
+  const handleUpdateOutcome = (id: string, updates: Partial<FunnelOutcome>) => {
+    setOutcomes(prev =>
+      prev.map(o => (o.id === id ? { ...o, ...updates } : o))
+    );
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, outcomeId: string) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingId(outcomeId);
+    
+    // [1] 上传逻辑：使用 Firebase Storage SDK
+    const storageRef = ref(storage, `funnel-images/${funnelId}/${outcomeId}/${file.name}`);
+    
+    try {
+      // 1. 上传文件
+      const snapshot = await uploadBytes(storageRef, file);
+      
+      // 2. 获取可公开访问的 URL
+      const downloadURL = await getDownloadURL(snapshot.ref);
+      
+      // 3. 更新 Firestore 状态（仅存储 URL 字符串）
+      handleUpdateOutcome(outcomeId, { imageUrl: downloadURL });
+      
+      // 清空文件输入
+      e.target.value = '';
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      // setNotification({ message: '图片上传失败', type: 'error' });
+    } finally {
+      setUploadingId(null);
+    }
+  };
+
+  return (
+    <div className="link-settings-container">
+      <h2>
+        <span role="img" aria-label="trophy">🏆</span>{' '}
+        Exclusive Results Configuration
+      </h2>
+      <p>Configure different result pages for high-converting, personalized recommendations. (Changes are auto-saved).</p>
+
+      {outcomes.map((outcome, index) => (
+        <div key={outcome.id} className="outcome-card" style={{ marginBottom: '25px', padding: '15px', border: '1px solid #ddd', borderRadius: '8px', position: 'relative' }}>
+          
+          <h4 style={{marginTop: 0, borderBottom: '1px solid #eee', paddingBottom: '10px'}}>{outcome.name} (Result #{index + 1})</h4>
+          
+          <div className="form-group">
+            <label>Result Name (Internal):</label>
+            <OptimizedTextInput
+              initialValue={outcome.name}
+              onUpdate={(v) => handleUpdateOutcome(outcome.id, { name: v })}
+              placeholder="e.g., Top Budget Recommendation"
+              type="text"
+            />
+          </div>
+
+          <div className="form-group">
+            <label>Result Title (Displayed to User):</label>
+            <OptimizedTextInput
+              initialValue={outcome.title}
+              onUpdate={(v) => handleUpdateOutcome(outcome.id, { title: v })}
+              placeholder="e.g., Congratulations! You are a High-Value Client."
+              type="text"
+            />
+          </div>
+          
+          <div className="form-group">
+            <label>CTA Link:</label>
+            <OptimizedTextInput
+              initialValue={outcome.ctaLink}
+              onUpdate={(v) => handleUpdateOutcome(outcome.id, { ctaLink: v })}
+              placeholder="https://your-product-link.com"
+              type="url"
+            />
+          </div>
+
+          {/* 图片上传区域 */}
+          <div className="form-group">
+            <label>Result Image URL (For Visual Recommendation):</label>
+            {outcome.imageUrl && (
+              <img src={outcome.imageUrl} alt="Result Preview" style={{ maxWidth: '100%', maxHeight: '150px', display: 'block', margin: '10px 0', border: '1px solid #ccc' }} />
+            )}
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => handleImageUpload(e, outcome.id)}
+              disabled={uploadingId === outcome.id}
+            />
+            {uploadingId === outcome.id && <p style={{color: '#007bff', fontSize: '0.9em'}}>Uploading image...</p>}
+            
+             <OptimizedTextInput
+              initialValue={outcome.imageUrl}
+              onUpdate={(v) => handleUpdateOutcome(outcome.id, { imageUrl: v })}
+              placeholder="Or paste an external URL"
+              type="url"
+              style={{marginTop: '10px'}}
+            />
+          </div>
+
+        </div>
+      ))}
+      
+      <button 
+        className="add-button" 
+        onClick={() => setOutcomes(prev => [...prev, { id: `result-${Date.now()}`, name: `New Result ${prev.length + 1}`, title: 'New Personalized Result', summary: '', ctaLink: '', imageUrl: '' }])}
+      >
+        <span role="img" aria-label="add">➕</span> Add New Result
+      </button>
+
+      <div className="form-actions">
+        <BackButton onClick={onBack} className="save-button">
+          <span role="img" aria-label="save">💾</span> Apply & Return to Editor
+        </BackButton>
+      </div>
     </div>
   );
 };
