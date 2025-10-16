@@ -1333,6 +1333,20 @@ const handleTitleUpdate = useCallback((newTitle: string) => {
     });
   }, [onUpdate]);
 
+  const handleAnswerScoreUpdate = useCallback((answerId: string, newScore: string) => {
+  setLocalQuestion((prevQuestion) => {
+    // 尝试将输入转换为数字，如果无效则为 0
+    const scoreValue = newScore === '' ? undefined : (isNaN(Number(newScore)) ? 0 : Number(newScore));
+
+    const updatedAnswers = {
+      ...prevQuestion.answers,
+      [answerId]: { ...prevQuestion.answers[answerId], resultScore: scoreValue },
+    };
+    const updatedQuestion: Question = { ...prevQuestion, answers: updatedAnswers };
+    onUpdate(updatedQuestion); // 通知父组件更新
+    return updatedQuestion;
+  });
+}, [onUpdate]);
   // 【已修复：答案文本更新】
   const handleAnswerTextUpdate = useCallback((answerId: string, newText: string) => {
     setLocalQuestion((prevQuestion) => {
@@ -1503,10 +1517,16 @@ return (
                         placeholder={`Option ${index + 1}`}
                         type="text"
                     />
-
+                     {/* 关联分数 (Result Score) <-- 新增内容 */}
+                      <OptimizedTextInput
+                        type="number"
+                        initialValue={answer.resultScore !== undefined ? String(answer.resultScore) : ""}
+                        onUpdate={(value) => handleAnswerScoreUpdate(answer.id, value)}
+                        placeholder="Result Score (e.g. 10)"
+                        style={{ marginTop: "5px" }}
+                    />
                     {/* 关联链接 (Affiliate Link) */}
-                    {/* ✅ 替换为 OptimizedTextInput，绑定到 handleLinkUpdate */}
-                    <OptimizedTextInput
+                     <OptimizedTextInput
                         type="url"
                         initialValue={localQuestion.data?.affiliateLinks?.[index] || ""}
                         onUpdate={(value) => handleLinkUpdate(index, value)}
@@ -1514,8 +1534,7 @@ return (
                     />
 
                     {/* 下一步 ID (Next Step ID) */}
-                    {/* ✅ 替换为 OptimizedTextInput，绑定到 handleAnswerNextStepIdUpdate */}
-                    {/* 移除了内联的 onChange 逻辑，使用新的处理函数 */}
+                    
                     <OptimizedTextInput
                         initialValue={answer.nextStepId || ""}
                         onUpdate={(newNextStepId) => handleAnswerNextStepIdUpdate(answer.id, newNextStepId)}
