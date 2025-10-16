@@ -76,6 +76,9 @@ const defaultFunnelData: FunnelData = {
       imageUrl: '', // 默认图片链接为空
     },
   ],
+  scoreMappings: [
+    { minScore: 0, maxScore: 100, outcomeId: 'default-result' },
+  ],
 };
 const getDefaultData = (type: string) => {
     switch (type) {
@@ -504,6 +507,7 @@ const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData }) => 
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [outcomes, setOutcomes] = useState<FunnelOutcome[]>(defaultFunnelData.outcomes);
+  const [scoreMappings, setScoreMappings] = useState<ScoreOutcomeMapping[]>(defaultFunnelData.scoreMappings);
   const [leadCaptureEnabled, setLeadCaptureEnabled] = useState(false);
   const [leadCaptureWebhookUrl, setLeadCaptureWebhookUrl] = useState('');
   
@@ -607,6 +611,7 @@ const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData }) => 
       setLeadCaptureEnabled(funnel.data.enableLeadCapture || false); 
       setLeadCaptureWebhookUrl(funnel.data.leadCaptureWebhookUrl || '');
       setOutcomes(funnel.data.outcomes || defaultFunnelData.outcomes);
+      setScoreMappings(funnel.data.scoreMappings || defaultFunnelData.scoreMappings); 
       setIsDataLoaded(true);  // 总是设置为true，确保保存能触发
       setDebugLinkValue(`<strong>DEBUG:</strong> <br /> ${loadedLink || 'N/A'}`);
       console.log('✅ Firestore data loaded and state updated. Questions length:', compatibleQuestions.length);
@@ -637,6 +642,7 @@ const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, updateFunnelData }) => 
     enableLeadCapture: leadCaptureEnabled, // 【中文注释：保存 Lead Capture 状态】
     leadCaptureWebhookUrl: leadCaptureWebhookUrl, // 【中文注释：保存 Webhook URL 状态】
     outcomes: outcomes,
+    scoreMappings: scoreMappings,
   };
   updateFunnelData(funnelId, dataToSave);
   console.log('✅ Auto-Save triggered.');
@@ -685,6 +691,7 @@ useEffect(() => {
   leadCaptureEnabled, 
   leadCaptureWebhookUrl,
   outcomes,
+  scoreMappings,
   isDataLoaded,
   debouncedSave 
 ]);
