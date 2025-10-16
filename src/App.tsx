@@ -71,7 +71,7 @@ const defaultFunnelData: FunnelData = {
       id: 'default-result',
       name: 'Default result',
       title: 'Congratulations! This is your personalized report.',
-      summary: 'We've matched your answers to the most suitable products for you. See our exclusive recommendations below.',
+      summary: "We've matched your answers to the most suitable products for you. See our exclusive recommendations below.",
       ctaLink: '', // 默认链接为空，需用户填写
       imageUrl: '', // 默认图片链接为空
     },
