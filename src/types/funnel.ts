@@ -34,7 +34,11 @@ export interface FunnelOutcome {
   ctaLink: string; // 专属的结果 CTA 链接
   imageUrl: string; // 专属的结果图片 URL (来自 Firebase Storage)
 }
-
+export interface ScoreOutcomeMapping {
+  minScore: number;
+  maxScore: number;
+  outcomeId: string; // 引用 FunnelOutcome.id
+}
 // 【更新 FunnelData 接口以包含结果配置】
 export interface FunnelData {
   questions: Question[];
@@ -49,4 +53,5 @@ export interface FunnelData {
   leadCaptureWebhookUrl?: string;
   // 【新增：结果配置列表】
   outcomes: FunnelOutcome[];
+  scoreMappings: ScoreOutcomeMapping[];
 }
