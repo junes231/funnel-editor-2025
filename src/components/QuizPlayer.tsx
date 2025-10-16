@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getDoc, doc } from 'firebase/firestore';
-
+import { FunnelData, FunnelOutcome, ScoreOutcomeMapping, Answer } from '../types/funnel.ts';
 // 【中文注释：简化后的 FunnelStep 接口，只关注问答属性】
 interface FunnelStep {
   id: string;
@@ -32,7 +32,20 @@ interface QuizPlayerProps {
 
 const defaultFunnelData: FunnelData = { questions: [] };
 
+const findMatchingOutcome = (totalScore: number, outcomes: FunnelOutcome[], mappings: ScoreOutcomeMapping[]): FunnelOutcome | null => {
+  if (!mappings || !outcomes) return null;
+  
+  // 1. 查找匹配的分数范围
+  const matchingMapping = mappings.find(m => totalScore >= m.minScore && totalScore <= m.maxScore);
 
+  if (!matchingMapping) {
+    // 如果没有找到匹配的映射，尝试返回默认结果
+    return outcomes.find(o => o.id === 'default-result') || null;
+  }
+
+  // 2. 查找匹配的结果对象
+  return outcomes.find(o => o.id === matchingMapping.outcomeId) || null;
+};
 // ----------------------------------------------------------------------
 // 辅助组件：Lead Capture 表单 (内联定义)
 // ----------------------------------------------------------------------
@@ -61,19 +74,18 @@ const LeadCaptureForm: React.FC<LeadCaptureFormProps> = ({ onSuccess, buttonColo
         try {
             await onSuccess({ name, email });
             // ✅ 如果 onSuccess 成功，这里会继续，不需要额外的成功逻辑
-        } catch (e) {
+        } catch (e: any) {
             // 🐛 重点修改：将错误提示改为警告，并假设如果到达这里是 Load Failed，数据可能仍已发送。
             // 实际生产环境中，如果 Webhook 成功触发，数据可能已经记录。
             console.error("Webhook submission failed (Network Error or CORS):", e);
             // 假设提交已经成功（因为Zapier返回了200，但浏览器报错Load failed），继续进行重定向。
             // 这一步是为了让用户流程继续，而不是卡死。
             setError('Warning: Network error detected. Proceeding to results...'); 
+             await onSuccess({ name, email });
         } finally {
             setIsSubmitting(false);
-            // ✅ 即使出错也强制调用 onSuccess 来确保重定向发生
-            await onSuccess({ name, email });
-        }
-    };
+           }
+          };
 
     return (
         <form onSubmit={handleSubmit} style={{padding: '20px', border: `1px solid ${buttonColor}`, borderRadius: '8px', boxShadow: '0 4px 15px rgba(0,0,0,0.1)'}}>
@@ -100,6 +112,55 @@ const LeadCaptureForm: React.FC<LeadCaptureFormProps> = ({ onSuccess, buttonColo
     );
 };
 
+interface ExclusiveResultPageProps {
+  outcome: FunnelOutcome;
+  buttonColor: string;
+  textColor: string;
+}
+
+const ExclusiveResultPage: React.FC<ExclusiveResultPageProps> = ({ outcome, buttonColor, textColor }) => {
+  const handleCtaClick = () => {
+    if (outcome.ctaLink) {
+      window.location.href = outcome.ctaLink;
+    }
+  };
+
+  return (
+    <div style={{ textAlign: 'center', padding: '20px' }}>
+      <h3 className="quiz-question-title" style={{ color: textColor, marginBottom: '20px' }}>
+        {outcome.title || "Your exclusive results"}
+      </h3>
+      
+      {outcome.imageUrl && (
+        <img 
+          src={outcome.imageUrl} 
+          alt={outcome.name} 
+          style={{ 
+            maxWidth: '100%', 
+            maxHeight: '300px', 
+            borderRadius: '8px', 
+            marginBottom: '20px',
+            boxShadow: '0 4px 15px rgba(0,0,0,0.1)'
+          }} 
+        />
+      )}
+      
+      <p style={{ color: textColor, lineHeight: 1.6, marginBottom: '30px' }}>
+        {outcome.summary || "This is a report summary customized based on your responses."}
+      </p>
+
+      {outcome.ctaLink && (
+        <button 
+          onClick={handleCtaClick}
+          className="quiz-answer-button" 
+          style={{ backgroundColor: buttonColor, color: '#ffffff', minHeight: '55px' }}
+        >
+          Check out your exclusive recommendations now →
+        </button>
+      )}
+    </div>
+  );
+}
 
 // ----------------------------------------------------------------------
 // 主组件：QuizPlayer
@@ -115,7 +176,9 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ db }) => {
   const [error, setError] = useState<string | null>(null);
   // 【中文注释：新增状态来控制是否显示 Lead Capture 表单】
   const [showLeadCapture, setShowLeadCapture] = useState(false);
-
+   const [totalScore, setTotalScore] = useState(0);
+  // 【新增状态】用于控制是否渲染最终的结果页面
+  const [showOutcome, setShowOutcome] = useState<FunnelOutcome | null>(null);
 
   // 【中文注释：数据加载和兼容性处理】
   useEffect(() => {
@@ -133,7 +196,12 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ db }) => {
         if (funnelDoc.exists()) {
           const funnel = funnelDoc.data() as any; 
           
-          const compatibleFunnelData = { ...defaultFunnelData, ...funnel.data };
+          const compatibleFunnelData: FunnelData = { 
+                   // ... 假设这里正确地合并了所有字段和默认值
+                   ...funnel.data,
+                   outcomes: funnel.data.outcomes || [],
+                   scoreMappings: funnel.data.scoreMappings || [],
+               };
           if (compatibleFunnelData.questions) {
             compatibleFunnelData.questions = compatibleFunnelData.questions.map((question: FunnelStep) => {
               
@@ -183,7 +251,29 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ db }) => {
     };
     getFunnelForPlay();
   }, [funnelId, db]);
+   const determineAndShowOutcome = useCallback(() => {
+    if (!funnelData) return;
 
+    // 1. 根据总分和映射表找到匹配的结果
+    const matchedOutcome = findMatchingOutcome(
+      totalScore,
+      funnelData.outcomes,
+      funnelData.scoreMappings
+    );
+
+    if (matchedOutcome) {
+      // 2. 渲染结果页面
+      setShowOutcome(matchedOutcome);
+    } else {
+      // 3. 如果未匹配到任何结果 (这是安全网)
+      const redirectLink = funnelData.finalRedirectLink;
+      if (redirectLink && redirectLink.trim() !== "") {
+        window.location.href = redirectLink;
+      } else {
+        setError("Quiz complete! No outcome matched and no final redirect link set.");
+      }
+    }
+  }, [funnelData, totalScore]);
   const handleFinalRedirect = (redirectUrl: string) => {
     window.location.href = redirectUrl;
   };
@@ -246,7 +336,8 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ db }) => {
 
     const answerValues = Object.values(currentStep.answers || {}) as Answer[];
     const selectedAnswer = answerValues.find(a => a.id === answerId);
-    
+    const answerScore = selectedAnswer?.resultScore || 0;
+    setTotalScore(prevScore => prevScore + answerScore);
     // 【中文注释：获取下一个步骤的索引或 ID】
     const nextStepId = selectedAnswer?.nextStepId?.trim();
     setTimeout(() => {
@@ -273,11 +364,20 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ db }) => {
       const isLastStep = currentQuestionIndex >= funnelData.questions.length - 1;
 
       if (isLastStep) {
-        // 【中文注释：关键修改：如果配置了 Lead Capture，则显示表单而不是重定向】
+        // 【核心修改 B：流程调整】
         if (funnelData.enableLeadCapture) {
+          // 如果启用捕获，先显示表单
           setShowLeadCapture(true);
-          return;
+        } else {
+          // 否则，直接进入结果判定和显示
+          determineAndShowOutcome(); 
         }
+        return;
+      }
+
+      setCurrentQuestionIndex(currentQuestionIndex + 1);
+    }, 500);
+  };
         
         // 【中文注释：否则，执行最终重定向】
         const redirectLink = funnelData.finalRedirectLink;
@@ -315,7 +415,32 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ db }) => {
       </div>
     );
   }
+ if (showOutcome) {
+    return (
+        <div className="quiz-player-container" 
+             style={{ backgroundColor: funnelData.backgroundColor, color: funnelData.textColor }}>
+            <ExclusiveResultPage 
+                outcome={showOutcome} 
+                buttonColor={funnelData.buttonColor || '#28a745'} 
+                textColor={funnelData.textColor || '#333333'} 
+            />
+        </div>
+    );
+  }
 
+  // 优先级 2: 如果启用 Lead Capture，渲染表单
+  if (funnelData.enableLeadCapture && showLeadCapture) {
+      return (
+        <div className="quiz-player-container" 
+             style={{ backgroundColor: funnelData.backgroundColor, color: funnelData.textColor }}>
+            <LeadCaptureForm 
+                onSuccess={handleLeadCaptureSubmit}
+                buttonColor={funnelData.buttonColor || '#28a745'}
+                textColor={funnelData.textColor || '#333333'}
+            />
+        </div>
+    );
+  }
   const currentStep = funnelData.questions[currentQuestionIndex];
 
   if (!currentStep) {
@@ -360,7 +485,19 @@ const QuizPlayer: React.FC<QuizPlayerProps> = ({ db }) => {
           {currentStep.title && (
              <h3 className="quiz-question-title">{currentStep.title}</h3>
           )}
-          
+
+          {/* 【新增：进度条和分数显示】 */}
+          <div style={{ marginBottom: '20px', fontSize: '1em', color: 'var(--text-color)', display: 'flex', justifyContent: 'space-between' }}>
+             <span>Question {currentQuestionIndex + 1} of {funnelData.questions.length}</span>
+             <span>Current Score: {totalScore}</span>
+          </div>
+          <div className="progress-bar-container">
+              <div 
+                  className="progress-bar" 
+                  style={{ width: `${((currentQuestionIndex + 1) / funnelData.questions.length) * 100}%` }}
+              ></div>
+          </div>
+        
           <div className="quiz-answers-container">
             {sortedAnswers.length > 0 ? (
                 sortedAnswers.map((answer, index) => {
