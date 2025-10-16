@@ -957,7 +957,17 @@ const handleImportQuestions = (importedQuestions: Question[]) => {
             onBack={() => setCurrentSubView('mainEditorDashboard')}
           />
         );
-      case 'analytics':
+       
+       case 'scoreMapping': // <--- 新增视图入口
+        return (
+          <ScoreMappingComponent
+            scoreMappings={scoreMappings}
+            setScoreMappings={setScoreMappings}
+            outcomes={outcomes}
+            onBack={() => setCurrentSubView('mainEditorDashboard')}
+          />
+        );
+       case 'analytics':
        return (
     <SmartAnalysisReport
       questions={questions}
@@ -1003,6 +1013,28 @@ const handleImportQuestions = (importedQuestions: Question[]) => {
               </h3>
               <p>Customize theme colors for this funnel.</p>
             </div>
+
+            {/* 新增：结果配置卡片 (OutcomeSettingsComponent 的入口) */}
+            <div className="dashboard-card" onClick={() => setCurrentSubView('outcomeSettings')}>
+            <h3>
+            <span role="img" aria-label="trophy">
+             🏆
+           </span>{' '}
+           Exclusive Results Configuration
+           </h3>
+          <p>Configure personalized results, images, and unique CTA links based on quiz answers.</p>
+          </div>
+            
+            {/* 新增：分数映射卡片 (ScoreMappingComponent 的入口) */}
+            <div className="dashboard-card" onClick={() => setCurrentSubView('scoreMapping')}>
+            <h3>
+            <span role="img" aria-label="score">
+             🔢
+           </span>{' '}
+           Score to Result Mapping
+           </h3>
+          <p>Map cumulative quiz scores to specific exclusive result pages.</p>
+          </div>
             <div className="dashboard-card" onClick={() => setCurrentSubView('analytics')}>
             <h3>
             <span role="img" aria-label="analytics">
@@ -1013,17 +1045,7 @@ const handleImportQuestions = (importedQuestions: Question[]) => {
           <p>Get data-driven insights to boost your funnel's performance.</p>
           </div>
 
-            <div className="dashboard-card" onClick={() => setCurrentSubView('outcomeSettings')}>
-            <h3>
-            <span role="img" aria-label="trophy">
-             🏆
-           </span>{' '}
-           Exclusive Results Mapping
-           </h3>
-          <p>Configure personalized results, images, and unique CTA links based on quiz answers.</p>
-          </div>
-       
-            <div style={{ marginTop: '40px', textAlign: 'center' }}>
+         <div style={{ marginTop: '40px', textAlign: 'center' }}>
             <BackButton to="/" data-testid="back-button"> 
               <span role="img" aria-label="back">←</span> Back to All Funnels
             </BackButton>
@@ -1903,6 +1925,141 @@ const OutcomeSettingsComponent: React.FC<OutcomeSettingsComponentProps> = ({
         onClick={() => setOutcomes(prev => [...prev, { id: `result-${Date.now()}`, name: `New Result ${prev.length + 1}`, title: 'New Personalized Result', summary: '', ctaLink: '', imageUrl: '' }])}
       >
         <span role="img" aria-label="add">➕</span> Add New Result
+      </button>
+
+      <div className="form-actions">
+        <BackButton onClick={onBack} className="save-button">
+          <span role="img" aria-label="save">💾</span> Apply & Return to Editor
+        </BackButton>
+      </div>
+    </div>
+  );
+};
+
+interface ScoreMappingComponentProps {
+  scoreMappings: ScoreOutcomeMapping[];
+  setScoreMappings: React.Dispatch<React.SetStateAction<ScoreOutcomeMapping[]>>;
+  outcomes: FunnelOutcome[];
+  onBack: (event: React.MouseEvent<HTMLButtonElement>) => void;
+}
+
+const ScoreMappingComponent: React.FC<ScoreMappingComponentProps> = ({
+  scoreMappings,
+  setScoreMappings,
+  outcomes,
+  onBack,
+}) => {
+  // 确保至少有一个默认结果供选择
+  const hasOutcomes = outcomes && outcomes.length > 0;
+  
+  const handleUpdateMapping = useCallback((index: number, updates: Partial<ScoreOutcomeMapping>) => {
+    setScoreMappings(prev => {
+      const newMappings = [...prev];
+      newMappings[index] = { ...newMappings[index], ...updates };
+      return newMappings;
+    });
+  }, [setScoreMappings]);
+
+  const handleAddMapping = () => {
+    // 计算下一个映射的起始分数
+    const defaultMinScore = scoreMappings.length > 0
+        ? Math.max(...scoreMappings.map(m => m.maxScore || 0)) + 1
+        : 0;
+
+    const newMapping: ScoreOutcomeMapping = {
+      minScore: defaultMinScore,
+      maxScore: defaultMinScore + 10,
+      outcomeId: outcomes[0]?.id || 'default-result', // 默认指向第一个结果
+    };
+    setScoreMappings(prev => [...prev, newMapping]);
+  };
+
+  const handleRemoveMapping = (index: number) => {
+    if (scoreMappings.length <= 1) {
+       // 您可以添加通知提示：至少需要保留一个映射
+       return;
+    }
+    setScoreMappings(prev => prev.filter((_, i) => i !== index));
+  };
+  
+  return (
+    <div className="link-settings-container">
+      <h2>
+        <span role="img" aria-label="score">🔢</span>{' '}
+        Score to Result Mapping
+      </h2>
+      <p>Define which score range from the quiz matches a specific exclusive result page.</p>
+      
+      {!hasOutcomes && (
+          <p style={{color: '#dc3545', fontWeight: 'bold'}}>
+             ❌ Please first“Exclusive Results Configuration”Create at least one results page in.
+          </p>
+      )}
+
+      {scoreMappings.map((mapping, index) => {
+        const outcome = outcomes.find(o => o.id === mapping.outcomeId);
+        
+        return (
+          <div key={index} style={{ marginBottom: '20px', padding: '15px', border: '1px solid #007bff', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h4 style={{ margin: 0 }}>Mapping #{index + 1}</h4>
+              {scoreMappings.length > 1 && (
+                <button className="delete-button" onClick={() => handleRemoveMapping(index)} style={{ padding: '5px 10px' }}>
+                  Remove
+                </button>
+              )}
+            </div>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label>Minimum Score:</label>
+                <OptimizedTextInput
+                  initialValue={String(mapping.minScore)}
+                  onUpdate={(v) => handleUpdateMapping(index, { minScore: isNaN(Number(v)) ? 0 : Number(v) })}
+                  type="number"
+                />
+              </div>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label>Maximum Score:</label>
+                <OptimizedTextInput
+                  initialValue={String(mapping.maxScore)}
+                  onUpdate={(v) => handleUpdateMapping(index, { maxScore: isNaN(Number(v)) ? 100 : Number(v) })}
+                  type="number"
+                />
+              </div>
+            </div>
+
+            <div className="form-group" style={{ marginTop: '10px', marginBottom: 0 }}>
+              <label>Map to Result Page:</label>
+              <select
+                value={mapping.outcomeId}
+                onChange={(e) => handleUpdateMapping(index, { outcomeId: e.target.value })}
+                disabled={!hasOutcomes}
+                style={{ width: '100%', padding: '10px', border: '1px solid #ccc', borderRadius: '4px' }}
+              >
+                {hasOutcomes ? (
+                  outcomes.map(o => (
+                    <option key={o.id} value={o.id}>
+                      {o.name} (ID: {o.id})
+                    </option>
+                  ))
+                ) : (
+                    <option value="">No Results Available</option>
+                )}
+              </select>
+               <p style={{ fontSize: '0.8em', color: '#666', margin: '5px 0 0' }}>Current Link: {outcome?.ctaLink || 'N/A'}</p>
+            </div>
+            
+          </div>
+        );
+      })}
+      
+      <button 
+        className="add-button" 
+        onClick={handleAddMapping}
+        style={{ marginBottom: '20px' }}
+      >
+        <span role="img" aria-label="add">➕</span> Add New Score Range
       </button>
 
       <div className="form-actions">
