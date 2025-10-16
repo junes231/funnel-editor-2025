@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, ChangeEvent, useMemo } from 'react';
 import { getAuth, onAuthStateChanged, User, signOut } from 'firebase/auth';
-import { FunnelData, FunnelComponent, Answer, Question } from './types/funnel.ts'; 
+import { FunnelData, FunnelComponent, Answer, Question, FunnelOutcome } from './types/funnel.ts'; 
 import debounce from 'lodash.debounce'; 
 import QuizPlayer from './components/QuizPlayer.tsx';
 import ResetPage from './pages/reset.tsx';
@@ -42,19 +42,6 @@ interface Question {
   };
 }
 
-interface FunnelData {
-  questions: Question[];
-  finalRedirectLink: string;
-  tracking: string;
-  conversionGoal: string;
-  primaryColor: string;
-  buttonColor: string;
-  backgroundColor: string;
-  textColor: string;
-  enableLeadCapture?: boolean;
-  leadCaptureWebhookUrl?: string;
-}
-
 interface Funnel {
   id: string;
   name: string;
@@ -76,6 +63,17 @@ const defaultFunnelData: FunnelData = {
   textColor: '#333333',
   enableLeadCapture: false, 
   leadCaptureWebhookUrl: '',
+  // 【新增默认结果列表】
+  outcomes: [
+    {
+      id: 'default-result',
+      name: 'Default result',
+      title: 'Congratulations! This is your personalized report.',
+      summary: 'We've matched your answers to the most suitable products for you. See our exclusive recommendations below.',
+      ctaLink: '', // 默认链接为空，需用户填写
+      imageUrl: '', // 默认图片链接为空
+    },
+  ],
 };
 const getDefaultData = (type: string) => {
     switch (type) {
