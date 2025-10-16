@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef, ChangeEvent, useMemo }
 import { getAuth, onAuthStateChanged, User, signOut } from 'firebase/auth';
 import { FunnelData, FunnelComponent, Answer, Question, FunnelOutcome } from './types/funnel.ts'; 
 import debounce from 'lodash.debounce'; 
+import { FirebaseStorage } from 'firebase/storage';
 import QuizPlayer from './components/QuizPlayer.tsx';
 import ResetPage from './pages/reset.tsx';
 import LoginPage from "./pages/Login.tsx";
@@ -50,6 +51,7 @@ interface Funnel {
 
 interface AppProps {
   db: Firestore;
+  storage: FirebaseStorage;
 }
 
 const defaultFunnelData: FunnelData = {
@@ -92,7 +94,7 @@ const getDefaultData = (type: string) => {
          }
           };
 // REPLACE your old App function with this new one
-export default function App({ db }: AppProps) {
+export default function App({ db, storage }: AppProps) {
   const navigate = useNavigate();
   const location = useLocation();
   // New state variables to manage authentication and user roles
@@ -237,7 +239,7 @@ useEffect(() => {
   path="/edit/:funnelId"
   element={
     <AuthRouteWrapper user={user} isLoading={isLoading} isAdmin={isAdmin} db={db}>
-        <FunnelEditor db={db} updateFunnelData={updateFunnelData} />
+        <FunnelEditor db={db} storage={storage} updateFunnelData={updateFunnelData} />
     </AuthRouteWrapper>
   }
 />
@@ -481,6 +483,7 @@ const FunnelDashboard: React.FC<FunnelDashboardProps> = ({ db, user, isAdmin, fu
 };
 interface FunnelEditorProps {
   db: Firestore;
+  storage: FirebaseStorage;
   updateFunnelData: (funnelId: string, newData: FunnelData) => Promise<void>;
 }
 
