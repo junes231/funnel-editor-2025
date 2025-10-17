@@ -1824,20 +1824,21 @@ const OutcomeSettingsComponent: React.FC<OutcomeSettingsComponentProps> = ({
     );
   };
 
-  // 文件: src/App.tsx (OutcomeSettingsComponent - // 文件: src/App.tsx (OutcomeSettingsComponent - handleImageUpload)
+// 文件: src/App.tsx (OutcomeSettingsComponent - handleImageUpload)
 
-const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, outcomeId: string) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, outcomeId: string) => {
     const file = e.target.files?.[0];
     setFileLabel(prev => ({ ...prev, [outcomeId]: file ? file.name : 'No file chosen' }));
 
     if (!file) return;
 
     setUploadingId(outcomeId);
-    const storageRef = ref(storage, `funnel-images/${funnelId}/${outcomeId}/${file.name}`);
-
-    // 【新增：读取文件为 Base64 字符串】
+    
+    // 🚨 【重要】使用您的 Cloud Run URL 作为后端代理上传的地址
+    const uploadApiUrl = `${process.env.REACT_APP_TRACK_CLICK_URL.replace(/\/trackClick$/, '')}/uploadImage`; 
+    
     const reader = new FileReader();
-    reader.readAsDataURL(file); // 读取文件为 data URI
+    reader.readAsDataURL(file); 
 
     reader.onloadend = async () => {
         if (!reader.result) {
@@ -1846,17 +1847,36 @@ const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, outcome
             return;
         }
 
-        // 提取 Base64 编码部分，并保留 Data URI 前缀，指定上传格式
         const base64String = reader.result as string; 
         
         try {
-            // 【核心修改：使用 uploadString 和 data_url 格式】
-            await uploadString(storageRef, base64String, 'data_url', { 
-                contentType: file.type // 确保设置正确的 MIME 类型
+            // 1. 构造发送给后端的 Payload
+            const uploadPayload = {
+                base64: base64String,
+                mimeType: file.type,
+                funnelId: funnelId,
+                outcomeId: outcomeId,
+                fileName: file.name
+            };
+            
+            // 2. 发送给后端代理
+            const response = await fetch(uploadApiUrl, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ data: uploadPayload }) // 包装在 data 字段中以匹配后端
             });
 
-            // 成功后，获取 URL 并更新 Firestore
-            const downloadURL = await getDownloadURL(storageRef);
+            if (!response.ok) {
+                const errorBody = await response.text();
+                throw new Error(`Backend upload failed: Status ${response.status}. Response: ${errorBody}`);
+            }
+
+            const result = await response.json();
+            const downloadURL = result.data.url; // 获取后端返回的公开 URL
+
+            // 3. 更新 Firestore 状态
             handleUpdateOutcome(outcomeId, { imageUrl: downloadURL });
             
             // 清理状态
@@ -1864,9 +1884,8 @@ const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, outcome
             e.target.value = '';
 
         } catch (error: any) { 
-            console.error("❌ Image Upload Failed:", error.code || 'UNKNOWN', error.message);
-            // 这里我们使用 alert 来确保您在移动端能看到错误，以防 Debug Console 再次静默
-            alert(`Image Upload Failed. Code: ${error.code || 'UNKNOWN'}. Message: ${error.message}`); 
+            console.error("❌ Proxy Upload Error:", error.message);
+            console.log(`Image Upload Failed. Message: ${error.message}`); 
             setUploadingId(null);
         }
     };
