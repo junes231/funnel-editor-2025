@@ -3,12 +3,14 @@ console.log("⚡ track-click API Server starting...");
 const express = require("express");
 const admin = require("firebase-admin");
 const cors = require("cors");
+const { Buffer } = require('node:buffer');
 
 // --- Firebase 初始化 ---
 if (!admin.apps.length) {
   admin.initializeApp();
 }
 const db = admin.firestore();
+const bucket = admin.storage().bucket(); // <-- [1] 确保获取了 Storage 桶
 
 // --- Express 应用创建 ---
 const app = express();
@@ -21,7 +23,50 @@ const corsOptions = {
 };
 app.options('*', cors(corsOptions));
 app.use(cors(corsOptions));
-app.use(express.json());
+app.use(express.json({ limit: '5mb' })); // <-- [2] 允许更大的请求体来处理图片 Base64
+
+// --- 路由定义：图片上传代理 ---
+app.post("/uploadImage", async (req, res) => {
+    // 【重要】在生产环境中，您应该在这里验证 Auth Token
+    
+    const { base64, mimeType, funnelId, outcomeId, fileName } = req.body.data || {};
+
+    if (!base64 || !mimeType || !funnelId || !outcomeId || !fileName) {
+        console.error("Missing required image data fields:", { funnelId, outcomeId, fileName });
+        return res.status(400).send({ error: "Missing required image data." });
+    }
+    
+    // 1. 构造文件路径
+    const filePath = `funnel-images/${funnelId}/${outcomeId}/${fileName}`;
+    const file = bucket.file(filePath);
+
+    // 2. 将 Base64 字符串写入 Storage
+    try {
+        // 移除 Data URI 前缀 (e.g., 'data:image/png;base66,')
+        const base64EncodedImageString = base64.replace(/^data:image\/\w+;base64,/, "");
+        const imageBuffer = Buffer.from(base64EncodedImageString, 'base64');
+        
+        await file.save(imageBuffer, {
+            metadata: {
+                contentType: mimeType,
+            },
+            public: true, // 确保文件可公开访问
+            predefinedAcl: 'publicRead' // 确保文件可公开读取
+        });
+        
+        // 3. 获取公开 URL (使用简单的公开链接格式)
+        const publicUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(filePath)}?alt=media`;
+        
+        console.log(`✅ File uploaded to: ${publicUrl}`);
+
+        // 4. 返回公开 URL 给前端
+        res.status(200).send({ data: { url: publicUrl } });
+
+    } catch (error) {
+        console.error("❌ Backend Storage Upload Failed:", error);
+        res.status(500).send({ error: "Failed to upload file to Storage." });
+    }
+});
 
 // --- 路由定义 ---
 app.post("/trackClick", async (req, res) => {
