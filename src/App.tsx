@@ -1826,7 +1826,9 @@ const OutcomeSettingsComponent: React.FC<OutcomeSettingsComponentProps> = ({
 
 // 文件: src/App.tsx (OutcomeSettingsComponent - handleImageUpload)
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, outcomeId: string) => {
+  // 文件: src/App.tsx (OutcomeSettingsComponent - handleImageUpload)
+
+const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, outcomeId: string) => {
     const file = e.target.files?.[0];
     setFileLabel(prev => ({ ...prev, [outcomeId]: file ? file.name : 'No file chosen' }));
 
@@ -1834,66 +1836,44 @@ const OutcomeSettingsComponent: React.FC<OutcomeSettingsComponentProps> = ({
 
     setUploadingId(outcomeId);
     
-    // 🚨 【重要】使用您的 Cloud Run URL 作为后端代理上传的地址
+    // 🚨 使用 Cloud Run URL 作为后端代理上传的地址
+    // 注意：这里我们使用 /uploadImage 路由
     const uploadApiUrl = `${process.env.REACT_APP_TRACK_CLICK_URL.replace(/\/trackClick$/, '')}/uploadImage`; 
     
-    const reader = new FileReader();
-    reader.readAsDataURL(file); 
-
-    reader.onloadend = async () => {
-        if (!reader.result) {
-            console.error("FileReader failed to read file.");
-            setUploadingId(null);
-            return;
-        }
-
-        const base64String = reader.result as string; 
+    try {
+        // 【核心修改：使用 FormData 发送文件】
+        const formData = new FormData();
+        formData.append("file", file); // <-- 名称要和 multer.single("file") 对应
+        formData.append("funnelId", funnelId);
+       formData.append("outcomeId", outcomeId);
         
-        try {
-            // 1. 构造发送给后端的 Payload
-            const uploadPayload = {
-                base64: base64String,
-                mimeType: file.type,
-                funnelId: funnelId,
-                outcomeId: outcomeId,
-                fileName: file.name
-            };
-            
-            // 2. 发送给后端代理
-            const response = await fetch(uploadApiUrl, {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ data: uploadPayload }) // 包装在 data 字段中以匹配后端
-            });
+        // 3. 发送给后端代理 (浏览器会自动设置 Content-Type: multipart/form-data)
+        const response = await fetch(uploadApiUrl, {
+            method: 'POST',
+            body: formData,
+            // ⚠️ 重点：不要设置 'Content-Type': 'multipart/form-data'，让浏览器自动处理边界
+        });
 
-            if (!response.ok) {
-                const errorBody = await response.text();
-                throw new Error(`Backend upload failed: Status ${response.status}. Response: ${errorBody}`);
-            }
-
-            const result = await response.json();
-            const downloadURL = result.data.url; // 获取后端返回的公开 URL
-
-            // 3. 更新 Firestore 状态
-            handleUpdateOutcome(outcomeId, { imageUrl: downloadURL });
-            
-            // 清理状态
-            setUploadingId(null);
-            e.target.value = '';
-
-        } catch (error: any) { 
-            console.error("❌ Proxy Upload Error:", error.message);
-            console.log(`Image Upload Failed. Message: ${error.message}`); 
-            setUploadingId(null);
+        if (!response.ok) {
+            const errorBody = await response.text();
+            throw new Error(`Backend upload failed: Status ${response.status}. Response: ${errorBody}`);
         }
-    };
-    
-    reader.onerror = (e) => {
-        console.error("FileReader error:", e);
+
+        const result = await response.json();
+        const downloadURL = result.data.url; // 获取后端返回的公开 URL
+
+        // 4. 更新 Firestore 状态
+        handleUpdateOutcome(outcomeId, { fileUrl: downloadURL });
+        
+        // 清理状态
         setUploadingId(null);
-    };
+        e.target.value = '';
+
+    } catch (error: any) { 
+        console.error("❌ Multer Proxy Upload Error:", error.message);
+        console.log(`Image Upload Failed. Message: ${error.message}`); 
+        setUploadingId(null);
+    }
 };
 
   return (
