@@ -3,18 +3,18 @@ console.log("⚡ track-click API Server starting...");
 const express = require("express");
 const admin = require("firebase-admin");
 const cors = require("cors");
+const multer = require('multer'); // <-- 【1. 导入 multer】
 const { Buffer } = require('node:buffer');
 
 // --- Firebase 初始化 ---
 if (!admin.apps.length) {
-  // 【修改点 A：显式指定 storageBucket 名称】
   admin.initializeApp({
+      // 显式指定 Storage Bucket 名称
       storageBucket: 'funnel-editor-netlify.appspot.com' 
   });
 }
 const db = admin.firestore();
-// 【修改点 B：显式指定 bucket() 名称，确保引用正确】
-const bucket = admin.storage().bucket('funnel-editor-netlify.appspot.com');// <-- [1] 确保获取了 Storage 桶
+const bucket = admin.storage().bucket('funnel-editor-netlify.appspot.com'); 
 
 // --- Express 应用创建 ---
 const app = express();
@@ -27,53 +27,68 @@ const corsOptions = {
 };
 app.options('*', cors(corsOptions));
 app.use(cors(corsOptions));
-app.use(express.json({ limit: '25mb' })); // <-- [2] 允许更大的请求体来处理图片 Base64
 
-// --- 路由定义：图片上传代理 ---
-app.post("/uploadImage", async (req, res) => {
-    // 【重要】在生产环境中，您应该在这里验证 Auth Token
-    
-    const { base64, mimeType, funnelId, outcomeId, fileName } = req.body.data || {};
-
-    if (!base64 || !mimeType || !funnelId || !outcomeId || !fileName) {
-        console.error("Missing required image data fields:", { funnelId, outcomeId, fileName });
-        return res.status(400).send({ error: "Missing required image data." });
-    }
-    
-    // 1. 构造文件路径
-    const filePath = `funnel-images/${funnelId}/${outcomeId}/${fileName}`;
-    const file = bucket.file(filePath);
-
-    // 2. 将 Base64 字符串写入 Storage
-    try {
-        // 移除 Data URI 前缀 (e.g., 'data:image/png;base66,')
-        const base64EncodedImageString = base64.replace(/^data:image\/\w+;base64,/, "");
-        const imageBuffer = Buffer.from(base64EncodedImageString, 'base64');
-        
-        await file.save(imageBuffer, {
-            metadata: {
-                contentType: mimeType,
-            },
-            public: true, // 确保文件可公开访问
-            predefinedAcl: 'publicRead' // 确保文件可公开读取
-        });
-        
-        // 3. 获取公开 URL (使用简单的公开链接格式)
-        const publicUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(filePath)}?alt=media`;
-        
-        console.log(`✅ File uploaded to: ${publicUrl}`);
-
-        // 4. 返回公开 URL 给前端
-        res.status(200).send({ data: { url: publicUrl } });
-
-    } catch (error) {
-        console.error("❌ Backend Storage Upload Failed:", error);
-        res.status(500).send({ error: "Failed to upload file to Storage." });
-    }
+// 【3. 配置 Multer：使用内存存储，以获取文件 Buffer】
+const upload = multer({ 
+    storage: multer.memoryStorage(), 
+    limits: { fileSize: 25 * 1024 * 1024 } // 限制文件大小为 25MB 
 });
 
-// --- 路由定义 ---
-app.post("/trackClick", async (req, res) => {
+// --- 路由定义：图片上传代理 (Multipart/form-data) ---
+// 【4. 使用 Multer 中间件处理单个名为 'image' 的文件】
+app.post("/uploadFile", upload.single("file"), async (req, res) => {
+  const file = req.file;
+  const { funnelId, outcomeId } = req.body;
+
+  if (!file || !funnelId || !outcomeId) {
+    console.error("Missing required file or form fields:", {
+      file: !!file,
+      funnelId,
+      outcomeId,
+    });
+    return res.status(400).send({ error: "Missing required file or form fields." });
+  }
+
+  // 根据 MIME 自动确定文件夹类别
+  const fileTypeFolder = file.mimetype.startsWith("image/")
+    ? "images"
+    : file.mimetype.startsWith("video/")
+    ? "videos"
+    : file.mimetype.startsWith("audio/")
+    ? "audio"
+    : "docs";
+
+  const filePath = `uploads/${fileTypeFolder}/${funnelId}/${outcomeId}/${file.originalname}`;
+  const storageFile = bucket.file(filePath);
+
+  try {
+    await storageFile.save(file.buffer, {
+      metadata: { contentType: file.mimetype },
+      public: true,
+      predefinedAcl: "publicRead",
+    });
+
+    const publicUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(filePath)}?alt=media`;
+    console.log(`✅ File uploaded: ${publicUrl}`);
+
+    res.status(200).send({
+      data: {
+        url: publicUrl,
+        name: file.originalname,
+        type: file.mimetype,
+        size: file.size,
+      },
+    });
+  } catch (error) {
+    console.error("❌ File Upload Failed:", error);
+    res.status(500).send({ error: "Failed to upload file." });
+  }
+});
+
+
+// --- 路由定义：点击追踪 (需要重新添加 JSON Body Parser) ---
+// 由于移除了 app.use(express.json()), 必须只对需要 JSON 的路由使用它
+app.post("/trackClick", express.json(), async (req, res) => {
   // 使用事务来确保读取和写入操作的原子性，避免并发冲突
   const transactionResult = await db.runTransaction(async (transaction) => {
     const { funnelId, questionId, answerId } = req.body.data || {};
