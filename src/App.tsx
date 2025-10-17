@@ -1824,45 +1824,58 @@ const OutcomeSettingsComponent: React.FC<OutcomeSettingsComponentProps> = ({
     );
   };
 
-  // 文件: src/App.tsx (OutcomeSettingsComponent - handleImageUpload)
+  // 文件: src/App.tsx (OutcomeSettingsComponent - // 文件: src/App.tsx (OutcomeSettingsComponent - handleImageUpload)
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, outcomeId: string) => {
+const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, outcomeId: string) => {
     const file = e.target.files?.[0];
     setFileLabel(prev => ({ ...prev, [outcomeId]: file ? file.name : 'No file chosen' }));
 
     if (!file) return;
 
     setUploadingId(outcomeId);
-    
     const storageRef = ref(storage, `funnel-images/${funnelId}/${outcomeId}/${file.name}`);
+
+    // 【新增：读取文件为 Base64 字符串】
+    const reader = new FileReader();
+    reader.readAsDataURL(file); // 读取文件为 data URI
+
+    reader.onloadend = async () => {
+        if (!reader.result) {
+            console.error("FileReader failed to read file.");
+            setUploadingId(null);
+            return;
+        }
+
+        // 提取 Base64 编码部分，并保留 Data URI 前缀，指定上传格式
+        const base64String = reader.result as string; 
+        
+        try {
+            // 【核心修改：使用 uploadString 和 data_url 格式】
+            await uploadString(storageRef, base64String, 'data_url', { 
+                contentType: file.type // 确保设置正确的 MIME 类型
+            });
+
+            // 成功后，获取 URL 并更新 Firestore
+            const downloadURL = await getDownloadURL(storageRef);
+            handleUpdateOutcome(outcomeId, { imageUrl: downloadURL });
+            
+            // 清理状态
+            setUploadingId(null);
+            e.target.value = '';
+
+        } catch (error: any) { 
+            console.error("❌ Image Upload Failed:", error.code || 'UNKNOWN', error.message);
+            // 这里我们使用 alert 来确保您在移动端能看到错误，以防 Debug Console 再次静默
+            alert(`Image Upload Failed. Code: ${error.code || 'UNKNOWN'}. Message: ${error.message}`); 
+            setUploadingId(null);
+        }
+    };
     
-    // 【核心修复区域】: 强制刷新 Auth Token
-    try {
-      
-      
-       // 1. 上传文件 (Firebase Storage SDK 现在应该能自动附带有效 Token)
-      const snapshot = await uploadBytes(storageRef, file);
-      
-      // 2. 获取 URL
-      const downloadURL = await getDownloadURL(snapshot.ref);
-      
-      // 3. 更新 Firestore 状态
-      handleUpdateOutcome(outcomeId, { imageUrl: downloadURL });
-      
-      // 成功后，清除上传状态，并可能显示成功消息
-      setUploadingId(null);
-      e.target.value = '';
-      
-    } catch (error: any) { 
-      // 打印详细错误代码
-      console.error("❌ Image Upload Failed:", error.code || 'UNKNOWN', error.message);
-      
-      setUploadingId(null);
-      
-    } finally {
-      // 移除冗余的 setUploadingId(null) 确保逻辑清晰
-    }
-  };
+    reader.onerror = (e) => {
+        console.error("FileReader error:", e);
+        setUploadingId(null);
+    };
+};
 
   return (
     <div className="link-settings-container">
