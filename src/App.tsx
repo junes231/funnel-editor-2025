@@ -491,7 +491,7 @@ interface FunnelEditorProps {
 }
 
 
-const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, storage, updateFunnelData }) => {
+const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, auth, storage, updateFunnelData }) => {
   const { funnelId } = useParams<{ funnelId: string }>();
   const navigate = useNavigate();
   const location = useLocation(); 
@@ -1823,18 +1823,31 @@ const OutcomeSettingsComponent: React.FC<OutcomeSettingsComponentProps> = ({
     );
   };
 
+  // 文件: src/App.tsx (OutcomeSettingsComponent - handleImageUpload)
+
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, outcomeId: string) => {
     const file = e.target.files?.[0];
     setFileLabel(prev => ({ ...prev, [outcomeId]: file ? file.name : 'No file chosen' }));
+
     if (!file) return;
 
     setUploadingId(outcomeId);
     
-    // [1] 上传逻辑：使用 Firebase Storage SDK
     const storageRef = ref(storage, `funnel-images/${funnelId}/${outcomeId}/${file.name}`);
     
+    // 【核心修复区域】: 强制刷新 Auth Token
     try {
-      // 1. 上传文件
+      const auth = getAuth();
+      const user = auth.currentUser;
+      
+      if (!user) {
+        throw new Error("User not authenticated. Please log in again.");
+      }
+      
+      // 强制刷新令牌，确保上传时携带最新的有效令牌
+      await user.getIdToken(true); 
+
+      // 1. 上传文件 (Firebase Storage SDK 现在应该能自动附带有效 Token)
       const snapshot = await uploadBytes(storageRef, file);
       
       // 2. 获取 URL
@@ -1843,17 +1856,21 @@ const OutcomeSettingsComponent: React.FC<OutcomeSettingsComponentProps> = ({
       // 3. 更新 Firestore 状态
       handleUpdateOutcome(outcomeId, { imageUrl: downloadURL });
       
-      // 清空文件输入
+      // 成功后，清除上传状态，并可能显示成功消息
+      setUploadingId(null);
       e.target.value = '';
- } catch (error: any) { 
-      // 【关键：这行代码会把错误信息打印到 Debug Console】
-      console.error("❌ Image Upload Failed:", error.code, error.message); 
       
-      // 我们依赖这个日志，而不是 alert()
-      // alert(`Image Upload Failed. Code: ${error.code || 'UNKNOWN'}. Please check Debug Console.`); 
+    } catch (error: any) { 
+      // 打印详细错误代码
+      console.error("❌ Image Upload Failed:", error.code || 'UNKNOWN', error.message);
+      
+      // 移除 alert，避免阻塞
+      
+      // 如果上传失败，清除上传状态
+      setUploadingId(null);
       
     } finally {
-      setUploadingId(null);
+      // 移除冗余的 setUploadingId(null) 确保逻辑清晰
     }
   };
 
