@@ -23,7 +23,7 @@ const corsOptions = {
 };
 app.options('*', cors(corsOptions));
 app.use(cors(corsOptions));
-app.use(express.json({ limit: '5mb' })); // <-- [2] 允许更大的请求体来处理图片 Base64
+app.use(express.json({ limit: '25mb' })); // <-- [2] 允许更大的请求体来处理图片 Base64
 
 // --- 路由定义：图片上传代理 ---
 app.post("/uploadImage", async (req, res) => {
