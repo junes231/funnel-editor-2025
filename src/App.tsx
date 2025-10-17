@@ -1845,18 +1845,14 @@ const OutcomeSettingsComponent: React.FC<OutcomeSettingsComponentProps> = ({
       
       // 清空文件输入
       e.target.value = '';
-  } catch (error: any) { 
-      // 【核心修改：打印详细的错误代码和消息】
-      console.error("❌ Image Upload Failed:", error.code, error.message);
+ } catch (error: any) { 
+      // 【关键：这行代码会把错误信息打印到 Debug Console】
+      console.error("❌ Image Upload Failed:", error.code, error.message); 
       
-      // 使用 alert 确保您能看到详细的错误代码
-      alert(`Image Upload Failed. Code: ${error.code || 'UNKNOWN'}. Please check Debug Console.`); 
-      
-      // 如果上传失败，我们还需要清除上传状态
-      setUploadingId(null);
+      // 我们依赖这个日志，而不是 alert()
+      // alert(`Image Upload Failed. Code: ${error.code || 'UNKNOWN'}. Please check Debug Console.`); 
       
     } finally {
-      // 保持 finally 清理上传状态
       setUploadingId(null);
     }
   };
