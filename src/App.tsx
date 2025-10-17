@@ -1815,7 +1815,8 @@ const OutcomeSettingsComponent: React.FC<OutcomeSettingsComponentProps> = ({
   onBack,
 }) => {
   const [uploadingId, setUploadingId] = useState<string | null>(null);
-
+  const [fileLabel, setFileLabel] = useState<Record<string, string>>({}); // <--- 新增状态：存储文件名
+  const fileInputRef = useRef<Record<string, HTMLInputElement | null>>({});
   const handleUpdateOutcome = (id: string, updates: Partial<FunnelOutcome>) => {
     setOutcomes(prev =>
       prev.map(o => (o.id === id ? { ...o, ...updates } : o))
@@ -1824,6 +1825,7 @@ const OutcomeSettingsComponent: React.FC<OutcomeSettingsComponentProps> = ({
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, outcomeId: string) => {
     const file = e.target.files?.[0];
+    setFileLabel(prev => ({ ...prev, [outcomeId]: file ? file.name : 'No file chosen' }));
     if (!file) return;
 
     setUploadingId(outcomeId);
@@ -1900,15 +1902,35 @@ const OutcomeSettingsComponent: React.FC<OutcomeSettingsComponentProps> = ({
             {outcome.imageUrl && (
               <img src={outcome.imageUrl} alt="Result Preview" style={{ maxWidth: '100%', maxHeight: '150px', display: 'block', margin: '10px 0', border: '1px solid #ccc' }} />
             )}
-            <input
-              type="file"
-              accept="image/*"
-              onChange={(e) => handleImageUpload(e, outcome.id)}
-              disabled={uploadingId === outcome.id}
-            />
+            
+            {/* 👇👇👇 使用自定义文件上传 UI 替换原生输入框 👇👇👇 */}
+            <div className="file-upload-wrapper">
+                <button 
+                    className="custom-file-button"
+                    onClick={() => fileInputRef.current[outcome.id]?.click()} // 点击自定义按钮触发隐藏的 input
+                    disabled={uploadingId === outcome.id}
+                >
+                    {uploadingId === outcome.id ? 'Uploading...' : 'Select File'}
+                </button>
+                <span className="file-name-display">
+                    {fileLabel[outcome.id] || 'No file chosen'}
+                </span>
+                
+                {/* 隐藏的原生文件输入框 */}
+                <input
+                    type="file"
+                    accept="image/*"
+                    ref={el => fileInputRef.current[outcome.id] = el}
+                    onChange={(e) => handleImageUpload(e, outcome.id)}
+                    disabled={uploadingId === outcome.id}
+                    className="file-upload-input" // 应用隐藏样式
+                />
+            </div>
+            {/* 👆👆👆 自定义文件上传 UI 结束 👆👆👆 */}
+
             {uploadingId === outcome.id && <p style={{color: '#007bff', fontSize: '0.9em'}}>Uploading image...</p>}
             
-             <OptimizedTextInput
+            <OptimizedTextInput
               initialValue={outcome.imageUrl}
               onUpdate={(v) => handleUpdateOutcome(outcome.id, { imageUrl: v })}
               placeholder="Or paste an external URL"
