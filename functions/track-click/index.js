@@ -7,10 +7,14 @@ const { Buffer } = require('node:buffer');
 
 // --- Firebase 初始化 ---
 if (!admin.apps.length) {
-  admin.initializeApp();
+  // 【修改点 A：显式指定 storageBucket 名称】
+  admin.initializeApp({
+      storageBucket: 'funnel-editor-netlify.appspot.com' 
+  });
 }
 const db = admin.firestore();
-const bucket = admin.storage().bucket(); // <-- [1] 确保获取了 Storage 桶
+// 【修改点 B：显式指定 bucket() 名称，确保引用正确】
+const bucket = admin.storage().bucket('funnel-editor-netlify.appspot.com');// <-- [1] 确保获取了 Storage 桶
 
 // --- Express 应用创建 ---
 const app = express();
