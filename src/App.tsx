@@ -1837,17 +1837,21 @@ const OutcomeSettingsComponent: React.FC<OutcomeSettingsComponentProps> = ({
       // 1. 上传文件
       const snapshot = await uploadBytes(storageRef, file);
       
-      // 2. 获取可公开访问的 URL
+      // 2. 获取 URL
       const downloadURL = await getDownloadURL(snapshot.ref);
       
-      // 3. 更新 Firestore 状态（仅存储 URL 字符串）
+      // 3. 更新 Firestore 状态
       handleUpdateOutcome(outcomeId, { imageUrl: downloadURL });
       
       // 清空文件输入
       e.target.value = '';
-    } catch (error) {
-      console.error("Error uploading image:", error);
-      // setNotification({ message: '图片上传失败', type: 'error' });
+    } catch (error: any) { // <-- 捕获错误并打印
+      console.error("❌ Image Upload Failed:", error.code, error.message);
+      
+      // 【新增：如果失败，显示通知】
+      // 您可能需要将 App.tsx 顶部的 showNotification 函数传递到 FunnelEditor 组件，这里暂时跳过 UI 通知
+      console.log(`Image Upload Failed. Code: ${error.code}. Message: ${error.message}`); 
+      
     } finally {
       setUploadingId(null);
     }
