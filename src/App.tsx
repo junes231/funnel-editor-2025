@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, User, signOut } from 'firebase/auth';
 import { FunnelData, FunnelComponent, Answer, Question, FunnelOutcome } from './types/funnel.ts'; 
 import debounce from 'lodash.debounce'; 
 import { getFirestore } from 'firebase/firestore';
-import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject, uploadString } from 'firebase/storage';
 import QuizPlayer from './components/QuizPlayer.tsx';
 import ResetPage from './pages/reset.tsx';
 import LoginPage from "./pages/Login.tsx";
