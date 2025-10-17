@@ -1845,14 +1845,18 @@ const OutcomeSettingsComponent: React.FC<OutcomeSettingsComponentProps> = ({
       
       // 清空文件输入
       e.target.value = '';
-    } catch (error: any) { // <-- 捕获错误并打印
+  } catch (error: any) { 
+      // 【核心修改：打印详细的错误代码和消息】
       console.error("❌ Image Upload Failed:", error.code, error.message);
       
-      // 【新增：如果失败，显示通知】
-      // 您可能需要将 App.tsx 顶部的 showNotification 函数传递到 FunnelEditor 组件，这里暂时跳过 UI 通知
-      console.log(`Image Upload Failed. Code: ${error.code}. Message: ${error.message}`); 
+      // 使用 alert 确保您能看到详细的错误代码
+      alert(`Image Upload Failed. Code: ${error.code || 'UNKNOWN'}. Please check Debug Console.`); 
+      
+      // 如果上传失败，我们还需要清除上传状态
+      setUploadingId(null);
       
     } finally {
+      // 保持 finally 清理上传状态
       setUploadingId(null);
     }
   };
