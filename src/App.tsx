@@ -1838,32 +1838,26 @@ const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, outcome
     
     // 🚨 使用 Cloud Run URL 作为后端代理上传的地址
     // 注意：这里我们使用 /uploadImage 路由
-    const uploadApiUrl = `${process.env.REACT_APP_TRACK_CLICK_URL.replace(/\/trackClick$/, '')}/uploadFile`; 
-    
-    try {
-        // 【核心修改：使用 FormData 发送文件】
-        const formData = new FormData();
-        formData.append("file", file); // <-- 名称要和 multer.single("file") 对应
-        formData.append("funnelId", funnelId);
-       formData.append("outcomeId", outcomeId);
-        
-        // 3. 发送给后端代理 (浏览器会自动设置 Content-Type: multipart/form-data)
-        const response = await fetch(uploadApiUrl, {
-            method: 'POST',
-            body: formData,
-            // ⚠️ 重点：不要设置 'Content-Type': 'multipart/form-data'，让浏览器自动处理边界
-        });
+    const uploadApiUrl = `${process.env.REACT_APP_TRACK_CLICK_URL.replace(/\/trackClick$/, '')}/uploadFile`;
 
-        if (!response.ok) {
-            const errorBody = await response.text();
-            throw new Error(`Backend upload failed: Status ${response.status}. Response: ${errorBody}`);
-        }
+  try {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("funnelId", funnelId); // 确保 funnelId 在作用域
+    formData.append("outcomeId", outcomeId);
 
-        const result = await response.json();
-        const downloadURL = result.data.url; // 获取后端返回的公开 URL
+    const response = await fetch(uploadApiUrl, { method: "POST", body: formData });
 
-        // 4. 更新 Firestore 状态
-        handleUpdateOutcome(outcomeId, { fileUrl: downloadURL });
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`Upload failed: ${text}`);
+    }
+
+    const result = await response.json();
+    const downloadURL = result.data.url;
+
+    // 更新 Firestore
+    handleUpdateOutcome(outcomeId, { fileUrl: downloadURL });
         
         // 清理状态
         setUploadingId(null);
