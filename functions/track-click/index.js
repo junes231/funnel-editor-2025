@@ -42,8 +42,8 @@ app.post("/uploadFile", upload.single("file"), async (req, res) => {
 
   // --- 1️⃣ 基础验证 ---
   if (!file || !funnelId || !outcomeId) {
-    console.error("Missing required file or form fields:", {
-      file: !!file,
+    console.error("❌ Missing required fields:", {
+      hasFile: !!file,
       funnelId,
       outcomeId,
     });
@@ -52,20 +52,16 @@ app.post("/uploadFile", upload.single("file"), async (req, res) => {
 
   // --- 2️⃣ 文件类型白名单 ---
   const allowedMimeTypes = [
-    // 图片
     "image/png", "image/jpeg", "image/webp", "image/gif",
-    // 文档
     "application/pdf",
     "application/msword",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     "application/vnd.ms-excel",
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     "text/plain",
-    // 压缩包
     "application/zip",
     "application/x-zip-compressed",
     "application/x-rar-compressed",
-    // 视频 / 音频
     "video/mp4",
     "audio/mpeg",
     "audio/wav"
@@ -79,31 +75,33 @@ app.post("/uploadFile", upload.single("file"), async (req, res) => {
     });
   }
 
-  // --- 3️⃣ 分类路径 ---
-  let fileTypeFolder = "others";
-  if (file.mimetype.startsWith("image/")) fileTypeFolder = "images";
-  else if (file.mimetype.startsWith("video/")) fileTypeFolder = "videos";
-  else if (file.mimetype.startsWith("audio/")) fileTypeFolder = "audio";
+  // --- 3️⃣ 自动分类 ---
+  let folder = "others";
+  if (file.mimetype.startsWith("image/")) folder = "images";
+  else if (file.mimetype.startsWith("video/")) folder = "videos";
+  else if (file.mimetype.startsWith("audio/")) folder = "audio";
   else if (file.mimetype.includes("pdf") || file.mimetype.includes("word") || file.mimetype.includes("excel"))
-    fileTypeFolder = "docs";
+    folder = "docs";
   else if (file.mimetype.includes("zip") || file.mimetype.includes("rar"))
-    fileTypeFolder = "archives";
+    folder = "archives";
 
-  // --- 4️⃣ 自动重命名文件 ---
+  // --- 4️⃣ 自动重命名 ---
   const timestamp = Date.now();
   const ext = file.originalname.includes('.') ? file.originalname.split('.').pop() : '';
-  const safeFileName = ext ? `${timestamp}-${file.originalname.replace(/[^\w.-]/g, '_')}` : `${timestamp}-${file.originalname}`;
+  const safeFileName = ext
+    ? `${timestamp}-${file.originalname.replace(/[^\w.-]/g, '_')}`
+    : `${timestamp}-${file.originalname}`;
 
   // --- 5️⃣ 构造路径 ---
-  const filePath = `uploads/${fileTypeFolder}/${funnelId}/${outcomeId}/${safeFileName}`;
+  const filePath = `uploads/${folder}/${funnelId}/${outcomeId}/${safeFileName}`;
   const storageFile = bucket.file(filePath);
 
-  // --- 6️⃣ 上传文件 ---
+  // --- 6️⃣ 上传 ---
   try {
     await storageFile.save(file.buffer, {
       metadata: { contentType: file.mimetype },
       public: true,
-      predefinedAcl: "publicRead", // 公共访问，可根据需求改为私有
+      predefinedAcl: "publicRead",
     });
 
     const publicUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(filePath)}?alt=media`;
@@ -111,14 +109,14 @@ app.post("/uploadFile", upload.single("file"), async (req, res) => {
     console.log(`✅ Uploaded: ${safeFileName} (${file.mimetype})`);
     console.log(`🌐 URL: ${publicUrl}`);
 
-    // --- 7️⃣ 返回上传结果 ---
+    // --- 7️⃣ 返回结果 ---
     res.status(200).send({
       data: {
         url: publicUrl,
         name: safeFileName,
         type: file.mimetype,
         size: file.size,
-        folder: fileTypeFolder,
+        folder,
       },
     });
   } catch (error) {
