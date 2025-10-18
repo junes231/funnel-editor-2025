@@ -36,12 +36,12 @@ const upload = multer({
 
 // --- 路由定义：图片上传代理 (Multipart/form-data) ---
 // 【4. 使用 Multer 中间件处理单个名为 'image' 的文件】
-app.post("/uploadFile", upload.single("file"), async (req, res) => {
-  const file = req.file;
-  const { funnelId, outcomeId } = req.body;
+app.post("/uploadImage", upload.single("image"), async (req, res) => { // <-- Multer 字段名改为 "image"
+  const file = req.file; // <-- 修正：从 req.file 获取文件对象
+  const { funnelId, outcomeId } = req.body; // <-- 修正：从 req.body 获取文本字段
 
   // --- 1️⃣ 基础验证 ---
-  if (!file || !funnelId || !outcomeId) {
+  if (!file || !funnelId || !outcomeId) { // <-- 修正：使用标准的 JS 语法 (if, !, ||)
     console.error("❌ Missing required fields:", {
       hasFile: !!file,
       funnelId,
@@ -50,24 +50,16 @@ app.post("/uploadFile", upload.single("file"), async (req, res) => {
     return res.status(400).send({ error: "Missing required file or form fields." });
   }
 
-  // --- 2️⃣ 文件类型白名单 ---
+  // --- 2️⃣ 文件类型白名单 (保留，并修正语法) ---
   const allowedMimeTypes = [
     "image/png", "image/jpeg", "image/webp", "image/gif",
-    "application/pdf",
-    "application/msword",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    "application/vnd.ms-excel",
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    "text/plain",
-    "application/zip",
-    "application/x-zip-compressed",
-    "application/x-rar-compressed",
-    "video/mp4",
-    "audio/mpeg",
-    "audio/wav"
+    "application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.ms-excel", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "text/plain", "application/zip", "application/x-zip-compressed", 
+    "application/x-rar-compressed", "video/mp4", "audio/mpeg", "audio/wav"
   ];
 
-  if (!allowedMimeTypes.includes(file.mimetype)) {
+  if (!allowedMimeTypes.includes(file.mimetype)) { // <-- 修正：使用标准的 if 语法
     console.warn(`🚫 Blocked unsupported file type: ${file.mimetype}`);
     return res.status(400).send({
       error: `Unsupported file type: ${file.mimetype}`,
@@ -75,7 +67,7 @@ app.post("/uploadFile", upload.single("file"), async (req, res) => {
     });
   }
 
-  // --- 3️⃣ 自动分类 ---
+  // --- 3️⃣ 自动分类 (保留，并修正语法) ---
   let folder = "others";
   if (file.mimetype.startsWith("image/")) folder = "images";
   else if (file.mimetype.startsWith("video/")) folder = "videos";
@@ -85,20 +77,20 @@ app.post("/uploadFile", upload.single("file"), async (req, res) => {
   else if (file.mimetype.includes("zip") || file.mimetype.includes("rar"))
     folder = "archives";
 
-  // --- 4️⃣ 自动重命名 ---
-  const timestamp = Date.now();
+  // --- 4️⃣ 自动重命名 (修正语法) ---
+  const timestamp = Date.now(); // <-- 修正：const
   const ext = file.originalname.includes('.') ? file.originalname.split('.').pop() : '';
   const safeFileName = ext
     ? `${timestamp}-${file.originalname.replace(/[^\w.-]/g, '_')}`
-    : `${timestamp}-${file.originalname}`;
+    : `${timestamp}-${file.originalname}`; // <-- 修正：三元运算符和模板字符串
 
   // --- 5️⃣ 构造路径 ---
-  const filePath = `uploads/${folder}/${funnelId}/${outcomeId}/${safeFileName}`;
-  const storageFile = bucket.file(filePath);
+  const filePath = `uploads/${folder}/${funnelId}/${outcomeId}/${safeFileName}`; // <-- 修正：使用英文变量 filePath
+  const storageFile = bucket.file(filePath); // <-- 修正：使用英文变量 storageFile
 
-  // --- 6️⃣ 上传 ---
+  // --- 6️⃣ 上传 (修正语法) ---
   try {
-    await storageFile.save(file.buffer, {
+    await storageFile.save(file.buffer, { // <-- 修正：await/save/buffer
       metadata: { contentType: file.mimetype },
       public: true,
       predefinedAcl: "publicRead",
@@ -109,24 +101,24 @@ app.post("/uploadFile", upload.single("file"), async (req, res) => {
     console.log(`✅ Uploaded: ${safeFileName} (${file.mimetype})`);
     console.log(`🌐 URL: ${publicUrl}`);
 
-    // --- 7️⃣ 返回结果 ---
+    // --- 7️⃣ 返回结果 (修正语法) ---
     res.status(200).send({
       data: {
-        url: publicUrl,
+        url: publicUrl, // <-- 修正：使用 url
         name: safeFileName,
         type: file.mimetype,
         size: file.size,
         folder,
       },
     });
-  } catch (error) {
+  } catch (error) { // <-- 修正：catch 语法
     console.error("❌ File Upload Failed:", error);
     res.status(500).send({ error: "Failed to upload file to Storage." });
   }
 });
 
 
-// --- 路由定义：点击追踪 (需要重新添加 JSON Body Parser) ---
+
 // 由于移除了 app.use(express.json()), 必须只对需要 JSON 的路由使用它
 app.post("/trackClick", express.json(), async (req, res) => {
   // 使用事务来确保读取和写入操作的原子性，避免并发冲突
