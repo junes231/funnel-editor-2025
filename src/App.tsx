@@ -1838,7 +1838,7 @@ const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, outcome
     
     // 🚨 使用 Cloud Run URL 作为后端代理上传的地址
     // 注意：这里我们使用 /uploadImage 路由
-    const uploadApiUrl = `${process.env.REACT_APP_TRACK_CLICK_URL.replace(/\/trackClick$/, '')}/uploadImage`; 
+    const uploadApiUrl = `${process.env.REACT_APP_TRACK_CLICK_URL.replace(/\/trackClick$/, '')}/uploadFile`; 
     
     try {
         // 【核心修改：使用 FormData 发送文件】
