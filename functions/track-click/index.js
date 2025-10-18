@@ -36,44 +36,6 @@ const upload = multer({
 
 // --- 路由定义：图片上传代理 (Multipart/form-data) ---
 // 【4. 使用 Multer 中间件处理单个名为 'image' 的文件】
-console.log("⚡ track-click API Server starting...");
-
-const express = require("express");
-const admin = require("firebase-admin");
-const cors = require("cors");
-const multer = require('multer'); // <-- 【1. 导入 multer】
-const { Buffer } = require('node:buffer');
-
-// --- Firebase 初始化 ---
-if (!admin.apps.length) {
-  admin.initializeApp({
-      // 显式指定 Storage Bucket 名称
-      storageBucket: 'funnel-editor-netlify.appspot.com' 
-  });
-}
-const db = admin.firestore();
-const bucket = admin.storage().bucket('funnel-editor-netlify.appspot.com'); 
-
-// --- Express 应用创建 ---
-const app = express();
-
-// --- CORS 中间件 ---
-const corsOptions = {
-  origin: "*",
-  methods: "GET,POST,OPTIONS",
-  allowedHeaders: "Content-Type,Authorization",
-};
-app.options('*', cors(corsOptions));
-app.use(cors(corsOptions));
-
-// 【3. 配置 Multer：使用内存存储，以获取文件 Buffer】
-const upload = multer({ 
-    storage: multer.memoryStorage(), 
-    limits: { fileSize: 25 * 1024 * 1024 } // 限制文件大小为 25MB 
-});
-
-// --- 路由定义：图片上传代理 (Multipart/form-data) ---
-// 【4. 使用 Multer 中间件处理单个名为 'image' 的文件】
 app.post("/uploadImage", upload.single("image"), async (req, res) => { // <-- Multer 字段名改为 "image"
   const file = req.file; // <-- 修正：从 req.file 获取文件对象
   const { funnelId, outcomeId } = req.body; // <-- 修正：从 req.body 获取文本字段
