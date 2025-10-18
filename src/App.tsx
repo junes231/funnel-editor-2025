@@ -1824,49 +1824,46 @@ const OutcomeSettingsComponent: React.FC<OutcomeSettingsComponentProps> = ({
     );
   };
 
-// 文件: src/App.tsx (OutcomeSettingsComponent - handleImageUpload)
+const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, outcomeId: string) => { // <-- 修正：参数名应为 outcomeId
+  const file = e.target.files?.[0]; // <-- 修正：使用英文变量 file
+  setFileLabel(prev => ({ ...prev, [outcomeId]: file ? file.name : 'No file chosen' }));
 
-  // 文件: src/App.tsx (OutcomeSettingsComponent - handleImageUpload)
+  if (!file) return; // <-- 修正：使用标准 if 语法
 
-const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, outcomeId: string) => {
-    const file = e.target.files?.[0];
-    setFileLabel(prev => ({ ...prev, [outcomeId]: file ? file.name : 'No file chosen' }));
+  setUploadingId(outcomeId);
+  
+  // 🚨 使用 Cloud Run URL 作为代理上传的地址
+  // 【关键修正：使用后端路由名称 /uploadImage】
+  const uploadApiUrl = `${process.env.REACT_APP_TRACK_CLICK_URL.replace(/\/trackClick$/, '')}/uploadImage`; 
 
-    if (!file) return;
-
-    setUploadingId(outcomeId);
-    
-    // 🚨 使用 Cloud Run URL 作为后端代理上传的地址
-    // 注意：这里我们使用 /uploadImage 路由
-    const uploadApiUrl = `${process.env.REACT_APP_TRACK_CLICK_URL.replace(/\/trackClick$/, '')}/uploadFile`;
-
-  try {
+  try { // <-- 修正：使用标准 try 语法
     const formData = new FormData();
-    formData.append("file", file);
-    formData.append("funnelId", funnelId); // 确保 funnelId 在作用域
+    // 【关键修正：Multer 字段名必须是 'image'】
+    formData.append("image", file); 
+    formData.append("funnelId", funnelId); // <-- 确保 funnelId 在作用域内
     formData.append("outcomeId", outcomeId);
 
-    const response = await fetch(uploadApiUrl, { method: "POST", body: formData });
+    const response = await fetch(uploadApiUrl, { method: "POST", body: formData }); // <-- 修正：使用标准 await fetch 语法
 
-    if (!response.ok) {
+    if (!response.ok) { // <-- 修正：使用标准 if 语法
       const text = await response.text();
-      throw new Error(`Upload failed: ${text}`);
+      throw new Error(`Upload failed: ${text}`); // <-- 修正：使用标准 throw 语法
     }
 
     const result = await response.json();
-    const downloadURL = result.data.url;
+    const downloadURL = result.data.url; // <-- 修正：获取后端返回的 url
 
-    // 更新 Firestore
-    handleUpdateOutcome(outcomeId, { fileUrl: downloadURL });
+    // 更新 Firestore (修正：将 fileUrl 修正为 imageUrl)
+    handleUpdateOutcome(outcomeId, { imageUrl: downloadURL }); // <-- 修正：使用正确的 property name
         
-        // 清理状态
-        setUploadingId(null);
-        e.target.value = '';
+    // 清理状态
+    setUploadingId(null);
+    e.target.value = ''; // <-- 修正：使用标准 JS 赋值
 
-    } catch (error: any) { 
-        console.error("❌ Multer Proxy Upload Error:", error.message);
-        console.log(`Image Upload Failed. Message: ${error.message}`); 
-        setUploadingId(null);
+    } catch (error: any) { // <-- 修正：使用标准 catch 语法
+      console.error("❌ Multer Proxy Upload Error:", error.message);
+      console.log(`Image Upload Failed. Message: ${error.message}`); 
+      setUploadingId(null);
     }
 };
 
