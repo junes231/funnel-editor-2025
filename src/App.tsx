@@ -1824,44 +1824,48 @@ const OutcomeSettingsComponent: React.FC<OutcomeSettingsComponentProps> = ({
     );
   };
 
-const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, outcomeId: string) => { // <-- 修正：参数名应为 outcomeId
-  const file = e.target.files?.[0]; // <-- 修正：使用英文变量 file
+// 文件: src/App.tsx (handleImageUpload 函数)
+
+const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, outcomeId: string) => {
+  const file = e.target.files?.[0]; // 修正：使用英文变量 file
   setFileLabel(prev => ({ ...prev, [outcomeId]: file ? file.name : 'No file chosen' }));
 
-  if (!file) return; // <-- 修正：使用标准 if 语法
+  if (!file) return; 
 
   setUploadingId(outcomeId);
+    
   
-  // 🚨 使用 Cloud Run URL 作为代理上传的地址
-  // 【关键修正：使用后端路由名称 /uploadImage】
+  // 修正：确保路由名称是 /uploadImage
   const uploadApiUrl = `${process.env.REACT_APP_TRACK_CLICK_URL.replace(/\/trackClick$/, '')}/uploadImage`; 
 
-  try { // <-- 修正：使用标准 try 语法
+  try { 
     const formData = new FormData();
-    // 【关键修正：Multer 字段名必须是 'image'】
+    // 修正：Multer 字段名必须是 "image"
     formData.append("image", file); 
-    formData.append("funnelId", funnelId); // <-- 确保 funnelId 在作用域内
+    // 修正：确保 funnelId 在作用域内 (假设它在 FunnelEditor props 中)
+    formData.append("funnelId", funnelId); 
     formData.append("outcomeId", outcomeId);
 
-    const response = await fetch(uploadApiUrl, { method: "POST", body: formData }); // <-- 修正：使用标准 await fetch 语法
+    const response = await fetch(uploadApiUrl, { method: "POST", body: formData }); // 修正：使用标准 fetch
 
-    if (!response.ok) { // <-- 修正：使用标准 if 语法
+    if (!response.ok) { 
       const text = await response.text();
-      throw new Error(`Upload failed: ${text}`); // <-- 修正：使用标准 throw 语法
+      throw new Error(`Upload failed: ${text}`); // 修正：使用标准 throw 语法
     }
 
     const result = await response.json();
-    const downloadURL = result.data.url; // <-- 修正：获取后端返回的 url
+    const downloadURL = result.data.url; // 修正：获取后端返回的 url
 
-    // 更新 Firestore (修正：将 fileUrl 修正为 imageUrl)
-    handleUpdateOutcome(outcomeId, { imageUrl: downloadURL }); // <-- 修正：使用正确的 property name
+    // 更新 Firestore (修正：属性名应为 imageUrl)
+    handleUpdateOutcome(outcomeId, { imageUrl: downloadURL }); 
         
     // 清理状态
     setUploadingId(null);
-    e.target.value = ''; // <-- 修正：使用标准 JS 赋值
+    e.target.value = '';
 
-    } catch (error: any) { // <-- 修正：使用标准 catch 语法
+    } catch (error: any) { 
       console.error("❌ Multer Proxy Upload Error:", error.message);
+      // 修正：打印详细信息，以便在 Debug Console 中查看
       console.log(`Image Upload Failed. Message: ${error.message}`); 
       setUploadingId(null);
     }
