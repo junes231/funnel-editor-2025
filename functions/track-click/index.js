@@ -3,17 +3,17 @@ console.log("⚡ track-click API Server starting...");
 const express = require("express");
 const admin = require("firebase-admin");
 const cors = require("cors");
-const multer = require('multer'); // <-- 【1. 导入 multer】
-const { Buffer } = require('node:buffer');
+// 移除 Multer 依赖，因为不再需要服务器处理文件上传
 
 // --- Firebase 初始化 ---
 if (!admin.apps.length) {
   admin.initializeApp({
-      // 显式指定 Storage Bucket 名称
+      // 【修正点 1】: 使用正确的 Firebase Storage 存储桶名称
       storageBucket: 'funnel-editor-netlify.firebasestorage.app' 
   });
 }
 const db = admin.firestore();
+// 【修正点 2】: 使用正确的存储桶名称
 const bucket = admin.storage().bucket('funnel-editor-netlify.firebasestorage.app'); 
 
 // --- Express 应用创建 ---
@@ -27,100 +27,93 @@ const corsOptions = {
 };
 app.options('*', cors(corsOptions));
 app.use(cors(corsOptions));
+// 启用 JSON 解析，因为 /generateUploadUrl 将接收 JSON
+app.use(express.json());
 
-// 【3. 配置 Multer：使用内存存储，以获取文件 Buffer】
-const upload = multer({ 
-    storage: multer.memoryStorage(), 
-    limits: { fileSize: 25 * 1024 * 1024 } // 限制文件大小为 25MB 
-});
 
-// --- 路由定义：图片上传代理 (Multipart/form-data) ---
-// 【4. 使用 Multer 中间件处理单个名为 'image' 的文件】
-app.post("/uploadImage", upload.single("image"), async (req, res) => { // <-- Multer 字段名改为 "image"
-  const file = req.file; // <-- 修正：从 req.file 获取文件对象
-  const { funnelId, outcomeId } = req.body; // <-- 修正：从 req.body 获取文本字段
+// ====================================================================
+// 【新增路由】: 生成预签名上传 URL (Presigned URL)
+// ====================================================================
+app.post("/generateUploadUrl", async (req, res) => {
+    // 请求体中包含文件信息 (注意：不再是 req.file，而是 req.body.data)
+    const { funnelId, outcomeId, fileName, fileType } = req.body.data || {};
 
-  // --- 1️⃣ 基础验证 ---
-  if (!file || !funnelId || !outcomeId) { // <-- 修正：使用标准的 JS 语法 (if, !, ||)
-    console.error("❌ Missing required fields:", {
-      hasFile: !!file,
-      funnelId,
-      outcomeId,
-    });
-    return res.status(400).send({ error: "Missing required file or form fields." });
-  }
+    // --- 1️⃣ 基础验证 ---
+    if (!funnelId || !outcomeId || !fileName || !fileType) {
+        return res.status(400).send({ 
+            error: "Missing required file info (funnelId, outcomeId, fileName, fileType)." 
+        });
+    }
 
-  // --- 2️⃣ 文件类型白名单 (保留，并修正语法) ---
-  const allowedMimeTypes = [
-    "image/png", "image/jpeg", "image/webp", "image/gif",
-    "application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    "application/vnd.ms-excel", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    "text/plain", "application/zip", "application/x-zip-compressed", 
-    "application/x-rar-compressed", "video/mp4", "audio/mpeg", "audio/wav"
-  ];
+    // --- 2️⃣ 文件类型白名单和自动分类 (基于 fileType 重新实现) ---
+    const allowedMimeTypes = [
+        "image/png", "image/jpeg", "image/webp", "image/gif",
+        "application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/vnd.ms-excel", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "text/plain", "application/zip", "application/x-zip-compressed", 
+        "application/x-rar-compressed", "video/mp4", "audio/mpeg", "audio/wav"
+    ];
 
-  if (!allowedMimeTypes.includes(file.mimetype)) { // <-- 修正：使用标准的 if 语法
-    console.warn(`🚫 Blocked unsupported file type: ${file.mimetype}`);
-    return res.status(400).send({
-      error: `Unsupported file type: ${file.mimetype}`,
-      allowed: allowedMimeTypes,
-    });
-  }
+    if (!allowedMimeTypes.includes(fileType)) {
+        console.warn(`🚫 Blocked unsupported file type: ${fileType}`);
+        return res.status(400).send({
+            error: `Unsupported file type: ${fileType}.`,
+        });
+    }
 
-  // --- 3️⃣ 自动分类 (保留，并修正语法) ---
-  let folder = "others";
-  if (file.mimetype.startsWith("image/")) folder = "images";
-  else if (file.mimetype.startsWith("video/")) folder = "videos";
-  else if (file.mimetype.startsWith("audio/")) folder = "audio";
-  else if (file.mimetype.includes("pdf") || file.mimetype.includes("word") || file.mimetype.includes("excel"))
-    folder = "docs";
-  else if (file.mimetype.includes("zip") || file.mimetype.includes("rar"))
-    folder = "archives";
+    // --- 3️⃣ 自动分类 (基于 fileType 重新实现) ---
+    let folder = "others";
+    if (fileType.startsWith("image/")) folder = "images";
+    else if (fileType.startsWith("video/")) folder = "videos";
+    else if (fileType.startsWith("audio/")) folder = "audio";
+    else if (fileType.includes("pdf") || fileType.includes("word") || fileType.includes("excel"))
+        folder = "docs";
+    else if (fileType.includes("zip") || fileType.includes("rar"))
+        folder = "archives";
+    
+    // --- 4️⃣ 自动重命名和构造路径 (使用 fileName 代替 file.originalname) ---
+    const timestamp = Date.now();
+    const ext = fileName.includes('.') ? fileName.split('.').pop() : '';
+    const safeFileName = ext
+        ? `${timestamp}-${fileName.replace(/[^\w.-]/g, '_')}`
+        : `${timestamp}-${fileName}`;
 
-  // --- 4️⃣ 自动重命名 (修正语法) ---
-  const timestamp = Date.now(); // <-- 修正：const
-  const ext = file.originalname.includes('.') ? file.originalname.split('.').pop() : '';
-  const safeFileName = ext
-    ? `${timestamp}-${file.originalname.replace(/[^\w.-]/g, '_')}`
-    : `${timestamp}-${file.originalname}`; // <-- 修正：三元运算符和模板字符串
+    const filePath = `uploads/${folder}/${funnelId}/${outcomeId}/${safeFileName}`;
+    const file = bucket.file(filePath);
 
-  // --- 5️⃣ 构造路径 ---
-  const filePath = `uploads/${folder}/${funnelId}/${outcomeId}/${safeFileName}`; // <-- 修正：使用英文变量 filePath
-  const storageFile = bucket.file(filePath); // <-- 修正：使用英文变量 storageFile
+    try {
+        // 生成预签名 URL (设置为 PUT 方法，用于直接上传)
+        const [uploadUrl] = await file.getSignedUrl({
+            action: 'write',
+            expires: Date.now() + 60 * 1000, // 链接有效期 1 分钟 (60秒)
+            contentType: fileType, // 必须匹配前端上传时的 Content-Type
+        });
+        
+        // 构造最终文件的公共 URL
+        const publicFileUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(filePath)}?alt=media`;
 
-  // --- 6️⃣ 上传 (修正语法) ---
-  try {
-    await storageFile.save(file.buffer, { // <-- 修正：await/save/buffer
-      metadata: { contentType: file.mimetype },
-      public: true,
-      predefinedAcl: "publicRead",
-    });
-
-    const publicUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(filePath)}?alt=media`;
-
-    console.log(`✅ Uploaded: ${safeFileName} (${file.mimetype})`);
-    console.log(`🌐 URL: ${publicUrl}`);
-
-    // --- 7️⃣ 返回结果 (修正语法) ---
-    res.status(200).send({
-      data: {
-        url: publicUrl, // <-- 修正：使用 url
-        name: safeFileName,
-        type: file.mimetype,
-        size: file.size,
-        folder,
-      },
-  } catch (error) {
-  console.error("❌ File Upload Failed:");
-  console.error("Error Message:", error.message);
-  console.error("Error Code:", error.code);
-  console.error("Full Error Object:", JSON.stringify(error, null, 2));
-
-  res.status(500).send({ 
-    error: "Failed to upload file to Storage.", 
-    details: error.message || error 
-  });
-}
+        console.log(`✅ Signed URL generated for: ${fileName}`);
+        
+        // 返回给前端的上传链接和最终公共链接
+        res.status(200).send({
+            data: {
+                uploadUrl: uploadUrl,     // 前端将文件 PUT 到此 URL
+                fileUrl: publicFileUrl // 存储到 Firestore 的最终 URL
+            }
+        });
+    } catch (error) {
+        // 捕获权限或其他错误 (如果权限配置错误，这里会失败)
+        let errorMessage = "Failed to generate signed URL.";
+        if (error.code === 403) {
+            errorMessage = "Permission Denied: Cloud Run service account must have 'Storage Object Admin' and 'Service Account Token Creator' roles.";
+        }
+        
+        console.error("❌ Failed to generate signed URL:", error);
+        res.status(500).send({ 
+            error: errorMessage,
+            details: error.message || error 
+        });
+    }
 });
 
 // 由于移除了 app.use(express.json()), 必须只对需要 JSON 的路由使用它
