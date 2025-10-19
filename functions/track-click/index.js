@@ -10,11 +10,11 @@ const { Buffer } = require('node:buffer');
 if (!admin.apps.length) {
   admin.initializeApp({
       // 显式指定 Storage Bucket 名称
-      storageBucket: 'funnel-editor-netlify.appspot.com' 
+      storageBucket: 'funnel-editor-netlify.firebasestorage.app' 
   });
 }
 const db = admin.firestore();
-const bucket = admin.storage().bucket('funnel-editor-netlify.appspot.com'); 
+const bucket = admin.storage().bucket('funnel-editor-netlify.firebasestorage.app'); 
 
 // --- Express 应用创建 ---
 const app = express();
