@@ -1849,9 +1849,10 @@ const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, outcome
     const response = await fetch(uploadApiUrl, { method: "POST", body: formData }); // 修正：使用标准 fetch
 
     if (!response.ok) { 
-      const text = await response.text();
-      throw new Error(`Upload failed: ${text}`); // 修正：使用标准 throw 语法
-    }
+  const text = await response.text();
+  console.error("Upload failed response:", text);
+  throw new Error(`Upload failed: ${text}`);
+}
 
     const result = await response.json();
     const downloadURL = result.data.url; // 修正：获取后端返回的 url
