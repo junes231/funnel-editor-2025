@@ -110,17 +110,16 @@ app.post("/uploadImage", upload.single("image"), async (req, res) => { // <-- Mu
         size: file.size,
         folder,
       },
-    });
- } catch (error) { 
-    // 【核心修改：打印原始错误信息，用于诊断】
+    } catch (error) { 
+    const errMessage = (error.message || error.toString()).includes('storage.buckets.update') 
+        ? 'Permission Denied: Missing "Storage Object Admin" or "Storage Object Creator" role.' 
+        : (error.message || 'Unknown Error');
+        
     console.error("❌ File Upload Failed:", error); 
     
-    // 尝试提取 Google Cloud 错误信息，避免前端只显示通用错误
-    const errorMessage = error.message || "Failed to upload file to Storage (Unknown Error).";
-    
-    // 返回详细信息到前端（Status 500）
+    // 返回更清晰的错误信息给前端
     res.status(500).send({ 
-        error: `File Upload Failed: ${errorMessage}` 
+        error: `File Upload Failed: ${errMessage}` 
     });
   }
 });
