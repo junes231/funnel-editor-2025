@@ -1824,52 +1824,58 @@ const OutcomeSettingsComponent: React.FC<OutcomeSettingsComponentProps> = ({
     );
   };
 
-// 文件: src/App.tsx (handleImageUpload 函数)
-
 const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, outcomeId: string) => {
-  const file = e.target.files?.[0]; // 修正：使用英文变量 file
+  const file = e.target.files?.[0]; 
   setFileLabel(prev => ({ ...prev, [outcomeId]: file ? file.name : 'No file chosen' }));
-
   if (!file) return; 
 
   setUploadingId(outcomeId);
-    
+  const trackClickBaseUrl = process.env.REACT_APP_TRACK_CLICK_URL.replace(/\/trackClick$/, '');
   
-  // 修正：确保路由名称是 /uploadImage
-  const uploadApiUrl = `${process.env.REACT_APP_TRACK_CLICK_URL.replace(/\/trackClick$/, '')}/uploadImage`; 
-
   try { 
-    const formData = new FormData();
-    // 修正：Multer 字段名必须是 "image"
-    formData.append("image", file); 
-    // 修正：确保 funnelId 在作用域内 (假设它在 FunnelEditor props 中)
-    formData.append("funnelId", funnelId); 
-    formData.append("outcomeId", outcomeId);
+    // 步骤 1: 调用后端 API 获取签名 URL
+    const generateUrlResponse = await fetch(`${trackClickBaseUrl}/generateUploadUrl`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            data: { 
+                funnelId, 
+                outcomeId, 
+                fileName: file.name,
+                fileType: file.type // 传递文件类型给后端
+            }
+        }),
+    });
 
-    const response = await fetch(uploadApiUrl, { method: "POST", body: formData }); // 修正：使用标准 fetch
+    if (!generateUrlResponse.ok) {
+        throw new Error("Failed to get signed URL from backend.");
+    }
 
-    if (!response.ok) { 
-  const text = await response.text();
-  console.error("Upload failed response:", text);
-  throw new Error(`Upload failed: ${text}`);
-}
+    const { data } = await generateUrlResponse.json();
+    const { uploadUrl, fileUrl } = data;
 
-    const result = await response.json();
-    const downloadURL = result.data.url; // 修正：获取后端返回的 url
+    // 步骤 2: 前端直接上传文件到 GCS
+    await fetch(uploadUrl, {
+        method: "PUT", // Presigned URLs for write usually use PUT
+        body: file,
+        headers: {
+            'Content-Type': file.type,
+            'Content-Length': file.size.toString(),
+        },
+    });
 
-    // 更新 Firestore (修正：属性名应为 imageUrl)
-    handleUpdateOutcome(outcomeId, { imageUrl: downloadURL }); 
-        
-    // 清理状态
+    // 步骤 3: 成功后更新 Firestore
+    handleUpdateOutcome(outcomeId, { imageUrl: fileUrl }); 
     setUploadingId(null);
     e.target.value = '';
+    
+    // 通知成功 (需要您自己实现 showNotification)
+    console.log(`✅ Upload success. URL: ${fileUrl}`);
 
-    } catch (error: any) { 
-      console.error("❌ Multer Proxy Upload Error:", error.message);
-      // 修正：打印详细信息，以便在 Debug Console 中查看
-      console.log(`Image Upload Failed. Message: ${error.message}`); 
-      setUploadingId(null);
-    }
+  } catch (error: any) { 
+    console.error("❌ Upload Error:", error.message);
+    setUploadingId(null);
+  }
 };
 
   return (
