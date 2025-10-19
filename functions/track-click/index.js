@@ -111,9 +111,17 @@ app.post("/uploadImage", upload.single("image"), async (req, res) => { // <-- Mu
         folder,
       },
     });
-  } catch (error) { // <-- 修正：catch 语法
-    console.error("❌ File Upload Failed:", error);
-    res.status(500).send({ error: "Failed to upload file to Storage." });
+ } catch (error) { 
+    // 【核心修改：打印原始错误信息，用于诊断】
+    console.error("❌ File Upload Failed:", error); 
+    
+    // 尝试提取 Google Cloud 错误信息，避免前端只显示通用错误
+    const errorMessage = error.message || "Failed to upload file to Storage (Unknown Error).";
+    
+    // 返回详细信息到前端（Status 500）
+    res.status(500).send({ 
+        error: `File Upload Failed: ${errorMessage}` 
+    });
   }
 });
 
