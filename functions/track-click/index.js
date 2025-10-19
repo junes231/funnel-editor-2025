@@ -110,18 +110,17 @@ app.post("/uploadImage", upload.single("image"), async (req, res) => { // <-- Mu
         size: file.size,
         folder,
       },
-    } catch (error) { 
-    const errMessage = (error.message || error.toString()).includes('storage.buckets.update') 
-        ? 'Permission Denied: Missing "Storage Object Admin" or "Storage Object Creator" role.' 
-        : (error.message || 'Unknown Error');
-        
-    console.error("❌ File Upload Failed:", error); 
-    
-    // 返回更清晰的错误信息给前端
-    res.status(500).send({ 
-        error: `File Upload Failed: ${errMessage}` 
-    });
-  }
+  } catch (error) {
+  console.error("❌ File Upload Failed:");
+  console.error("Error Message:", error.message);
+  console.error("Error Code:", error.code);
+  console.error("Full Error Object:", JSON.stringify(error, null, 2));
+
+  res.status(500).send({ 
+    error: "Failed to upload file to Storage.", 
+    details: error.message || error 
+  });
+}
 });
 
 // 由于移除了 app.use(express.json()), 必须只对需要 JSON 的路由使用它
