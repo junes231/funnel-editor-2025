@@ -84,10 +84,12 @@ app.post("/generateUploadUrl", async (req, res) => {
     try {
         // 生成预签名 URL (设置为 PUT 方法，用于直接上传)
         const [uploadUrl] = await file.getSignedUrl({
-            action: 'write',
-            expires: Date.now() + 60 * 1000, // 链接有效期 1 分钟 (60秒)
-            contentType: fileType, // 必须匹配前端上传时的 Content-Type
-        });
+  version: 'v4',
+  action: 'write',
+  expires: Date.now() + 10 * 60 * 1000, // 10 分钟有效
+  contentType: fileType,
+  virtualHostedStyle: true, // ✅ 强制走 storage.googleapis.com 域
+});
         
         // 构造最终文件的公共 URL
         const publicFileUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(filePath)}?alt=media`;
