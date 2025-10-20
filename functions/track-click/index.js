@@ -3,7 +3,7 @@ console.log("⚡ track-click API Server starting...");
 const express = require("express");
 const admin = require("firebase-admin");
 const cors = require("cors");
-// 移除 Multer 依赖，因为不再需要服务器处理文件上传
+
 
 // --- Firebase 初始化 ---
 if (!admin.apps.length) {
