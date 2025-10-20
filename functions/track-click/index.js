@@ -92,7 +92,7 @@ app.post("/generateUploadUrl", async (req, res) => {
 });
         
         // 构造最终文件的公共 URL
-        const publicFileUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(filePath)}?alt=media`;
+        const publicFileUrl = `https://storage.googleapis.com/${bucket.name}/${filePath}`;
 
         console.log(`✅ Signed URL generated for: ${fileName}`);
         
