@@ -179,7 +179,12 @@ app.post("/trackClick", express.json(), async (req, res) => {
 app.get("/test-cors", (req, res) => {
   res.status(200).send({ status: 'success', message: 'track-click CORS test successful!' });
 });
-
+// 打印所有注册的路由，方便调试
+app._router.stack.forEach((r) => {
+  if (r.route && r.route.path) {
+    console.log(`[ROUTE] ${Object.keys(r.route.methods).join(',').toUpperCase()} ${r.route.path}`);
+  }
+});
 // --- 启动服务器 ---
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
