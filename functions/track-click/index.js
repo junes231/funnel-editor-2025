@@ -9,12 +9,12 @@ const cors = require("cors");
 if (!admin.apps.length) {
   admin.initializeApp({
       // 【修正点 1】: 使用正确的 Firebase Storage 存储桶名称
-      storageBucket: 'funnel-editor-netlify.firebasestorage.app' 
+      storageBucket: 'funnel-editor-netlify.appspot.com' 
   });
 }
 const db = admin.firestore();
 // 【修正点 2】: 使用正确的存储桶名称
-const bucket = admin.storage().bucket('funnel-editor-netlify.firebasestorage.app'); 
+const bucket = admin.storage().bucket('funnel-editor-netlify.appspot.com'); 
 
 // --- Express 应用创建 ---
 const app = express();
