@@ -185,6 +185,13 @@ app._router.stack.forEach((r) => {
     console.log(`[ROUTE] ${Object.keys(r.route.methods).join(',').toUpperCase()} ${r.route.path}`);
   }
 });
+console.log(app._router.stack
+  .filter(r => r.route)
+  .map(r => ({
+    path: r.route.path,
+    methods: r.route.methods
+  }))
+);
 // --- 启动服务器 ---
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
