@@ -4,17 +4,14 @@ const express = require("express");
 const admin = require("firebase-admin");
 const cors = require("cors");
 
-
 // --- Firebase 初始化 ---
 if (!admin.apps.length) {
   admin.initializeApp({
-      // 【修正点 1】: 使用正确的 Firebase Storage 存储桶名称
-      storageBucket: 'funnel-editor-netlify.appspot.com' 
+    storageBucket: 'funnel-editor-netlify.firebasestorage.app' // 修正存储桶名称
   });
 }
 const db = admin.firestore();
-// 【修正点 2】: 使用正确的存储桶名称
-const bucket = admin.storage().bucket('funnel-editor-netlify.appspot.com'); 
+const bucket = admin.storage().bucket('funnel-editor-netlify.firebasestorage.app'); // 修正存储桶名称
 
 // --- Express 应用创建 ---
 const app = express();
@@ -27,95 +24,94 @@ const corsOptions = {
 };
 app.options('*', cors(corsOptions));
 app.use(cors(corsOptions));
-// 启用 JSON 解析，因为 /generateUploadUrl 将接收 JSON
 app.use(express.json());
 
-
-// ====================================================================
-// 【新增路由】: 生成预签名上传 URL (Presigned URL)
-// ====================================================================
+// --- 生成预签名上传 URL ---
 app.post("/generateUploadUrl", async (req, res) => {
-    // 请求体中包含文件信息 (注意：不再是 req.file，而是 req.body.data)
-    const { funnelId, outcomeId, fileName, fileType } = req.body.data || {};
+  const { funnelId, outcomeId, fileName, fileType } = req.body.data || req.body; // 兼容直接发送字段
 
-    // --- 1️⃣ 基础验证 ---
-    if (!funnelId || !outcomeId || !fileName || !fileType) {
-        return res.status(400).send({ 
-            error: "Missing required file info (funnelId, outcomeId, fileName, fileType)." 
-        });
-    }
+  // --- 1️⃣ 基础验证 ---
+  if (!funnelId || !outcomeId || !fileName || !fileType) {
+    return res.status(400).send({ 
+      error: "Missing required file info (funnelId, outcomeId, fileName, fileType)." 
+    });
+  }
 
-    // --- 2️⃣ 文件类型白名单和自动分类 (基于 fileType 重新实现) ---
-    const allowedMimeTypes = [
-        "image/png", "image/jpeg", "image/webp", "image/gif",
-        "application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        "application/vnd.ms-excel", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        "text/plain", "application/zip", "application/x-zip-compressed", 
-        "application/x-rar-compressed", "video/mp4", "audio/mpeg", "audio/wav"
-    ];
+  // --- 2️⃣ 文件类型白名单 ---
+  const allowedMimeTypes = [
+    "image/png", "image/jpeg", "image/webp", "image/gif",
+    "application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.ms-excel", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "text/plain", "application/zip", "application/x-zip-compressed", 
+    "application/x-rar-compressed", "video/mp4", "audio/mpeg", "audio/wav"
+  ];
 
-    if (!allowedMimeTypes.includes(fileType)) {
-        console.warn(`🚫 Blocked unsupported file type: ${fileType}`);
-        return res.status(400).send({
-            error: `Unsupported file type: ${fileType}.`,
-        });
-    }
+  if (!allowedMimeTypes.includes(fileType)) {
+    console.warn(`🚫 Blocked unsupported file type: ${fileType}`);
+    return res.status(400).send({
+      error: `Unsupported file type: ${fileType}.`,
+    });
+  }
 
-    // --- 3️⃣ 自动分类 (基于 fileType 重新实现) ---
-    let folder = "others";
-    if (fileType.startsWith("image/")) folder = "images";
-    else if (fileType.startsWith("video/")) folder = "videos";
-    else if (fileType.startsWith("audio/")) folder = "audio";
-    else if (fileType.includes("pdf") || fileType.includes("word") || fileType.includes("excel"))
-        folder = "docs";
-    else if (fileType.includes("zip") || fileType.includes("rar"))
-        folder = "archives";
+  // --- 3️⃣ 自动分类 ---
+  let folder = "others";
+  if (fileType.startsWith("image/")) folder = "images";
+  else if (fileType.startsWith("video/")) folder = "videos";
+  else if (fileType.startsWith("audio/")) folder = "audio";
+  else if (fileType.includes("pdf") || fileType.includes("word") || fileType.includes("excel"))
+    folder = "docs";
+  else if (fileType.includes("zip") || fileType.includes("rar"))
+    folder = "archives";
+  
+  // --- 4️⃣ 自动重命名和构造路径 ---
+  const timestamp = Date.now();
+  const ext = fileName.includes('.') ? fileName.split('.').pop() : '';
+  const safeFileName = ext
+    ? `${timestamp}-${fileName.replace(/[^\w.-]/g, '_')}`
+    : `${timestamp}-${fileName}`;
+
+  const filePath = `uploads/${folder}/${funnelId}/${outcomeId}/${safeFileName}`;
+  const file = bucket.file(filePath);
+
+  try {
+    // 生成预签名 URL
+    const [uploadUrl] = await file.getSignedUrl({
+      version: 'v4',
+      action: 'write',
+      expires: Date.now() + 10 * 60 * 1000, // 10 分钟有效
+      contentType: fileType,
+      virtualHostedStyle: true,
+    });
     
-    // --- 4️⃣ 自动重命名和构造路径 (使用 fileName 代替 file.originalname) ---
-    const timestamp = Date.now();
-    const ext = fileName.includes('.') ? fileName.split('.').pop() : '';
-    const safeFileName = ext
-        ? `${timestamp}-${fileName.replace(/[^\w.-]/g, '_')}`
-        : `${timestamp}-${fileName}`;
+    // 构造最终文件的公共 URL
+    const publicFileUrl = `https://storage.googleapis.com/funnel-editor-netlify.firebasestorage.app/${filePath}`;
 
-    const filePath = `uploads/${folder}/${funnelId}/${outcomeId}/${safeFileName}`;
-    const file = bucket.file(filePath);
-
-    try {
-        // 生成预签名 URL (设置为 PUT 方法，用于直接上传)
-        const [uploadUrl] = await file.getSignedUrl({
-  version: 'v4',
-  action: 'write',
-  expires: Date.now() + 10 * 60 * 1000, // 10 分钟有效
-  contentType: fileType,
-  virtualHostedStyle: true, // ✅ 强制走 storage.googleapis.com 域
-});
-        
-        // 构造最终文件的公共 URL
-        const publicFileUrl = `https://storage.googleapis.com/${bucket.name}/${filePath}`;
-
-        console.log(`✅ Signed URL generated for: ${fileName}`);
-        
-        // 返回给前端的上传链接和最终公共链接
-        res.status(200).send({
-            data: {
-                uploadUrl: uploadUrl,     // 前端将文件 PUT 到此 URL
-                fileUrl: publicFileUrl // 存储到 Firestore 的最终 URL
-            }
-        });
-    } catch (error) {
-        // 捕获权限或其他错误 (如果权限配置错误，这里会失败)
-        let errorMessage = "Failed to generate signed URL.";
-        if (error.code === 403) {
-            errorMessage = "Permission Denied: Cloud Run service account must have 'Storage Object Admin' and 'Service Account Token Creator' roles.";
-        }
-        
-        console.error("❌ Failed to generate signed URL:", error);
-        res.status(500).send({ 
-            error: errorMessage,
-            details: error.message || error 
-        });
+    console.log(`✅ Signed URL generated for: ${fileName}`);
+    
+    // 返回给前端
+    res.status(200).send({
+      data: {
+        uploadUrl: uploadUrl,
+        fileUrl: publicFileUrl
+      }
+    });
+  } catch (error) {
+    let errorMessage = "Failed to generate signed URL.";
+    if (error.code === 403) {
+      errorMessage = "Permission Denied: Cloud Run service account must have 'Storage Object Admin' and 'Service Account Token Creator' roles.";
     }
+    
+    console.error("❌ Failed to generate signed URL:", {
+      error: error.message,
+      bucket: bucket.name,
+      filePath,
+      fileType,
+    });
+    res.status(500).send({ 
+      error: errorMessage,
+      details: error.message || error 
+    });
+  }
 });
 
 // 由于移除了 app.use(express.json()), 必须只对需要 JSON 的路由使用它
