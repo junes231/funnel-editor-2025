@@ -64,12 +64,14 @@ app.post("/generateUploadUrl", async (req, res) => {
     folder = "archives";
   
   // --- 4️⃣ 自动重命名和构造路径 ---
+   const folder = "images";
+  const bucket = storage.bucket(process.env.STORAGE_BUCKET);
   const timestamp = Date.now();
   const ext = fileName.includes('.') ? fileName.split('.').pop() : '';
   const safeFileName = ext
     ? `${timestamp}-${fileName.replace(/[^\w.-]/g, '_')}`
     : `${timestamp}-${fileName}`;
-
+  
   const filePath = `uploads/${folder}/${funnelId}/${outcomeId}/${safeFileName}`;
   const file = bucket.file(filePath);
 
@@ -85,32 +87,24 @@ app.post("/generateUploadUrl", async (req, res) => {
     });
     
     // 构造最终文件的公共 URL
-    const publicFileUrl = `https://storage.googleapis.com/funnel-editor-netlify.firebasestorage.app/${filePath}`;
+    const publicFileUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(filePath)}?alt=media`;
 
-    console.log(`✅ Signed URL generated for: ${fileName}`);
-    
-    // 返回给前端
+    // 🧠 关键调试日志
+    console.log("✅ Signed URL generated for:", fileName);
+    console.log("📤 uploadUrl typeof:", typeof uploadUrl);
+    console.log("📤 uploadUrl preview:", uploadUrl.substring(0, 120) + "...");
+
     res.status(200).send({
       data: {
-        uploadUrl: uploadUrl,
+        uploadUrl: String(uploadUrl), // 👈 确保是字符串
         fileUrl: publicFileUrl
       }
     });
   } catch (error) {
-    let errorMessage = "Failed to generate signed URL.";
-    if (error.code === 403) {
-      errorMessage = "Permission Denied: Cloud Run service account must have 'Storage Object Admin' and 'Service Account Token Creator' roles.";
-    }
-    
-    console.error("❌ Failed to generate signed URL:", {
-      error: error.message,
-      bucket: bucket.name,
-      filePath,
-      fileType,
-    });
-    res.status(500).send({ 
-      error: errorMessage,
-      details: error.message || error 
+    console.error("❌ Failed to generate signed URL:", error);
+    res.status(500).send({
+      error: "Failed to generate signed URL.",
+      details: error.message || error
     });
   }
 });
