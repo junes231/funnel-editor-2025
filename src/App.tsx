@@ -1816,6 +1816,8 @@ const OutcomeSettingsComponent: React.FC<OutcomeSettingsComponentProps> = ({
   onBack,
 }) => {
   const [uploadingId, setUploadingId] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null); // NEW: 上传进度 (0-100)
+  const [isDragOver, setIsDragOver] = useState(false);
   const [fileLabel, setFileLabel] = useState<Record<string, string>>({}); // <--- 新增状态：存储文件名
   const fileInputRef = useRef<Record<string, HTMLInputElement | null>>({});
   const handleUpdateOutcome = (id: string, updates: Partial<FunnelOutcome>) => {
@@ -1824,60 +1826,130 @@ const OutcomeSettingsComponent: React.FC<OutcomeSettingsComponentProps> = ({
     );
   };
 
-const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, outcomeId: string) => {
-  const file = e.target.files?.[0];
-  setFileLabel(prev => ({ ...prev, [outcomeId]: file ? file.name : 'No file chosen' }));
-  if (!file) return;
+  const handleClearImage = (outcomeId: string) => {
+    handleUpdateOutcome(outcomeId, { imageUrl: '' });
+    setFileLabel(prev => ({ ...prev, [outcomeId]: '' }));
+    showNotification('Image link cleared.');
+};
+  
+// NEW: 处理文件选择或拖放
+const processFile = (selectedFile: File | null, outcomeId: string) => {
+    if (!selectedFile) return;
+    
+    // 检查文件类型 (仅限图片)
+    if (!selectedFile.type.startsWith('image/')) {
+        showNotification('Only image files are supported for upload.', 'error');
+        return;
+    }
+    
+    // 模拟文件选择事件结构并调用 handleImageUpload
+    // 注意：我们将文件对象直接传递给 handleImageUpload
+    handleImageUpload(selectedFile, outcomeId);
+};
+
+// NEW: 拖放事件处理器
+const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(true);
+};
+
+const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+};
+
+const handleDrop = (e: React.DragEvent, outcomeId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+    
+    const droppedFile = e.dataTransfer.files?.[0];
+    if (droppedFile) {
+        processFile(droppedFile, outcomeId);
+    }
+};
+const handleImageUpload = async (file: File, outcomeId: string) => {
+  setFileLabel(prev => ({ ...prev, [outcomeId]: file.name }));
+
+  if (uploadingId === outcomeId) return; 
 
   setUploadingId(outcomeId);
+  setUploadProgress(0);
   const trackClickBaseUrl = process.env.REACT_APP_TRACK_CLICK_URL.replace(/\/trackClick$/, '');
 
   try {
     // Step 1: 获取签名 URL
-    const response = await fetch(`${trackClickBaseUrl}/generateUploadUrl`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        data: {
-          funnelId,
-          outcomeId,
-          fileName: file.name,
-          fileType: file.type
-        }
-      }),
+  const generateUrlResponse = await fetch(`${trackClickBaseUrl}/generateUploadUrl`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            data: { 
+                funnelId, 
+                outcomeId, 
+                fileName: file.name,
+                fileType: file.type 
+            }
+        }),
     });
 
-    const rawJson = await response.json();
-    console.log("🔍 Raw JSON response:", rawJson);
-
-    const uploadUrl = rawJson?.data?.uploadUrl;
-    const fileUrl = rawJson?.data?.fileUrl;
-    console.log("📎 uploadUrl value:", uploadUrl);
-    console.log("📎 uploadUrl typeof:", typeof uploadUrl);
-
-    if (!uploadUrl || typeof uploadUrl !== 'string') {
-      throw new Error("Invalid uploadUrl received from backend.");
+    if (!generateUrlResponse.ok) {
+        const errorResponse = await generateUrlResponse.json().catch(() => ({}));
+        const details = errorResponse.error || "Failed to get signed URL (Check backend logs for details).";
+        showNotification(`Upload setup failed: ${details}`, 'error');
+        throw new Error(`Failed to get signed URL: ${details}`);
     }
 
-    // Step 2: 上传文件到 GCS
-    const uploadResp = await fetch(uploadUrl, {
-      method: "PUT",
-      headers: { "Content-Type": file.type },
-      body: file
+    const { data } = await generateUrlResponse.json();
+    const { uploadUrl, fileUrl } = data;
+     console.log("📎 uploadUrl value:", uploadUrl);
+     console.log("📎 uploadUrl typeof:", typeof uploadUrl);
+    // 步骤 2: 前端直接上传文件到 GCS (使用 XMLHttpRequest 来追踪进度)
+    
+    await new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('PUT', uploadUrl);
+        xhr.setRequestHeader('Content-Type', file.type);
+
+        xhr.upload.onprogress = (event) => {
+            if (event.lengthComputable) {
+                const percent = Math.round((event.loaded / event.total) * 100);
+                setUploadProgress(percent); // 更新进度
+            }
+        };
+
+        xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+                resolve(xhr.responseText);
+            } else {
+                reject(new Error(`File PUT failed with status: ${xhr.status}`));
+            }
+        };
+
+        xhr.onerror = () => {
+            reject(new Error('File PUT failed due to network error. Check CORS settings.'));
+        };
+
+        xhr.send(file);
     });
 
-    console.log("📤 Upload response status:", uploadResp.status);
-
-    if (!uploadResp.ok) throw new Error(`Upload failed with status ${uploadResp.status}`);
-
-    // Step 3: 更新 Firestore
-    handleUpdateOutcome(outcomeId, { imageUrl: fileUrl });
+    // 步骤 3: 成功后更新 Firestore
+    handleUpdateOutcome(outcomeId, { imageUrl: fileUrl }); 
+    showNotification('Image uploaded successfully!', 'success');
+    
+    // 清理状态
     setUploadingId(null);
-    e.target.value = '';
-    console.log(`✅ Upload success! URL: ${fileUrl}`);
-  } catch (err: any) {
-    console.error("❌ Upload error:", err.message);
+    setUploadProgress(null);
+
+  } catch (error: any) { 
+    console.error("❌ Upload Error:", error.message);
     setUploadingId(null);
+    setUploadProgress(null);
+    // 确保错误通知在 catch 中被显示
+    if (!error.message.includes("Failed to get signed URL")) {
+        showNotification(`Critical Upload Error: ${error.message}`, 'error');
+    }
   }
 };
 
@@ -1889,94 +1961,132 @@ const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, outcome
       </h2>
       <p>Configure different result pages for high-converting, personalized recommendations. (Changes are auto-saved).</p>
 
-      {outcomes.map((outcome, index) => (
-        <div key={outcome.id} className="outcome-card" style={{ marginBottom: '25px', padding: '15px', border: '1px solid #ddd', borderRadius: '8px', position: 'relative' }}>
-          
-          <h4 style={{marginTop: 0, borderBottom: '1px solid #eee', paddingBottom: '10px'}}>{outcome.name} (Result #{index + 1})</h4>
-          
-          <div className="form-group">
-            <label>Result Name (Internal):</label>
-            <OptimizedTextInput
-              initialValue={outcome.name}
-              onUpdate={(v) => handleUpdateOutcome(outcome.id, { name: v })}
-              placeholder="e.g., Top Budget Recommendation"
-              type="text"
-            />
-          </div>
-
-          <div className="form-group">
-            <label>Result Title (Displayed to User):</label>
-            <OptimizedTextInput
-              initialValue={outcome.title}
-              onUpdate={(v) => handleUpdateOutcome(outcome.id, { title: v })}
-              placeholder="e.g., Congratulations! You are a High-Value Client."
-              type="text"
-            />
-          </div>
-          
-          <div className="form-group">
-            <label>CTA Link:</label>
-            <OptimizedTextInput
-              initialValue={outcome.ctaLink}
-              onUpdate={(v) => handleUpdateOutcome(outcome.id, { ctaLink: v })}
-              placeholder="https://your-product-link.com"
-              type="url"
-            />
-          </div>
-
-          {/* 图片上传区域 */}
-          <div className="form-group">
-            <label>Result Image URL (For Visual Recommendation):</label>
-            {outcome.imageUrl && (
-              <img src={outcome.imageUrl} alt="Result Preview" style={{ maxWidth: '100%', maxHeight: '150px', display: 'block', margin: '10px 0', border: '1px solid #ccc' }} />
-            )}
+      {outcomes.map((outcome, index) => {
+        const isCurrentUploading = uploadingId === outcome.id;
+        
+        return (
+          <div key={outcome.id} className="outcome-card" style={{ marginBottom: '25px', padding: '15px', border: '1px solid #ddd', borderRadius: '8px', position: 'relative' }}>
             
-            {/* 👇👇👇 使用自定义文件上传 UI 替换原生输入框 👇👇👇 */}
-            <div className="file-upload-wrapper">
-    <button 
-        className="custom-file-button"
-        // onClick 保持不变，用于触发隐藏的 input
-        onClick={() => fileInputRef.current[outcome.id]?.click()} 
-        disabled={uploadingId === outcome.id}
-    >
-        <span role="img" aria-label="upload-icon" style={{ marginRight: 8 }}>
-            {uploadingId === outcome.id ? '⏳' : '📤'}
-        </span>
-        {uploadingId === outcome.id ? 'Uploading...' : 'Click to Select File'}
-    </button>
-    
-    {/* 文件名显示区域：显示当前文件或拖放提示 */}
-    <span className="file-name-display">
-        {fileLabel[outcome.id] 
-            ? `Current: ${fileLabel[outcome.id]}`
-            : 'Or drag and drop files into this area (maximum 25MB)'}
-    </span>
-                
-                {/* 隐藏的原生文件输入框 */}
-                <input
-                    type="file"
-                    accept="image/*"
-                    ref={el => fileInputRef.current[outcome.id] = el}
-                    onChange={(e) => handleImageUpload(e, outcome.id)}
-                    disabled={uploadingId === outcome.id}
-                    className="file-upload-input" // 应用隐藏样式
-                />
+            <h4 style={{marginTop: 0, borderBottom: '1px solid #eee', paddingBottom: '10px'}}>{outcome.name} (Result #{index + 1})</h4>
+            
+            <div className="form-group">
+              <label>Result Name (Internal):</label>
+              <OptimizedTextInput
+                initialValue={outcome.name}
+                onUpdate={(v) => handleUpdateOutcome(outcome.id, { name: v })}
+                placeholder="e.g., Top Budget Recommendation"
+                type="text"
+              />
             </div>
-            {/* 👆👆👆 自定义文件上传 UI 结束 👆👆👆 */}
 
-            {uploadingId === outcome.id && <p style={{color: '#007bff', fontSize: '0.9em'}}>Uploading image...</p>}
+            <div className="form-group">
+              <label>Result Title (Displayed to User):</label>
+              <OptimizedTextInput
+                initialValue={outcome.title}
+                onUpdate={(v) => handleUpdateOutcome(outcome.id, { title: v })}
+                placeholder="e.g., Congratulations! You are a High-Value Client."
+                type="text"
+              />
+            </div>
             
-            <OptimizedTextInput
-              initialValue={outcome.imageUrl}
-              onUpdate={(v) => handleUpdateOutcome(outcome.id, { imageUrl: v })}
-              placeholder="Or paste an external URL"
-              type="url"
-              style={{marginTop: '10px'}}
-            />
-          </div>
+            <div className="form-group">
+              <label>CTA Link:</label>
+              <OptimizedTextInput
+                initialValue={outcome.ctaLink}
+                onUpdate={(v) => handleUpdateOutcome(outcome.id, { ctaLink: v })}
+                placeholder="https://your-product-link.com"
+                type="url"
+              />
+            </div>
 
-        </div>
-      ))}
+            {/* 图片上传区域 - 整合拖放和进度条 */}
+            <div className="form-group">
+              <label>Result Image URL (For Visual Recommendation):</label>
+              
+              {/* 预览和删除区域 (NEW) */}
+              {outcome.imageUrl && (
+                <div className="image-preview-wrapper">
+                  <div className="image-preview-container">
+                    <img 
+                      src={outcome.imageUrl} 
+                      alt="Result Preview" 
+                      onError={(e) => {
+                          // 图片加载失败时显示占位符或清除 URL
+                          e.currentTarget.onerror = null; 
+                          e.currentTarget.src = 'https://placehold.co/100x100/F44336/ffffff?text=Load+Error';
+                      }}
+                    />
+                  </div>
+                  <button 
+                    className="delete-image-btn" 
+                    onClick={() => handleClearImage(outcome.id)}
+                  >
+                    Clear Image
+                  </button>
+                </div>
+              )}
+              
+              {/* 拖放/点击上传区域 (核心交互) */}
+              <div 
+                className={`file-upload-wrapper ${isDragOver && !isCurrentUploading ? 'drag-over' : ''}`}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={(e) => handleDrop(e, outcome.id)}
+              >
+                <button 
+                  className="custom-file-button"
+                  onClick={() => fileInputRef.current[outcome.id]?.click()} 
+                  disabled={isCurrentUploading}
+                >
+                  <span role="img" aria-label="upload-icon" style={{ marginRight: 8 }}>
+                    {isCurrentUploading ? '⏳' : '📤'}
+                  </span>
+                  {isCurrentUploading 
+                    ? `Uploading: ${uploadProgress !== null ? uploadProgress : 0}%` 
+                    : 'Click to Select File'}
+                </button>
+                
+                {/* 进度条 (NEW) */}
+                {isCurrentUploading && uploadProgress !== null && (
+                  <div className="upload-progress-container">
+                    <div 
+                      className="upload-progress-bar" 
+                      style={{ width: `${uploadProgress}%` }} 
+                    />
+                  </div>
+                )}
+                
+                <span className="file-name-display">
+                  {isCurrentUploading 
+                    ? `Transferring data: ${uploadProgress !== null ? uploadProgress : 0}%`
+                    : fileLabel[outcome.id] 
+                      ? `Current: ${fileLabel[outcome.id]}`
+                      : '或拖放文件到此区域 (最大 25MB)'}
+                </span>
+                
+                {/* 隐藏的 input (用于点击) */}
+                <input
+                  type="file"
+                  accept="image/*"
+                  ref={el => fileInputRef.current[outcome.id] = el}
+                  onChange={(e) => processFile(e.target.files?.[0] || null, outcomeId)}
+                  disabled={isCurrentUploading}
+                  className="file-upload-input" 
+                />
+              </div>
+
+              <OptimizedTextInput
+                initialValue={outcome.imageUrl}
+                onUpdate={(v) => handleUpdateOutcome(outcome.id, { imageUrl: v })}
+                placeholder="Or paste an external URL"
+                type="url"
+                style={{marginTop: '10px'}}
+                disabled={isCurrentUploading}
+              />
+            </div>
+          </div>
+        );
+      })}
       
       <button 
         className="add-button" 
