@@ -1933,19 +1933,24 @@ const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, outcome
             
             {/* 👇👇👇 使用自定义文件上传 UI 替换原生输入框 👇👇👇 */}
             <div className="file-upload-wrapper">
-                <button 
-                    className="custom-file-button"
-                    onClick={() => fileInputRef.current[outcome.id]?.click()} // 点击自定义按钮触发隐藏的 input
-                    disabled={uploadingId === outcome.id}
-                >
-                    {uploadingId === outcome.id ? 'Uploading...' : 'Select File'}
-                </button>
-                <span className="file-name-display">
-                <span role="img" aria-label="file-icon" style={{ marginRight: 5, color: '#888' }}>
-                {fileLabel[outcome.id] ? '📄' : '📁'}
-                </span>
-                 {fileLabel[outcome.id] || 'Select a file or paste a URL below'}
-                </span>
+    <button 
+        className="custom-file-button"
+        // onClick 保持不变，用于触发隐藏的 input
+        onClick={() => fileInputRef.current[outcome.id]?.click()} 
+        disabled={uploadingId === outcome.id}
+    >
+        <span role="img" aria-label="upload-icon" style={{ marginRight: 8 }}>
+            {uploadingId === outcome.id ? '⏳' : '📤'}
+        </span>
+        {uploadingId === outcome.id ? 'Uploading...' : 'Click to Select File'}
+    </button>
+    
+    {/* 文件名显示区域：显示当前文件或拖放提示 */}
+    <span className="file-name-display">
+        {fileLabel[outcome.id] 
+            ? `Current: ${fileLabel[outcome.id]}`
+            : 'Or drag and drop files into this area (maximum 25MB)'}
+    </span>
                 
                 {/* 隐藏的原生文件输入框 */}
                 <input
