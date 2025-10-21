@@ -82,12 +82,12 @@ app.post("/generateUploadUrl", async (req, res) => {
       action: 'write',
       expires: Date.now() + 10 * 60 * 1000, // 10 分钟有效
       contentType: fileType,
-      virtualHostedStyle: true,
+      virtualHostedStyle: false,
       region: 'us-central1',
     });
     
     // 构造最终文件的公共 URL
-    const publicFileUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(filePath)}?alt=media`;
+    const publicFileUrl = `https://storage.googleapis.com/${bucket.name}/${filePath}`;
 
     // 🧠 关键调试日志
     console.log("✅ Signed URL generated for:", fileName);
