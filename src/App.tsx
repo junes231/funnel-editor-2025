@@ -1825,55 +1825,58 @@ const OutcomeSettingsComponent: React.FC<OutcomeSettingsComponentProps> = ({
   };
 
 const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, outcomeId: string) => {
-  const file = e.target.files?.[0]; 
+  const file = e.target.files?.[0];
   setFileLabel(prev => ({ ...prev, [outcomeId]: file ? file.name : 'No file chosen' }));
-  if (!file) return; 
+  if (!file) return;
 
   setUploadingId(outcomeId);
   const trackClickBaseUrl = process.env.REACT_APP_TRACK_CLICK_URL.replace(/\/trackClick$/, '');
-  
-  try { 
-    // 步骤 1: 调用后端 API 获取签名 URL
-    const generateUrlResponse = await fetch(`${trackClickBaseUrl}/generateUploadUrl`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            data: { 
-                funnelId, 
-                outcomeId, 
-                fileName: file.name,
-                fileType: file.type // 传递文件类型给后端
-            }
-        }),
+
+  try {
+    // Step 1: 获取签名 URL
+    const response = await fetch(`${trackClickBaseUrl}/generateUploadUrl`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        data: {
+          funnelId,
+          outcomeId,
+          fileName: file.name,
+          fileType: file.type
+        }
+      }),
     });
 
-    if (!generateUrlResponse.ok) {
-        throw new Error("Failed to get signed URL from backend.");
+    const rawJson = await response.json();
+    console.log("🔍 Raw JSON response:", rawJson);
+
+    const uploadUrl = rawJson?.data?.uploadUrl;
+    const fileUrl = rawJson?.data?.fileUrl;
+    console.log("📎 uploadUrl value:", uploadUrl);
+    console.log("📎 uploadUrl typeof:", typeof uploadUrl);
+
+    if (!uploadUrl || typeof uploadUrl !== 'string') {
+      throw new Error("Invalid uploadUrl received from backend.");
     }
 
-    const { data } = await generateUrlResponse.json();
-    const { uploadUrl, fileUrl } = data;
-
-    // 步骤 2: 前端直接上传文件到 GCS
-    await fetch(uploadUrl, {
-        method: "PUT", // Presigned URLs for write usually use PUT
-        body: file,
-        headers: {
-            'Content-Type': file.type,
-            'Content-Length': file.size.toString(),
-        },
+    // Step 2: 上传文件到 GCS
+    const uploadResp = await fetch(uploadUrl, {
+      method: "PUT",
+      headers: { "Content-Type": file.type },
+      body: file
     });
 
-    // 步骤 3: 成功后更新 Firestore
-    handleUpdateOutcome(outcomeId, { imageUrl: fileUrl }); 
+    console.log("📤 Upload response status:", uploadResp.status);
+
+    if (!uploadResp.ok) throw new Error(`Upload failed with status ${uploadResp.status}`);
+
+    // Step 3: 更新 Firestore
+    handleUpdateOutcome(outcomeId, { imageUrl: fileUrl });
     setUploadingId(null);
     e.target.value = '';
-    
-    // 通知成功 (需要您自己实现 showNotification)
-    console.log(`✅ Upload success. URL: ${fileUrl}`);
-
-  } catch (error: any) { 
-    console.error("❌ Upload Error:", error.message);
+    console.log(`✅ Upload success! URL: ${fileUrl}`);
+  } catch (err: any) {
+    console.error("❌ Upload error:", err.message);
     setUploadingId(null);
   }
 };
