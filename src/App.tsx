@@ -1941,7 +1941,10 @@ const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, outcome
                     {uploadingId === outcome.id ? 'Uploading...' : 'Select File'}
                 </button>
                 <span className="file-name-display">
-                    {fileLabel[outcome.id] || 'No file chosen'}
+                <span role="img" aria-label="file-icon" style={{ marginRight: 5, color: '#888' }}>
+                {fileLabel[outcome.id] ? '📄' : '📁'}
+                </span>
+                 {fileLabel[outcome.id] || 'Select a file or paste a URL below'}
                 </span>
                 
                 {/* 隐藏的原生文件输入框 */}
