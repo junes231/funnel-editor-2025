@@ -81,6 +81,7 @@ app.post("/generateUploadUrl", async (req, res) => {
       expires: Date.now() + 10 * 60 * 1000, // 10 分钟有效
       contentType: fileType,
       virtualHostedStyle: true,
+      region: 'us-central1',
     });
     
     // 构造最终文件的公共 URL
