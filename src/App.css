@@ -1270,26 +1270,35 @@ p {
     min-width: 100%;
 }
 
-/* --- 优化整个上传区域容器 --- */
+/* 文件: src/App.css - 在文件末尾添加或修改 */
+
+/* --- 优化整个上传区域容器：改为卡片式布局 --- */
 .file-upload-wrapper {
   position: relative;
   display: flex;
+  flex-direction: column; /* 垂直堆叠内容 */
   align-items: center;
+  justify-content: center;
   gap: 10px;
-  margin-top: 10px;
-  padding: 12px; /* 增加内边距 */
-  border: 1px solid #e0e0e0; /* 柔和的边框 */
-  border-radius: 8px; /* 圆角 */
-  background-color: #fafafa; /* 轻微的背景色 */
-  transition: box-shadow 0.3s ease;
+  margin-top: 10px; 
+  padding: 20px; /* 增加大内边距 */
+  border: 2px dashed #007bff; /* 使用虚线边框模拟拖放区域 */
+  border-radius: 12px; /* 更大的圆角 */
+  background-color: #f8faff; /* 极浅的蓝色背景，暗示交互 */
+  transition: all 0.3s ease;
+  min-height: 120px;
+  cursor: pointer; /* 提示整个区域可点击 */
 }
 
 .file-upload-wrapper:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); /* 悬停阴影 */
+  border-color: #0056b3; /* 悬停时边框颜色加深 */
+  background-color: #e6f0ff; /* 背景色轻微变化 */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 /* 隐藏原生的文件输入框 (保持不变) */
 .file-upload-input {
+  
   position: absolute;
   top: 0;
   left: 0;
@@ -1300,47 +1309,38 @@ p {
   z-index: 10;
 }
 
-/* --- 优化自定义按钮样式 --- */
+/* --- 优化自定义按钮样式（将其作为信息提示的一部分）--- */
 .custom-file-button {
   /* 基础设计 */
-  background-color: #667eea; /* 使用品牌色或主题色 */
+  background-color: #007bff; 
   color: white;
-  border: none; /* 移除蓝色边框 */
-  padding: 8px 18px;
+  border: none; 
+  padding: 10px 24px;
   border-radius: 6px;
-  font-weight: 600; /* 加粗字体 */
+  font-weight: 600; 
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 10px rgba(102, 126, 234, 0.3); /* 增加深度感 */
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15); 
+  z-index: 20; /* 确保它在整个区域之上 */
 }
 
 .custom-file-button:hover {
-  background-color: #5a6fe0; 
-  transform: translateY(-1px); /* 悬停时轻微上浮 */
-  box-shadow: 0 6px 15px rgba(102, 126, 234, 0.4);
+  background-color: #0056b3; 
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
-/* 上传中/禁用状态 */
-.custom-file-button:disabled {
-  background-color: #cccccc;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
-}
-
-/* --- 文件名显示区域优化 --- */
+/* --- 文件名/提示文字区域优化 --- */
 .file-name-display {
-  color: #555;
-  font-size: 0.95em;
+  color: #6c757d;
+  font-size: 0.9em;
   font-style: italic;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  flex-grow: 1; /* 确保它占据大部分空间 */
-  padding-left: 10px;
-  border-left: 1px solid #ddd; /* 与按钮增加视觉分隔 */
+  white-space: normal; /* 允许文本换行 */
+  text-align: center;
+  flex-grow: 1; 
+  z-index: 20; 
 }
 
