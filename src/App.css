@@ -1373,10 +1373,18 @@ p {
   z-index: 20; 
 }
 
-/* 预览图容器 */
+/* --- 图片预览和删除按钮的容器 --- */
+.image-preview-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    margin-bottom: 10px;
+    z-index: 20;
+}
 .image-preview-container {
     width: 100%;
-    max-height: 120px; /* 限制高度 */
+    max-height: 120px; 
     overflow: hidden;
     margin-bottom: 10px;
     border-radius: 8px;
@@ -1388,4 +1396,20 @@ p {
     height: auto;
     display: block;
 }
+
+.delete-image-btn {
+    background-color: #dc3545;
+    color: white;
+    padding: 6px 15px;
+    border-radius: 4px;
+    font-size: 0.8em;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    margin-top: 5px;
+}
+.delete-image-btn:hover {
+    background-color: #c82333;
+}
+
 
