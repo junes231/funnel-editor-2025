@@ -27,8 +27,12 @@ const OptimizedTextInput: React.FC<OptimizedTextInputProps> = ({
     () => debounce(onUpdate, debounceTime),
     [onUpdate, debounceTime]
   );
-
    useEffect(() => {
+    // 只有在外部传入的 initialValue 改变时，才更新组件内部的 localValue
+    setLocalValue(initialValue);
+  }, [initialValue]); 
+  
+  useEffect(() => {
     return () => {
       debouncedUpdate.cancel();
     };
