@@ -7,11 +7,11 @@ const cors = require("cors");
 // --- Firebase 初始化 ---
 if (!admin.apps.length) {
   admin.initializeApp({
-    storageBucket: 'funnel-editor-netlify.firebasestorage.app' // 修正存储桶名称
+    storageBucket: 'process.env.STORAGE_BUCKET' // 修正存储桶名称
   });
 }
 const db = admin.firestore();
-const bucket = admin.storage().bucket('funnel-editor-netlify.firebasestorage.app'); // 修正存储桶名称
+const bucket = admin.storage().bucket('process.env.STORAGE_BUCKET'); // 修正存储桶名称
 
 // --- Express 应用创建 ---
 const app = express();
@@ -64,8 +64,7 @@ app.post("/generateUploadUrl", async (req, res) => {
     folder = "archives";
   
   // --- 4️⃣ 自动重命名和构造路径 ---
-   const folder = "images";
-  const bucket = storage.bucket(process.env.STORAGE_BUCKET);
+   
   const timestamp = Date.now();
   const ext = fileName.includes('.') ? fileName.split('.').pop() : '';
   const safeFileName = ext
