@@ -7,11 +7,11 @@ const cors = require("cors");
 // --- Firebase 初始化 ---
 if (!admin.apps.length) {
   admin.initializeApp({
-    storageBucket: 'process.env.STORAGE_BUCKET' // 修正存储桶名称
+    storageBucket: process.env.STORAGE_BUCKET // 修正存储桶名称
   });
 }
 const db = admin.firestore();
-const bucket = admin.storage().bucket('process.env.STORAGE_BUCKET'); // 修正存储桶名称
+const bucket = admin.storage().bucket(process.env.STORAGE_BUCKET); // 修正存储桶名称
 
 // --- Express 应用创建 ---
 const app = express();
