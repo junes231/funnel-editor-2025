@@ -1270,64 +1270,77 @@ p {
     min-width: 100%;
 }
 
-/* 容器确保定位上下文 */
+/* --- 优化整个上传区域容器 --- */
 .file-upload-wrapper {
   position: relative;
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-top: 10px; /* 增加与上方标签的间距 */
+  margin-top: 10px;
+  padding: 12px; /* 增加内边距 */
+  border: 1px solid #e0e0e0; /* 柔和的边框 */
+  border-radius: 8px; /* 圆角 */
+  background-color: #fafafa; /* 轻微的背景色 */
+  transition: box-shadow 0.3s ease;
 }
 
-/* 隐藏原生的文件输入框 */
+.file-upload-wrapper:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); /* 悬停阴影 */
+}
+
+/* 隐藏原生的文件输入框 (保持不变) */
 .file-upload-input {
-  /* 必须确保它在逻辑上可用，但在视觉上透明 */
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  opacity: 0; /* 关键：完全透明 */
+  opacity: 0;
   cursor: pointer;
   z-index: 10;
 }
 
-/* 自定义按钮样式 */
+/* --- 优化自定义按钮样式 --- */
 .custom-file-button {
-  background-color: #f8f9fa; /* 浅灰色背景 */
-  color: #007bff; /* 蓝色文字 */
-  border: 1px solid #007bff;
-  padding: 8px 16px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: 500;
-  display: inline-block;
+  /* 基础设计 */
+  background-color: #667eea; /* 使用品牌色或主题色 */
+  color: white;
+  border: none; /* 移除蓝色边框 */
+  padding: 8px 18px;
+  border-radius: 6px;
+  font-weight: 600; /* 加粗字体 */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 10px rgba(102, 126, 234, 0.3); /* 增加深度感 */
 }
 
 .custom-file-button:hover {
-  background-color: #007bff;
-  color: white;
+  background-color: #5a6fe0; 
+  transform: translateY(-1px); /* 悬停时轻微上浮 */
+  box-shadow: 0 6px 15px rgba(102, 126, 234, 0.4);
 }
 
-/* 文件名显示区域样式 */
+/* 上传中/禁用状态 */
+.custom-file-button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* --- 文件名显示区域优化 --- */
 .file-name-display {
-  color: #6c757d;
-  font-size: 0.9em;
+  color: #555;
+  font-size: 0.95em;
   font-style: italic;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  flex-grow: 1;
-}
-
-/* 禁用状态 */
-.custom-file-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  background-color: #e9ecef;
-  color: #6c757d;
-  border-color: #ced4da;
+  flex-grow: 1; /* 确保它占据大部分空间 */
+  padding-left: 10px;
+  border-left: 1px solid #ddd; /* 与按钮增加视觉分隔 */
 }
 
