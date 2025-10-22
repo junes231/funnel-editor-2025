@@ -1827,36 +1827,37 @@ const OutcomeSettingsComponent: React.FC<OutcomeSettingsComponentProps> = ({
   };
 
   // 假设这是你前端的 handleClearImage 函数
-const handleClearImage = async (outcomeId) => {
+const handleClearImage = async (outcomeId: string) => {
     // ⭐ DEBUG: 函數開始執行，確認點擊事件已觸發 ⭐
     console.log("-----------------------------------------");
     console.log("🖱️ CLEAR IMAGE BUTTON CLICKED. Starting handleClearImage for ID:", outcomeId);
     console.log("-----------------------------------------");
-    // ------------------------------------
-
-    // 【假設】在這裡從狀態中獲取 fileUrlToDelete。
-    // ⚠️ 範例：請確保這個 URL 是您要傳遞給後端刪除的實際檔案 URL。
-    const fileUrlToDelete = "YOUR_IMAGE_URL_FROM_STATE"; 
     
-    // ⭐ DEBUG: 檢查要傳輸到後端的 URL 變數 ⭐
+    // 步驟 1: 從 outcomes 狀態中獲取真正的圖片 URL
+    const currentOutcome = outcomes.find(o => o.id === outcomeId);
+    
+    // 假設圖片 URL 儲存在 FunnelOutcome 接口的 image_url 字段
+    // ⚠️ 請根據您的 FunnelOutcome 接口定義調整 image_url 字段名 ⚠️
+    const fileUrlToDelete = currentOutcome?.image_url; 
+    
+    // ⭐ DEBUG: 檢查實際獲取的 URL 變數 ⭐
     console.log("🔍 fileUrlToDelete value:", fileUrlToDelete);
-    
-    // 檢查 fileUrlToDelete 是否有效 (防止發送無意義的請求)
+
     if (!fileUrlToDelete || typeof fileUrlToDelete !== 'string' || fileUrlToDelete.trim() === '') {
-        console.error("❌ Deletion aborted: fileUrlToDelete is invalid or empty.");
-        showNotification('Cannot clear image: URL is missing.', 'error');
-        // ⭐ DEBUG: 確認函數執行到此處並返回 (這是按鈕無反應的一個常見原因) ⭐
+        console.error("❌ Deletion aborted: fileUrlToDelete is invalid or empty in state.");
+        // 如果 URL 為空，我們仍會更新狀態以清除任何可能的前端殘留，然後返回
+        handleUpdateOutcome(outcomeId, { image_url: null });
+        showNotification('No valid image URL found to clear.', 'warning');
         console.log("🛑 Deletion function returned early: Invalid URL.");
         return; 
     }
 
-    // ⭐ 必須在這裡獲取 ID Token ⭐
+    // --- 身份驗證階段 ---
     const auth = getAuth(); 
     const currentUser = auth.currentUser;
     
     if (!currentUser) {
         showNotification('User not logged in.', 'error');
-        // ⭐ DEBUG: 確認函數執行到此處並返回 ⭐
         console.log("🛑 Deletion function returned early: User not logged in.");
         return; 
     }
@@ -1864,24 +1865,19 @@ const handleClearImage = async (outcomeId) => {
     let idToken;
     try {
         idToken = await currentUser.getIdToken();
-        // ⭐ DEBUG: 確認成功獲取 Token ⭐
         console.log("🔑 Successfully retrieved ID Token.");
     } catch (tokenError) {
-        // 錯誤捕獲: 獲取 Token 失敗
         console.error("❌ Failed to get ID Token:", tokenError);
         showNotification('Failed to verify user session.', 'error');
-        // ⭐ DEBUG: 確認函數執行到此處並返回 ⭐
         console.log("🛑 Deletion function returned early: Failed to get ID Token.");
         return;
     }
     
+    // --- API 請求階段 ---
     const trackClickBaseUrl = process.env.REACT_APP_TRACK_CLICK_URL.replace(/\/trackClick$/, '');
-
-    // ⭐ DEBUG: 檢查 API URL ⭐
     console.log("🔗 Full API URL:", `${trackClickBaseUrl}/deleteFile`);
     
     try {
-        // ⭐ DEBUG: 確認開始發送 fetch 請求 ⭐
         console.log("🌐 Sending POST request to delete file...");
         
         const response = await fetch(`${trackClickBaseUrl}/deleteFile`, {
@@ -1897,7 +1893,6 @@ const handleClearImage = async (outcomeId) => {
             }),
         });
 
-        // ⭐ DEBUG: 檢查 HTTP 響應狀態 ⭐
         console.log("🔍 HTTP Response Status received:", response.status);
 
         // 檢查非 2xx 響應
@@ -1907,25 +1902,21 @@ const handleClearImage = async (outcomeId) => {
             throw new Error(errorMessage);
         }
         
-        // 【刪除成功邏輯】
+        // --- 刪除成功邏輯 ---
         showNotification('Image cleared successfully!', 'success');
-        
-        // ⭐ DEBUG: 確認檔案刪除成功，並將執行清除前端狀態 ⭐
-        console.log("✅ Backend deletion successful. Proceeding to update frontend state...");
+        console.log("✅ Backend deletion successful. Proceeding to update frontend state.");
 
-        // 執行清除資料庫 URL 的邏輯
+        // 步驟 2: 調用 handleUpdateOutcome 清除前端狀態和數據庫 URL
         handleUpdateOutcome(outcomeId, { 
-            image_url: null, 
+            image_url: null, // 清除 URL
+            // 清除其他相關狀態，例如文件名標籤
+            // fileLabel: { ...fileLabel, [outcomeId]: '' } // 如果 fileLabel 存儲在組件狀態中
         });
         
-        // ⭐ DEBUG: 確認前端狀態更新完成 ⭐
         console.log("🖼️ Frontend state update finished.");
-
 
     } catch (error) {
         // 🚨 錯誤捕獲和通知 🚨
-        
-        // 打印完整的錯誤訊息和物件
         if (error instanceof Error) {
             console.error("❌ File deletion failed:", error.message, error);
             showNotification(`Deletion failed: ${error.message}`, 'error');
@@ -1934,9 +1925,9 @@ const handleClearImage = async (outcomeId) => {
             showNotification('Deletion failed: Unknown error.', 'error');
         }
     }
-    // ⭐ DEBUG: 函數執行結束 ⭐
     console.log("🏁 handleClearImage function finished execution.");
 };
+
 
 // NEW: 处理文件选择或拖放
 const processFile = (selectedFile: File | null, outcomeId: string) => {
