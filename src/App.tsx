@@ -2061,7 +2061,7 @@ const handleImageUpload = async (file: File, outcomeId: string) => {
                     ? `Transferring data: ${uploadProgress !== null ? uploadProgress : 0}%`
                     : fileLabel[outcome.id] 
                       ? `Current: ${fileLabel[outcome.id]}`
-                      : '或拖放文件到此区域 (最大 25MB)'}
+                      : 'Or drag and drop files into this area (maximum 25MB)'}
                 </span>
                 
                 {/* 隐藏的 input (用于点击) */}
