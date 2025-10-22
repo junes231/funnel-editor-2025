@@ -1826,11 +1826,44 @@ const OutcomeSettingsComponent: React.FC<OutcomeSettingsComponentProps> = ({
     );
   };
 
-  const handleClearImage = (outcomeId: string) => {
+  const handleClearImage = async (outcomeId: string) => {
+    // 1. 找到要删除的旧 URL
+    const outcome = outcomes.find(o => o.id === outcomeId);
+    const fileUrlToDelete = outcome?.imageUrl;
+    
+    // 2. ⭐ 调用后端 API 执行删除操作 ⭐
+    if (fileUrlToDelete) {
+        try {
+            // 假设你有一个新的后端 API 路由，例如 '/deleteFile'
+            const trackClickBaseUrl = process.env.REACT_APP_TRACK_CLICK_URL.replace(/\/trackClick$/, '');
+            await fetch(`${trackClickBaseUrl}/deleteFile`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    data: { 
+                        fileUrl: fileUrlToDelete,
+                        // 确保你传递了任何必要的认证信息 (例如 Token)
+                    }
+                }),
+            });
+            // 成功删除后，通知用户
+            showNotification('Image file deleted from storage.', 'success');
+        } catch (error) {
+            console.error("❌ Failed to delete file from Storage:", error);
+            showNotification('Warning: Image URL cleared, but file delete failed.', 'warning');
+            // 注意：即使删除失败，我们仍应清除 URL
+        }
+    }
+    
+    // 3. 清除数据库中的 URL（并更新前端状态）
     handleUpdateOutcome(outcomeId, { imageUrl: '' });
+    
+    // 4. 清除本地文件名状态
     setFileLabel(prev => ({ ...prev, [outcomeId]: '' }));
+    
     showNotification('Image link cleared.');
 };
+
   
 // NEW: 处理文件选择或拖放
 const processFile = (selectedFile: File | null, outcomeId: string) => {
