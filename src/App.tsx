@@ -1826,43 +1826,63 @@ const OutcomeSettingsComponent: React.FC<OutcomeSettingsComponentProps> = ({
     );
   };
 
-  const handleClearImage = async (outcomeId: string) => {
-    // 1. 找到要删除的旧 URL
-    const outcome = outcomes.find(o => o.id === outcomeId);
-    const fileUrlToDelete = outcome?.imageUrl;
+  // 假设这是你前端的 handleClearImage 函数
+const handleClearImage = async (outcomeId) => {
+    // ... 获取 fileUrlToDelete ...
     
-    // 2. ⭐ 调用后端 API 执行删除操作 ⭐
-    if (fileUrlToDelete) {
-        try {
-            // 假设你有一个新的后端 API 路由，例如 '/deleteFile'
-            const trackClickBaseUrl = process.env.REACT_APP_TRACK_CLICK_URL.replace(/\/trackClick$/, '');
-            await fetch(`${trackClickBaseUrl}/deleteFile`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    data: { 
-                        fileUrl: fileUrlToDelete,
-                        // 确保你传递了任何必要的认证信息 (例如 Token)
-                    }
-                }),
-            });
-            // 成功删除后，通知用户
-            showNotification('Image file deleted from storage.', 'success');
-        } catch (error) {
-            console.error("❌ Failed to delete file from Storage:", error);
-            showNotification('Warning: Image URL cleared, but file delete failed.', 'warning');
-            // 注意：即使删除失败，我们仍应清除 URL
-        }
+    // ⭐ 必须在这里获取 ID Token ⭐
+    const auth = getAuth(); // 假设你已获取 Firebase Auth 实例
+    const currentUser = auth.currentUser;
+    
+    if (!currentUser) {
+        // 如果用户没有登录，我们不能发送删除请求
+        showNotification('User not logged in.', 'error');
+        return; 
     }
     
-    // 3. 清除数据库中的 URL（并更新前端状态）
-    handleUpdateOutcome(outcomeId, { imageUrl: '' });
+    let idToken;
+    try {
+        idToken = await currentUser.getIdToken();
+    } catch (tokenError) {
+        console.error("Failed to get ID Token:", tokenError);
+        showNotification('Failed to verify user session.', 'error');
+        return;
+    }
     
-    // 4. 清除本地文件名状态
-    setFileLabel(prev => ({ ...prev, [outcomeId]: '' }));
-    
-    showNotification('Image link cleared.');
+    // ... fetch 调用 ...
+    try {
+        const trackClickBaseUrl = process.env.REACT_APP_TRACK_CLICK_URL.replace(/\/trackClick$/, '');
+        
+        const response = await fetch(`${trackClickBaseUrl}/deleteFile`, {
+            method: "POST",
+            headers: { 
+                "Content-Type": "application/json",
+                // ⭐ 必须包含 ID Token ⭐
+                "Authorization": `Bearer ${idToken}` 
+            },
+            body: JSON.stringify({
+                data: { 
+                    fileUrl: fileUrlToDelete,
+                }
+            }),
+        });
+
+        // 检查非 2xx 响应
+        if (!response.ok) {
+            const errorBody = await response.json().catch(() => ({}));
+            throw new Error(errorBody.error || `HTTP error! Status: ${response.status}`);
+        }
+        
+        // ... (成功通知和清除数据库 URL 的逻辑) ...
+
+    } catch (error) {
+        // 🚨 错误捕获和通知 🚨
+        console.error("❌ File deletion failed:", error);
+        showNotification(`Deletion failed: ${error.message || 'Unknown error.'}`, 'error');
+    }
+    // ... 清除数据库 URL (handleUpdateOutcome) ...
 };
+
 
   
 // NEW: 处理文件选择或拖放
