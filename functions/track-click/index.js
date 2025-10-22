@@ -108,6 +108,42 @@ app.post("/generateUploadUrl", async (req, res) => {
   }
 });
 
+app.post("/deleteFile", async (req, res) => {
+    // 预期接收包含文件 URL 的 JSON 数据
+    const { fileUrl } = req.body.data || {};
+
+    if (!fileUrl) {
+        return res.status(400).send({ error: "Missing fileUrl." });
+    }
+
+    try {
+        // 从公共 URL 提取文件路径 (格式: gs://bucket.name/o/filePath?alt=media)
+        const urlPart = decodeURIComponent(fileUrl.split('/o/')[1].split('?')[0]);
+        
+        const file = bucket.file(urlPart);
+        
+        // 尝试删除文件
+        await file.delete();
+
+        console.log(`✅ File deleted successfully: ${urlPart}`);
+
+        res.status(200).send({
+            data: { success: true }
+        });
+    } catch (error) {
+        // 如果文件不存在 (404) 或没有权限 (403)，我们仍然返回成功（因为目标已达成）
+        if (error.code === 404) {
+            console.warn(`⚠️ File not found in Storage, treating as deleted.`);
+            return res.status(200).send({ data: { success: true, message: 'File already missing.' } });
+        }
+        
+        console.error("❌ Failed to delete file:", error);
+        res.status(500).send({ 
+            error: "Failed to delete file from Storage.", 
+            details: error.message || error 
+        });
+    }
+});
 // 由于移除了 app.use(express.json()), 必须只对需要 JSON 的路由使用它
 app.post("/trackClick", express.json(), async (req, res) => {
   // 使用事务来确保读取和写入操作的原子性，避免并发冲突
