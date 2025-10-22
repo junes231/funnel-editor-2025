@@ -1,17 +1,47 @@
-console.log("⚡ track-click API Server starting...");
+// Console.log("⚡ track-click API Server starting...");
 
 const express = require("express");
 const admin = require("firebase-admin");
 const cors = require("cors");
 
 // --- Firebase 初始化 ---
+// 修正存储桶名称
+const BUCKET_NAME = 'funnel-editor-netlify.firebasestorage.app'; 
+
 if (!admin.apps.length) {
   admin.initializeApp({
-    storageBucket: 'funnel-editor-netlify.firebasestorage.app' // 修正存储桶名称
+    storageBucket: BUCKET_NAME
   });
 }
 const db = admin.firestore();
-const bucket = admin.storage().bucket('funnel-editor-netlify.firebasestorage.app'); // 修正存储桶名称
+const bucket = admin.storage().bucket(BUCKET_NAME); 
+
+// --- 辅助函数：从 Firebase/GCS URL 中提取文件路径 ---
+// 关键修复：这个函数能够安全地处理多种 URL 格式，避免 split 错误
+const getFilePathFromUrl = (fileUrl, bucketName) => {
+    // 1. 检查是否为标准 Firebase URL 格式 (包含 /o/ 和 ?)
+    if (fileUrl.includes('/o/')) {
+        try {
+            // 从 /o/ 之后 ? 之前的部分获取路径
+            const urlPart = fileUrl.split('/o/')[1].split('?')[0];
+            return decodeURIComponent(urlPart);
+        } catch (e) {
+            // 如果 split 链中的任何一个失败 (如 URL 格式不完整)，返回 null
+            return null; 
+        }
+    }
+    
+    // 2. 检查是否为 GCS 公共格式: https://storage.googleapis.com/bucket.name/path/to/file
+    const gcsUrlPrefix = `https://storage.googleapis.com/${bucketName}/`;
+    if (fileUrl.startsWith(gcsUrlPrefix)) {
+        const path = fileUrl.substring(gcsUrlPrefix.length);
+        // 对 GCS URL 中的路径进行解码
+        return decodeURIComponent(path);
+    }
+    
+    // 3. 既不是 Firebase 格式也不是 GCS 格式
+    return null; 
+};
 
 // --- Express 应用创建 ---
 const app = express();
@@ -108,42 +138,69 @@ app.post("/generateUploadUrl", async (req, res) => {
   }
 });
 
+// ⭐ 修复: 路径解析导致 500 错误的 /deleteFile 路由 ⭐
 app.post("/deleteFile", async (req, res) => {
-    // 预期接收包含文件 URL 的 JSON 数据
-    const { fileUrl } = req.body.data || {};
-
-    if (!fileUrl) {
-        return res.status(400).send({ error: "Missing fileUrl." });
+    
+    // --- 1. 身份验证：检查 Authorization 头 ---
+    const idToken = req.headers.authorization?.split('Bearer ')[1]; 
+    if (!idToken) {
+        return res.status(401).send({ error: "Authentication token required." });
     }
 
     try {
-        // 从公共 URL 提取文件路径 (格式: gs://bucket.name/o/filePath?alt=media)
-        const urlPart = decodeURIComponent(fileUrl.split('/o/')[1].split('?')[0]);
+        // 验证 ID Token (Admin SDK 执行)
+        const decodedToken = await admin.auth().verifyIdToken(idToken);
+        const userId = decodedToken.uid; 
+        console.log(`[DELETE] Request verified for user: ${userId}`);
+
+        // --- 2. 获取数据和基础检查 ---
+        const { fileUrl } = req.body.data || {};
+        if (!fileUrl) {
+            return res.status(400).send({ error: "Missing fileUrl in request body." });
+        }
+
+        // --- 3. 解析路径和执行删除 ---
+        // ⭐ 使用健壮的辅助函数进行解析，避免 split 错误 ⭐
+        const filePath = getFilePathFromUrl(fileUrl, BUCKET_NAME);
         
-        const file = bucket.file(urlPart);
-        
-        // 尝试删除文件
+        if (!filePath) {
+            console.warn(`[DELETE] Invalid URL format received for deletion: ${fileUrl}`);
+            // 收到无效 URL，返回 400，而不是 500
+            return res.status(400).send({ error: "Invalid file URL format received." });
+        }
+
+        const file = bucket.file(filePath);
         await file.delete();
 
-        console.log(`✅ File deleted successfully: ${urlPart}`);
+        console.log(`✅ File deleted successfully: ${filePath}`);
 
         res.status(200).send({
             data: { success: true }
         });
+        
     } catch (error) {
-        // 如果文件不存在 (404) 或没有权限 (403)，我们仍然返回成功（因为目标已达成）
+        // 捕获所有错误：认证失败、删除失败、404等
+        
+        // 如果文件不存在 (404)
         if (error.code === 404) {
             console.warn(`⚠️ File not found in Storage, treating as deleted.`);
             return res.status(200).send({ data: { success: true, message: 'File already missing.' } });
         }
         
+        // 捕获认证失败错误
+        if (error.code === 'auth/argument-error' || String(error).includes('Firebase ID token has expired')) {
+             return res.status(401).send({ error: "Invalid or expired authentication token." });
+        }
+
         console.error("❌ Failed to delete file:", error);
         res.status(500).send({ 
             error: "Failed to delete file from Storage.", 
-            details: error.message || error 
+            details: error.message || String(error) 
         });
     }
 });
+
+
 // 由于移除了 app.use(express.json()), 必须只对需要 JSON 的路由使用它
 app.post("/trackClick", express.json(), async (req, res) => {
   // 使用事务来确保读取和写入操作的原子性，避免并发冲突
@@ -225,3 +282,4 @@ const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
   console.log(`🚀 track-click API Server listening on port ${PORT}`);
 });
+
