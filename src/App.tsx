@@ -2069,7 +2069,7 @@ const handleImageUpload = async (file: File, outcomeId: string) => {
                   type="file"
                   accept="image/*"
                   ref={el => fileInputRef.current[outcome.id] = el}
-                  onChange={(e) => processFile(e.target.files?.[0] || null, outcomeId)}
+                  onChange={(e) => processFile(e.target.files?.[0] || null, outcome.id)}
                   disabled={isCurrentUploading}
                   className="file-upload-input" 
                 />
