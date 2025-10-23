@@ -1859,7 +1859,9 @@ const fileUrlToDelete = outcomeStates[outcomeId]?.imageUrl; // 假设您的状�
     }
 
     // 假设您有一个获取 Auth Token 的函数
-    const token = await getAuthToken(); // 请确保此函数可用
+    const token = await getAuthToken();
+    console.log("Token retrieved successfully:", !!token); // 檢查 token 是否為 truthy
+ // 请确保此函数可用
 
     if (!token) {
         console.error("Auth token missing. Cannot delete file.");
