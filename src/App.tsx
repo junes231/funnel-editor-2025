@@ -1838,7 +1838,7 @@ const handleClearImage = async (outcomeId: string) => {
     
     // 假設圖片 URL 儲存在 FunnelOutcome 接口的 image_url 字段
     // ⚠️ 請根據您的 FunnelOutcome 接口定義調整 image_url 字段名 ⚠️
-    const fileUrlToDelete = currentOutcome?.image_url; 
+    const fileUrlToDelete = currentOutcome?.imageUrl; 
     
     // ⭐ DEBUG: 檢查實際獲取的 URL 變數 ⭐
     console.log("🔍 fileUrlToDelete value:", fileUrlToDelete);
@@ -1846,7 +1846,7 @@ const handleClearImage = async (outcomeId: string) => {
     if (!fileUrlToDelete || typeof fileUrlToDelete !== 'string' || fileUrlToDelete.trim() === '') {
         console.error("❌ Deletion aborted: fileUrlToDelete is invalid or empty in state.");
         // 如果 URL 為空，我們仍會更新狀態以清除任何可能的前端殘留，然後返回
-        handleUpdateOutcome(outcomeId, { image_url: null });
+        handleUpdateOutcome(outcomeId, { imageUrl: null });
         showNotification('No valid image URL found to clear.', 'warning');
         console.log("🛑 Deletion function returned early: Invalid URL.");
         return; 
@@ -1907,11 +1907,8 @@ const handleClearImage = async (outcomeId: string) => {
         console.log("✅ Backend deletion successful. Proceeding to update frontend state.");
 
         // 步驟 2: 調用 handleUpdateOutcome 清除前端狀態和數據庫 URL
-        handleUpdateOutcome(outcomeId, { 
-            image_url: null, // 清除 URL
-            // 清除其他相關狀態，例如文件名標籤
-            // fileLabel: { ...fileLabel, [outcomeId]: '' } // 如果 fileLabel 存儲在組件狀態中
-        });
+        handleUpdateOutcome(outcomeId, { imageUrl: permanentUrl }); 
+
         
         console.log("🖼️ Frontend state update finished.");
 
@@ -1977,8 +1974,8 @@ const handleImageUpload = async (file: File, outcomeId: string) => {
   const trackClickBaseUrl = process.env.REACT_APP_TRACK_CLICK_URL.replace(/\/trackClick$/, '');
 
   try {
-    // Step 1: 获取签名 URL
-  const generateUrlResponse = await fetch(`${trackClickBaseUrl}/generateUploadUrl`, {
+    // Step 1: 獲取簽名 URL
+    const generateUrlResponse = await fetch(`${trackClickBaseUrl}/generateUploadUrl`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1998,21 +1995,30 @@ const handleImageUpload = async (file: File, outcomeId: string) => {
         throw new Error(`Failed to get signed URL: ${details}`);
     }
 
+    // 🌟 修改點 1: 僅需提取 uploadUrl，後端應返回完整的 GCS 文件路徑 (filePath)
     const { data } = await generateUrlResponse.json();
-    const { uploadUrl, fileUrl } = data;
-     console.log("📎 uploadUrl value:", uploadUrl);
-     console.log("📎 uploadUrl typeof:", typeof uploadUrl);
-    // 步骤 2: 前端直接上传文件到 GCS (使用 XMLHttpRequest 来追踪进度)
+    const { uploadUrl, filePath } = data; // 假設後端返回文件在 Storage 中的路徑，例如：uploads/images/funnelId/outcomeId/file.png
     
+    // 檢查 filePath 是否存在，這是獲取永久 URL 的關鍵
+    if (!filePath) {
+        throw new Error("Backend did not return the file path required for getting the permanent URL.");
+    }
+    
+    // ... (日誌保持不變)
+    console.log("📎 uploadUrl value:", uploadUrl);
+    console.log("📎 uploadUrl typeof:", typeof uploadUrl);
+
+    // 步驟 2: 前端直接上傳文件到 GCS
     await new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         xhr.open('PUT', uploadUrl);
+        // ... (XMLHttpRequest 邏輯保持不變) ...
         xhr.setRequestHeader('Content-Type', file.type);
 
         xhr.upload.onprogress = (event) => {
             if (event.lengthComputable) {
                 const percent = Math.round((event.loaded / event.total) * 100);
-                setUploadProgress(percent); // 更新进度
+                setUploadProgress(percent); // 更新進度
             }
         };
 
@@ -2031,11 +2037,15 @@ const handleImageUpload = async (file: File, outcomeId: string) => {
         xhr.send(file);
     });
 
-    // 步骤 3: 成功后更新 Firestore
-    handleUpdateOutcome(outcomeId, { imageUrl: fileUrl }); 
+    // 🌟 修改點 2: 獲取永久下載 URL (使用 Firebase Storage SDK)
+    const fileRef = ref(storage, filePath);
+    const permanentUrl = await getDownloadURL(fileRef);
+    
+    // 🌟 修改點 3: 成功後更新 Firestore (使用 handleClearImage 匹配的字段名)
+    handleUpdateOutcome(outcomeId, { imageUrl: permanentUrl }); 
     showNotification('Image uploaded successfully!', 'success');
     
-    // 清理状态
+    // 清理狀態
     setUploadingId(null);
     setUploadProgress(null);
 
@@ -2043,12 +2053,12 @@ const handleImageUpload = async (file: File, outcomeId: string) => {
     console.error("❌ Upload Error:", error.message);
     setUploadingId(null);
     setUploadProgress(null);
-    // 确保错误通知在 catch 中被显示
     if (!error.message.includes("Failed to get signed URL")) {
         showNotification(`Critical Upload Error: ${error.message}`, 'error');
     }
   }
 };
+
 
   return (
     <div className="link-settings-container">
