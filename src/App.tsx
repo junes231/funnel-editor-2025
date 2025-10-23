@@ -1826,105 +1826,72 @@ const OutcomeSettingsComponent: React.FC<OutcomeSettingsComponentProps> = ({
     );
   };
 
-  // 假设这是你前端的 handleClearImage 函数
+
+const deleteFileApi = async (fileUrl: string, token: string) => {
+  const apiUrl = 'https://api-track-click-jgett3ucqq-uc.a.run.app/deleteFile';
+  const response = await fetch(apiUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify({ data: { fileUrl } }),
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.json();
+    throw new Error(`Deletion failed: ${errorBody.error || response.statusText}`);
+  }
+};
+
+
+// 修正后的 handleClearImage 函数
 const handleClearImage = async (outcomeId: string) => {
-    // ⭐ DEBUG: 函數開始執行，確認點擊事件已觸發 ⭐
-    console.log("-----------------------------------------");
-    console.log("🖱️ CLEAR IMAGE BUTTON CLICKED. Starting handleClearImage for ID:", outcomeId);
-    console.log("-----------------------------------------");
+const fileUrlToDelete = outcomeStates[outcomeId]?.imageUrl; // 假设您的状态使用 imageUrl
     
-    // 步驟 1: 從 outcomes 狀態中獲取真正的圖片 URL
-    const currentOutcome = outcomes.find(o => o.id === outcomeId);
-    
-    // 假設圖片 URL 儲存在 FunnelOutcome 接口的 image_url 字段
-    // ⚠️ 請根據您的 FunnelOutcome 接口定義調整 image_url 字段名 ⚠️
-    const fileUrlToDelete = currentOutcome?.imageUrl; 
-    
-    // ⭐ DEBUG: 檢查實際獲取的 URL 變數 ⭐
-    console.log("🔍 fileUrlToDelete value:", fileUrlToDelete);
-
-    if (!fileUrlToDelete || typeof fileUrlToDelete !== 'string' || fileUrlToDelete.trim() === '') {
-        console.error("❌ Deletion aborted: fileUrlToDelete is invalid or empty in state.");
-        // 如果 URL 為空，我們仍會更新狀態以清除任何可能的前端殘留，然後返回
-        handleUpdateOutcome(outcomeId, { imageUrl: null });
-        showNotification('No valid image URL found to clear.', 'warning');
-        console.log("🛑 Deletion function returned early: Invalid URL.");
+    if (!fileUrlToDelete) {
+        console.warn("Attempted to clear image but imageUrl was already null.");
+        // 即使没有 URL，也执行本地清理，以防万一
+        handleUpdateOutcome(outcomeId, { 
+            imageUrl: null, 
+        });
         return; 
     }
 
-    // --- 身份驗證階段 ---
-    const auth = getAuth(); 
-    const currentUser = auth.currentUser;
-    
-    if (!currentUser) {
-        showNotification('User not logged in.', 'error');
-        console.log("🛑 Deletion function returned early: User not logged in.");
-        return; 
-    }
-    
-    let idToken;
-    try {
-        idToken = await currentUser.getIdToken();
-        console.log("🔑 Successfully retrieved ID Token.");
-    } catch (tokenError) {
-        console.error("❌ Failed to get ID Token:", tokenError);
-        showNotification('Failed to verify user session.', 'error');
-        console.log("🛑 Deletion function returned early: Failed to get ID Token.");
+    // 假设您有一个获取 Auth Token 的函数
+    const token = await getAuthToken(); // 请确保此函数可用
+
+    if (!token) {
+        console.error("Auth token missing. Cannot delete file.");
+        // 如果没有 token，我们可以选择跳过后端删除，只清理本地状态，或直接返回错误
         return;
     }
     
-    // --- API 請求階段 ---
-    const trackClickBaseUrl = process.env.REACT_APP_TRACK_CLICK_URL.replace(/\/trackClick$/, '');
-    console.log("🔗 Full API URL:", `${trackClickBaseUrl}/deleteFile`);
-    
+    console.log("CLEAR IMAGE BUTTON CLICKED. Starting handleClearImage for ID:", outcomeId);
+    console.log("-----------------------------------------");
+    console.log("🔍 fileUrlToDelete value:", fileUrlToDelete);
+
     try {
-        console.log("🌐 Sending POST request to delete file...");
-        
-        const response = await fetch(`${trackClickBaseUrl}/deleteFile`, {
-            method: "POST",
-            headers: { 
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${idToken}` 
-            },
-            body: JSON.stringify({
-                data: { 
-                    fileUrl: fileUrlToDelete,
-                }
-            }),
+        // 2. 调用后端 API 删除文件
+        await deleteFileApi(fileUrlToDelete, token);
+
+        console.log("✅ Backend file deleted successfully (200 OK).");
+
+        // 3. 🌟 关键步骤: 更新本地状态 (确保使用正确的字段名 imageUrl)
+        handleUpdateOutcome(outcomeId, { 
+            imageUrl: null, // 清除 URL
+            
         });
-
-        console.log("🔍 HTTP Response Status received:", response.status);
-
-        // 檢查非 2xx 響應
-        if (!response.ok) {
-            const errorBody = await response.json().catch(() => ({}));
-            const errorMessage = errorBody.error || `HTTP error! Status: ${response.status}`;
-            throw new Error(errorMessage);
-        }
         
-        // --- 刪除成功邏輯 ---
-        showNotification('Image cleared successfully!', 'success');
-        console.log("✅ Backend deletion successful. Proceeding to update frontend state.");
-
-        // 步驟 2: 調用 handleUpdateOutcome 清除前端狀態和數據庫 URL
-        handleUpdateOutcome(outcomeId, { imageUrl: permanentUrl }); 
-
-        
-        console.log("🖼️ Frontend state update finished.");
+        // 修正: 移除 showNotification，使用 console.log 代替
+        console.log("🎉 Local state updated. Image cleared.");
 
     } catch (error) {
-        // 🚨 錯誤捕獲和通知 🚨
-        if (error instanceof Error) {
-            console.error("❌ File deletion failed:", error.message, error);
-            showNotification(`Deletion failed: ${error.message}`, 'error');
-        } else {
-            console.error("❌ File deletion failed: Unknown non-Error object thrown", error);
-            showNotification('Deletion failed: Unknown error.', 'error');
-        }
+        console.error("❌ File deletion failed at the front end.", error);
+        
+       
     }
-    console.log("🏁 handleClearImage function finished execution.");
 };
-
 
 // NEW: 处理文件选择或拖放
 const processFile = (selectedFile: File | null, outcomeId: string) => {
@@ -1932,7 +1899,7 @@ const processFile = (selectedFile: File | null, outcomeId: string) => {
     
     // 检查文件类型 (仅限图片)
     if (!selectedFile.type.startsWith('image/')) {
-        showNotification('Only image files are supported for upload.', 'error');
+        console.log('Only image files are supported for upload.', 'error');
         return;
     }
     
