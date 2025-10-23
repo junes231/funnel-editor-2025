@@ -57,7 +57,7 @@ app.use(cors(corsOptions));
 app.use(express.json());
 
 // --- 生成预签名上传 URL ---
-app.post("/generateUploadUrl", async (req, res) => {
+App.post("/generateUploadUrl", async (req, res) => {
   const { funnelId, outcomeId, fileName, fileType } = req.body.data || req.body; // 兼容直接发送字段
 
   // --- 1️⃣ 基础验证 ---
@@ -101,32 +101,34 @@ app.post("/generateUploadUrl", async (req, res) => {
     ? `${timestamp}-${fileName.replace(/[^\w.-]/g, '_')}`
     : `${timestamp}-${fileName}`;
   
+  // ⭐ 關鍵：這是 GCS 中的唯一路徑，將用於前端獲取永久 URL 和後端刪除 ⭐
   const filePath = `uploads/${folder}/${funnelId}/${outcomeId}/${safeFileName}`;
   const file = bucket.file(filePath);
 
   try {
-    // 生成预签名 URL
+    // 生成預簽名 URL (用於前端 PUT 請求)
     const [uploadUrl] = await file.getSignedUrl({
       version: 'v4',
       action: 'write',
-      expires: Date.now() + 10 * 60 * 1000, // 10 分钟有效
+      expires: Date.now() + 10 * 60 * 1000, // 10 分鐘有效
       contentType: fileType,
       virtualHostedStyle: false,
       region: 'us-central1',
     });
     
-    // 构造最终文件的公共 URL
-    const publicFileUrl = `https://storage.googleapis.com/${bucket.name}/${filePath}`;
+    // 構造最終文件的公共 URL (此行移除，交由前端處理)
+    // const publicFileUrl = `https://storage.googleapis.com/${bucket.name}/${filePath}`;
 
-    // 🧠 关键调试日志
+    // 🧠 關鍵調試日誌
     console.log("✅ Signed URL generated for:", fileName);
-    console.log("📤 uploadUrl typeof:", typeof uploadUrl);
+    console.log("🔑 File path for permanent URL generation:", filePath);
     console.log("📤 uploadUrl preview:", uploadUrl.substring(0, 120) + "...");
 
+    // ⭐ 修改點：返回 filePath 而不是 fileUrl ⭐
     res.status(200).send({
       data: {
-        uploadUrl: String(uploadUrl), // 👈 确保是字符串
-        fileUrl: publicFileUrl
+        uploadUrl: String(uploadUrl),
+        filePath: filePath // 將 GCS 檔案路徑返回給前端
       }
     });
   } catch (error) {
@@ -141,31 +143,32 @@ app.post("/generateUploadUrl", async (req, res) => {
 // ⭐ 修复: 路径解析导致 500 错误的 /deleteFile 路由 ⭐
 app.post("/deleteFile", async (req, res) => {
     
-    // --- 1. 身份验证：检查 Authorization 头 ---
+    // 假設 `getFilePathFromUrl` 函數已定義在某處，並且現在支持解析長效 Token URL。
+
+    // ... (身份驗證邏輯保持不變) ...
     const idToken = req.headers.authorization?.split('Bearer ')[1]; 
     if (!idToken) {
         return res.status(401).send({ error: "Authentication token required." });
     }
 
     try {
-        // 验证 ID Token (Admin SDK 执行)
+        // 驗證 ID Token (Admin SDK 執行)
         const decodedToken = await admin.auth().verifyIdToken(idToken);
         const userId = decodedToken.uid; 
         console.log(`[DELETE] Request verified for user: ${userId}`);
 
-        // --- 2. 获取数据和基础检查 ---
+        // --- 2. 獲取數據和基礎檢查 ---
         const { fileUrl } = req.body.data || {};
         if (!fileUrl) {
             return res.status(400).send({ error: "Missing fileUrl in request body." });
         }
 
-        // --- 3. 解析路径和执行删除 ---
-        // ⭐ 使用健壮的辅助函数进行解析，避免 split 错误 ⭐
+        // --- 3. 解析路徑和執行刪除 ---
+        // ⭐ 核心修改：確保這個函數能處理兩種 URL 格式 ⭐
         const filePath = getFilePathFromUrl(fileUrl, BUCKET_NAME);
         
         if (!filePath) {
             console.warn(`[DELETE] Invalid URL format received for deletion: ${fileUrl}`);
-            // 收到无效 URL，返回 400，而不是 500
             return res.status(400).send({ error: "Invalid file URL format received." });
         }
 
@@ -179,15 +182,12 @@ app.post("/deleteFile", async (req, res) => {
         });
         
     } catch (error) {
-        // 捕获所有错误：认证失败、删除失败、404等
-        
-        // 如果文件不存在 (404)
+        // ... (錯誤處理邏輯保持不變) ...
         if (error.code === 404) {
             console.warn(`⚠️ File not found in Storage, treating as deleted.`);
             return res.status(200).send({ data: { success: true, message: 'File already missing.' } });
         }
         
-        // 捕获认证失败错误
         if (error.code === 'auth/argument-error' || String(error).includes('Firebase ID token has expired')) {
              return res.status(401).send({ error: "Invalid or expired authentication token." });
         }
@@ -199,7 +199,6 @@ app.post("/deleteFile", async (req, res) => {
         });
     }
 });
-
 
 // 由于移除了 app.use(express.json()), 必须只对需要 JSON 的路由使用它
 app.post("/trackClick", express.json(), async (req, res) => {
