@@ -1844,23 +1844,51 @@ const deleteFileApi = async (fileUrl: string, token: string) => {
   }
 };
 
+const handleClearImage = async (outcomeId: string) => {
+const fileUrlToDelete = outcome.imageUrl; // 示例：從當前 outcome 獲取
 
-// 修正后的 handleClearImage 函数
-// 臨時測試函數 - 專門用於診斷點擊事件
-const handleClearImage = (outcomeId: string) => {
-    console.log(`[TEST] Clear Image button clicked for ID: ${outcomeId}`); 
+    if (!fileUrlToDelete) {
+        console.error("Cannot clear, image URL is already empty.");
+        return;
+    }
 
-    // 🌟 關鍵修復：除了清除 imageUrl，還要清除那個殘留的 URL 文本框的狀態。
-    handleUpdateOutcome(outcomeId, { 
-        imageUrl: null, 
-        // 假設 URL 文本框綁定的是 externalUrl 字段
-        externalUrl: '', 
-    });
+    console.log("DEBUG 1: Starting clear image process.");
     
-    // 此外，如果 Current: IMG_xxxx.jpeg 這樣的文字是通過 setFileLabel 設置的，也要清除它
-    // 假設 setFileLabel 是一個可用的函數
-    if (typeof setFileLabel === 'function') {
-        setFileLabel(prev => ({ ...prev, [outcomeId]: null }));
+    try {
+        const token = await getAuthToken(); 
+        
+        if (token) {
+            console.log("DEBUG 2: Calling deleteFileApi...");
+            // 嘗試刪除遠端文件
+            await deleteFileApi(fileUrlToDelete, token); 
+            console.log("DEBUG 3: deleteFileApi successful.");
+        } else {
+            console.warn("Auth token missing. Skipping remote file deletion, clearing local state only.");
+        }
+        
+        // 🌟 關鍵修復：清除所有本地相關狀態
+        handleUpdateOutcome(outcomeId, { 
+            imageUrl: null,     // 清除圖片預覽
+            externalUrl: '',    // 必須：清除 URL 文本框的綁定值
+        }); 
+        
+        // 清除上傳文件名標籤 (如果它存在且由 setFileLabel 控制)
+        if (typeof setFileLabel === 'function') {
+            setFileLabel(prev => ({ ...prev, [outcomeId]: null }));
+        }
+
+        console.log("DEBUG 4: All local states cleared successfully.");
+
+    } catch (error: any) {
+        console.error("❌ Clear Image Error (API Call Failed, clearing local state):", error.message);
+        // 即使 API 失敗，也要清除本地狀態，避免 UI 鎖死
+        handleUpdateOutcome(outcomeId, { 
+            imageUrl: null, 
+            externalUrl: '', 
+        }); 
+        if (typeof setFileLabel === 'function') {
+            setFileLabel(prev => ({ ...prev, [outcomeId]: null }));
+        }
     }
 };
 
@@ -2081,15 +2109,7 @@ return (
                   >
                     Clear Image
                   </button>
-                   {/* 在 Clear Image 按鈕的上方或下方添加這個測試按鈕 */}
-                <button 
-               style={{ position: 'fixed', top: '10px', right: '10px', zIndex: 9999, backgroundColor: 'yellow' }}
-              onClick={() => console.log('I AM THE TEST BUTTON')}
-             >
-            TEST CLICK
-           </button>
-
-                </div>
+                  </div>
               )}
               
               {/* 拖放/点击上传区域 (核心交互) */}
