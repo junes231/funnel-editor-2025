@@ -1931,6 +1931,10 @@ const handleDrop = (e: React.DragEvent, outcomeId: string) => {
         processFile(droppedFile, outcomeId);
     }
 };
+
+
+const BUCKET_NAME = 'funnel-editor-netlify.firebasestorage.app'; 
+
 const handleImageUpload = async (file: File, outcomeId: string) => {
   setFileLabel(prev => ({ ...prev, [outcomeId]: file.name }));
 
@@ -1938,10 +1942,11 @@ const handleImageUpload = async (file: File, outcomeId: string) => {
 
   setUploadingId(outcomeId);
   setUploadProgress(0);
+  // 假設 process.env.REACT_APP_TRACK_CLICK_URL 包含您的後端基礎 URL
   const trackClickBaseUrl = process.env.REACT_APP_TRACK_CLICK_URL.replace(/\/trackClick$/, '');
 
   try {
-    // Step 1: 獲取簽名 URL
+    // 步驟 1: 獲取簽名 URL
     const generateUrlResponse = await fetch(`${trackClickBaseUrl}/generateUploadUrl`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1958,29 +1963,28 @@ const handleImageUpload = async (file: File, outcomeId: string) => {
     if (!generateUrlResponse.ok) {
         const errorResponse = await generateUrlResponse.json().catch(() => ({}));
         const details = errorResponse.error || "Failed to get signed URL (Check backend logs for details).";
-        showNotification(`Upload setup failed: ${details}`, 'error');
+        // 修正: 確保 showNotification 可用
+        typeof showNotification === 'function' ? showNotification(`Upload setup failed: ${details}`, 'error') : console.error(`Upload setup failed: ${details}`);
         throw new Error(`Failed to get signed URL: ${details}`);
     }
 
-    // 🌟 修改點 1: 僅需提取 uploadUrl，後端應返回完整的 GCS 文件路徑 (filePath)
     const { data } = await generateUrlResponse.json();
-    const { uploadUrl, filePath } = data; // 假設後端返回文件在 Storage 中的路徑，例如：uploads/images/funnelId/outcomeId/file.png
+    // 獲取簽名 URL (用於 PUT) 和 GCS 文件路徑 (用於構造永久 URL)
+    const { uploadUrl, filePath } = data; 
     
-    // 檢查 filePath 是否存在，這是獲取永久 URL 的關鍵
     if (!filePath) {
         throw new Error("Backend did not return the file path required for getting the permanent URL.");
     }
     
-    // ... (日誌保持不變)
     console.log("📎 uploadUrl value:", uploadUrl);
-    console.log("📎 uploadUrl typeof:", typeof uploadUrl);
+    console.log("📎 filePath value:", filePath);
 
     // 步驟 2: 前端直接上傳文件到 GCS
     await new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         xhr.open('PUT', uploadUrl);
-        // ... (XMLHttpRequest 邏輯保持不變) ...
-        xhr.setRequestHeader('Content-Type', file.type);
+        // 🌟 關鍵修復點 1: 必須設置 Content-Type 匹配 GCS 預簽名 URL 的要求
+        xhr.setRequestHeader('Content-Type', file.type); 
 
         xhr.upload.onprogress = (event) => {
             if (event.lengthComputable) {
@@ -1991,26 +1995,33 @@ const handleImageUpload = async (file: File, outcomeId: string) => {
 
         xhr.onload = () => {
             if (xhr.status >= 200 && xhr.status < 300) {
+                console.log("✅ File PUT successful.");
                 resolve(xhr.responseText);
             } else {
-                reject(new Error(`File PUT failed with status: ${xhr.status}`));
+                // 處理 PUT 失敗，例如 CORS 錯誤通常會顯示 0
+                reject(new Error(`File PUT failed with status: ${xhr.status || 'Network/CORS error'}.`));
             }
         };
 
         xhr.onerror = () => {
-            reject(new Error('File PUT failed due to network error. Check CORS settings.'));
+            // 修正：提供更清晰的錯誤訊息
+            reject(new Error('File PUT failed due to network error or strict CORS policy.'));
         };
 
         xhr.send(file);
     });
 
-    // 🌟 修改點 2: 獲取永久下載 URL (使用 Firebase Storage SDK)
-    const fileRef = ref(storage, filePath);
-    const permanentUrl = await getDownloadURL(fileRef);
+    // 🌟 步驟 3: 構造永久下載 URL (取代 getDownloadURL)
+    // 這是最推薦且最穩定的獲取永久 URL 的方式，無需前端安裝 Firebase Storage SDK
+    const encodedFilePath = encodeURIComponent(filePath);
+    const permanentUrl = `https://firebasestorage.googleapis.com/v0/b/${BUCKET_NAME}/o/${encodedFilePath}?alt=media`;
+
+    console.log("🔗 Permanent Download URL:", permanentUrl);
     
-    // 🌟 修改點 3: 成功後更新 Firestore (使用 handleClearImage 匹配的字段名)
+    // 步驟 4: 成功後更新 Firestore
     handleUpdateOutcome(outcomeId, { imageUrl: permanentUrl }); 
-    showNotification('Image uploaded successfully!', 'success');
+    // 修正: 確保 showNotification 可用
+    typeof showNotification === 'function' ? showNotification('Image uploaded successfully!', 'success') : console.log('Image uploaded successfully!');
     
     // 清理狀態
     setUploadingId(null);
@@ -2020,14 +2031,16 @@ const handleImageUpload = async (file: File, outcomeId: string) => {
     console.error("❌ Upload Error:", error.message);
     setUploadingId(null);
     setUploadProgress(null);
+    
+    const displayMessage = `Critical Upload Error: ${error.message}`;
     if (!error.message.includes("Failed to get signed URL")) {
-        showNotification(`Critical Upload Error: ${error.message}`, 'error');
+        // 修正: 確保 showNotification 可用
+        typeof showNotification === 'function' ? showNotification(displayMessage, 'error') : console.error(displayMessage);
     }
   }
 };
 
-
-  return (
+return (
     <div className="link-settings-container">
       <h2>
         <span role="img" aria-label="trophy">🏆</span>{' '}
