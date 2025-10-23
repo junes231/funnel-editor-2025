@@ -1845,52 +1845,45 @@ const deleteFileApi = async (fileUrl: string, token: string) => {
 };
 
 const handleClearImage = async (outcomeId: string) => {
-const fileUrlToDelete = outcome.imageUrl; // 示例：從當前 outcome 獲取
+    // 請替換為您獲取 imageUrl 的實際邏輯
+    const fileUrlToDelete = outcome.imageUrl; 
 
     if (!fileUrlToDelete) {
-        console.error("Cannot clear, image URL is already empty.");
+        console.warn("URL is already empty or missing, skipping.");
         return;
     }
-
-    console.log("DEBUG 1: Starting clear image process.");
     
+    // 確保使用 try/catch 包裹所有非同步操作
     try {
+        console.log("DEBUG A: Starting Token Test.");
+        
+        // 🌟 這是唯一的 await 步驟
         const token = await getAuthToken(); 
         
-        if (token) {
-            console.log("DEBUG 2: Calling deleteFileApi...");
-            // 嘗試刪除遠端文件
-            await deleteFileApi(fileUrlToDelete, token); 
-            console.log("DEBUG 3: deleteFileApi successful.");
-        } else {
-            console.warn("Auth token missing. Skipping remote file deletion, clearing local state only.");
-        }
+        // 🌟 檢查 token 是否成功返回
+        console.log("DEBUG B: Token retrieved successfully. Is valid:", !!token); 
         
-        // 🌟 關鍵修復：清除所有本地相關狀態
-        handleUpdateOutcome(outcomeId, { 
-            imageUrl: null,     // 清除圖片預覽
-            externalUrl: '',    // 必須：清除 URL 文本框的綁定值
-        }); 
-        
-        // 清除上傳文件名標籤 (如果它存在且由 setFileLabel 控制)
-        if (typeof setFileLabel === 'function') {
-            setFileLabel(prev => ({ ...prev, [outcomeId]: null }));
-        }
+        // 🚨 不執行 API 刪除
 
-        console.log("DEBUG 4: All local states cleared successfully.");
-
-    } catch (error: any) {
-        console.error("❌ Clear Image Error (API Call Failed, clearing local state):", error.message);
-        // 即使 API 失敗，也要清除本地狀態，避免 UI 鎖死
+        // 成功後，清除本地狀態（無論 token 是否成功）
         handleUpdateOutcome(outcomeId, { 
             imageUrl: null, 
             externalUrl: '', 
         }); 
+        
+        // 清除文件名標籤
         if (typeof setFileLabel === 'function') {
             setFileLabel(prev => ({ ...prev, [outcomeId]: null }));
         }
+
+        console.log("DEBUG C: Local state cleared.");
+
+    } catch (error: any) {
+        console.error("❌ Token Test Error:", error.message);
     }
 };
+
+
 
 // NEW: 处理文件选择或拖放
 const processFile = (selectedFile: File | null, outcomeId: string) => {
