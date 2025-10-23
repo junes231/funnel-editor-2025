@@ -1846,54 +1846,16 @@ const deleteFileApi = async (fileUrl: string, token: string) => {
 
 
 // 修正后的 handleClearImage 函数
-const handleClearImage = async (outcomeId: string) => {
-const fileUrlToDelete = outcomeStates[outcomeId]?.imageUrl; // 假设您的状态使用 imageUrl
-    
-    if (!fileUrlToDelete) {
-        console.warn("Attempted to clear image but imageUrl was already null.");
-        // 即使没有 URL，也执行本地清理，以防万一
-        handleUpdateOutcome(outcomeId, { 
-            imageUrl: null, 
-        });
-        return; 
-    }
+// 臨時測試函數 - 專門用於診斷點擊事件
+const handleClearImage = (outcomeId: string) => {
+    // 🌟 立即打印日誌，這一步是關鍵
+    console.log(`[TEST] Clear Image button clicked for ID: ${outcomeId}`); 
 
-    // 假设您有一个获取 Auth Token 的函数
-    const token = await getAuthToken();
-    console.log("Token retrieved successfully:", !!token); // 檢查 token 是否為 truthy
- // 请确保此函数可用
-
-    if (!token) {
-        console.error("Auth token missing. Cannot delete file.");
-        // 如果没有 token，我们可以选择跳过后端删除，只清理本地状态，或直接返回错误
-        return;
-    }
-    
-    console.log("CLEAR IMAGE BUTTON CLICKED. Starting handleClearImage for ID:", outcomeId);
-    console.log("-----------------------------------------");
-    console.log("🔍 fileUrlToDelete value:", fileUrlToDelete);
-
-    try {
-        // 2. 调用后端 API 删除文件
-        await deleteFileApi(fileUrlToDelete, token);
-
-        console.log("✅ Backend file deleted successfully (200 OK).");
-
-        // 3. 🌟 关键步骤: 更新本地状态 (确保使用正确的字段名 imageUrl)
-        handleUpdateOutcome(outcomeId, { 
-            imageUrl: null, // 清除 URL
-            
-        });
-        
-        // 修正: 移除 showNotification，使用 console.log 代替
-        console.log("🎉 Local state updated. Image cleared.");
-
-    } catch (error) {
-        console.error("❌ File deletion failed at the front end.", error);
-        
-       
-    }
+    // 🌟 立即清除本地狀態 (跳過所有 API 和 Token 檢查)
+    // 目的: 測試點擊 -> 狀態更新的流程是否暢通
+    handleUpdateOutcome(outcomeId, { imageUrl: null }); 
 };
+
 
 // NEW: 处理文件选择或拖放
 const processFile = (selectedFile: File | null, outcomeId: string) => {
