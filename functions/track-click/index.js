@@ -15,35 +15,6 @@ if (!admin.apps.length) {
 }
 const db = admin.firestore();
 const bucket = admin.storage().bucket(BUCKET_NAME); 
-
-// --- 辅助函数：从 Firebase/GCS URL 中提取文件路径 ---
-// 关键修复：这个函数能够安全地处理多种 URL 格式，避免 split 错误
-const getFilePathFromUrl = (fileUrl, bucketName) => {
-    // 1. 检查是否为标准 Firebase URL 格式 (包含 /o/ 和 ?)
-    if (fileUrl.includes('/o/')) {
-        try {
-            // 从 /o/ 之后 ? 之前的部分获取路径
-            const urlPart = fileUrl.split('/o/')[1].split('?')[0];
-            return decodeURIComponent(urlPart);
-        } catch (e) {
-            // 如果 split 链中的任何一个失败 (如 URL 格式不完整)，返回 null
-            return null; 
-        }
-    }
-    
-    // 2. 检查是否为 GCS 公共格式: https://storage.googleapis.com/bucket.name/path/to/file
-    const gcsUrlPrefix = `https://storage.googleapis.com/${bucketName}/`;
-    if (fileUrl.startsWith(gcsUrlPrefix)) {
-        const path = fileUrl.substring(gcsUrlPrefix.length);
-        // 对 GCS URL 中的路径进行解码
-        return decodeURIComponent(path);
-    }
-    
-    // 3. 既不是 Firebase 格式也不是 GCS 格式
-    return null; 
-};
-
-// --- Express 应用创建 ---
 const app = express();
 
 // --- CORS 中间件 ---
