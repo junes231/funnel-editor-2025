@@ -1848,14 +1848,21 @@ const deleteFileApi = async (fileUrl: string, token: string) => {
 // 修正后的 handleClearImage 函数
 // 臨時測試函數 - 專門用於診斷點擊事件
 const handleClearImage = (outcomeId: string) => {
-    // 🌟 立即打印日誌，這一步是關鍵
     console.log(`[TEST] Clear Image button clicked for ID: ${outcomeId}`); 
 
-    // 🌟 立即清除本地狀態 (跳過所有 API 和 Token 檢查)
-    // 目的: 測試點擊 -> 狀態更新的流程是否暢通
-    handleUpdateOutcome(outcomeId, { imageUrl: null }); 
+    // 🌟 關鍵修復：除了清除 imageUrl，還要清除那個殘留的 URL 文本框的狀態。
+    handleUpdateOutcome(outcomeId, { 
+        imageUrl: null, 
+        // 假設 URL 文本框綁定的是 externalUrl 字段
+        externalUrl: '', 
+    });
+    
+    // 此外，如果 Current: IMG_xxxx.jpeg 這樣的文字是通過 setFileLabel 設置的，也要清除它
+    // 假設 setFileLabel 是一個可用的函數
+    if (typeof setFileLabel === 'function') {
+        setFileLabel(prev => ({ ...prev, [outcomeId]: null }));
+    }
 };
-
 
 // NEW: 处理文件选择或拖放
 const processFile = (selectedFile: File | null, outcomeId: string) => {
