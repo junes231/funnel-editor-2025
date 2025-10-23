@@ -2074,6 +2074,14 @@ return (
                   >
                     Clear Image
                   </button>
+                   {/* 在 Clear Image 按鈕的上方或下方添加這個測試按鈕 */}
+                <button 
+               style={{ position: 'fixed', top: '10px', right: '10px', zIndex: 9999, backgroundColor: 'yellow' }}
+              onClick={() => console.log('I AM THE TEST BUTTON')}
+             >
+            TEST CLICK
+           </button>
+
                 </div>
               )}
               
