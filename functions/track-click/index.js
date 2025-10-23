@@ -62,7 +62,7 @@ function getFilePathFromUrl(fileUrl, bucketName) {
     return null;
 }
 // --- 生成预签名上传 URL ---
-App.post("/generateUploadUrl", async (req, res) => {
+app.post("/generateUploadUrl", async (req, res) => {
   const { funnelId, outcomeId, fileName, fileType } = req.body.data || req.body; // 兼容直接发送字段
 
   // --- 1️⃣ 基础验证 ---
