@@ -1381,6 +1381,7 @@ p {
     width: 100%;
     margin-bottom: 10px;
     z-index: 20;
+    pointer-events: none; 
 }
 .image-preview-container {
     width: 100%;
@@ -1407,6 +1408,9 @@ p {
     cursor: pointer;
     transition: background-color 0.2s;
     margin-top: 5px;
+    pointer-events: auto; 
+    z-index: 1000; /* 確保它在最上層 */
+    position: relative;
 }
 .delete-image-btn:hover {
     background-color: #c82333;
