@@ -56,6 +56,40 @@ app.options('*', cors(corsOptions));
 app.use(cors(corsOptions));
 app.use(express.json());
 
+function getFilePathFromUrl(fileUrl, bucketName) {
+    if (!fileUrl || typeof fileUrl !== 'string') return null;
+
+    try {
+        const url = new URL(fileUrl);
+        const path = url.pathname;
+        
+        // 1. 處理 GCS 公共 URL 格式: /BUCKET_NAME/uploads/...
+        if (url.hostname === 'storage.googleapis.com' && path.includes(bucketName)) {
+            const pathParts = path.split('/');
+            const bucketIndex = pathParts.indexOf(bucketName);
+            if (bucketIndex !== -1) {
+                return pathParts.slice(bucketIndex + 1).join('/');
+            }
+        }
+        
+        // 2. 處理 Firebase Long-Lived Token URL 格式: /v0/b/BUCKET_NAME/o/path%2Fto%2Ffile
+        if (url.hostname.includes('firebasestorage.googleapis.com') && path.startsWith(`/v0/b/${bucketName}/o/`)) {
+            // 提取出 'o/' 後面的部分
+            let encodedPath = path.substring(`/v0/b/${bucketName}/o/`.length);
+            
+            // 確保路徑被 URL 解碼 (例如將 %2F 轉回 /)
+            let decodedPath = decodeURIComponent(encodedPath);
+            
+            return decodedPath;
+        }
+
+    } catch (e) {
+        console.error("Error during URL parsing:", e);
+        return null;
+    }
+
+    return null;
+}
 // --- 生成预签名上传 URL ---
 App.post("/generateUploadUrl", async (req, res) => {
   const { funnelId, outcomeId, fileName, fileType } = req.body.data || req.body; // 兼容直接发送字段
