@@ -1280,22 +1280,20 @@ p {
   overflow: hidden;
   text-overflow: ellipsis;
   min-width: 0; /* 允许 flex item 正确收缩 */
-  max-width: 100%;
-}
+  }
 .file-upload-wrapper {
   position: relative;
   display: flex;
   flex-direction: column; 
   align-items: center;
   justify-content: center;
-  gap: 10px; /* 减少间距 */
+  gap: 10px; 
   margin-top: 10px; 
   padding: 30px 20px; 
-  /* 🌟 美观的虚线边框 */
-  border: 2px dashed #b0bec5; 
+  border: 2px dashed #b0bec5; /* 灰蓝色虚线 */
   border-radius: 12px; 
-  background-color: #fff;
-  min-height: 120px; /* 再次调整最小高度 */
+  background-color: #fafafa;
+  min-height: 120px; 
   cursor: pointer; 
   transition: all 0.3s ease;
 }
@@ -1310,9 +1308,21 @@ p {
   border-color: #546e7a; /* 悬停时边框颜色加深 */
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
+.custom-file-button {
+  min-width: 180px; 
+  padding: 10px 20px; 
+  font-size: 0.95em;
+  background-color: #007bff; 
+  color: white;
+  border-radius: 6px; 
+  font-weight: 600; 
+  flex-shrink: 0; 
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
 /* 提示文本（用于上传区域） */
 .file-name-display-hint {
-  color: #78909c; /* 提示文字颜色 */
+  color: #78909c; 
   font-size: 0.85em;
   font-style: italic;
   text-align: center;
@@ -1330,19 +1340,6 @@ p {
   cursor: pointer;
   /* Z-index 必須比上層的 delete-image-btn 低，但比其他內容高，以確保點擊文件選擇 */
   z-index: 5; 
-}
-
-/* --- 优化自定义按钮样式 (保持不变) --- */
-.custom-file-button {
-  min-width: 180px; 
-  padding: 10px 20px; /* 略微缩小 */
-  font-size: 0.95em;
-  background-color: #007bff; 
-  color: white;
-  border-radius: 6px; /* 略微减小圆角 */
-  font-weight: 600; 
-  flex-shrink: 0; 
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 /* --- 图片预览和删除按钮的容器 --- */
@@ -1379,10 +1376,7 @@ p {
 }
 
 .delete-image-btn {
-    /* 样式保持不变，但确保其 z-index 高于所有文件输入元素 */
-   flex-shrink: 0; /* 确保按钮不会被压缩 */
-   margin-left: 10px;
-  background-color: #dc3545;
+    background-color: #dc3545;
     color: white;
     padding: 8px 16px;
     border-radius: 6px;
@@ -1390,8 +1384,8 @@ p {
     font-weight: 500;
     cursor: pointer;
     transition: background-color 0.2s;
-    margin-top: 0;
-    z-index: 100; 
+    flex-shrink: 0;
+    margin-left: 10px; 
 }
 .delete-image-btn:hover {
     background-color: #c82333;
