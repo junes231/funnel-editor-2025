@@ -1826,63 +1826,50 @@ const OutcomeSettingsComponent: React.FC<OutcomeSettingsComponentProps> = ({
     );
   };
 
-
-const deleteFileApi = async (fileUrl: string, token: string) => {
-  const apiUrl = 'https://api-track-click-jgett3ucqq-uc.a.run.app/deleteFile';
-  const response = await fetch(apiUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
-    body: JSON.stringify({ data: { fileUrl } }),
-  });
-
-  if (!response.ok) {
-    const errorBody = await response.json();
-    throw new Error(`Deletion failed: ${errorBody.error || response.statusText}`);
-  }
-};
-
-const handleClearImage = async (outcomeId: string) => {
-    // 請替換為您獲取 imageUrl 的實際邏輯
-    const fileUrlToDelete = outcome.imageUrl; 
-
-    if (!fileUrlToDelete) {
+  // 【核心修复的函数】
+  const handleClearImage = async (outcomeId: string) => {
+    // 1. 修复：从 props 中获取正确的 outcome 对象
+    const outcomeToClear = outcomes.find(o => o.id === outcomeId);
+    
+    // 如果找不到或者没有 imageUrl，则直接返回
+    if (!outcomeToClear || !outcomeToClear.imageUrl) {
         console.warn("URL is already empty or missing, skipping.");
+        // 确保清除 local file label 以防万一
+        if (typeof setFileLabel === 'function') {
+             setFileLabel(prev => ({ ...prev, [outcomeId]: '' }));
+        }
         return;
     }
-    
-    // 確保使用 try/catch 包裹所有非同步操作
-    try {
-        console.log("DEBUG A: Starting Token Test.");
-        
-        // 🌟 這是唯一的 await 步驟
-        const token = await getAuthToken(); 
-        
-        // 🌟 檢查 token 是否成功返回
-        console.log("DEBUG B: Token retrieved successfully. Is valid:", !!token); 
-        
-        // 🚨 不執行 API 刪除
 
-        // 成功後，清除本地狀態（無論 token 是否成功）
+    try {
+        // 【已删除/注释】：移除依赖于未定义函数的异步调用（getAuthToken），防止代码中断
+        // 如果您希望同时删除远程文件，您需要定义 getAuthToken 函数并取消注释下面的逻辑：
+        
+       // const token = await getAuthToken(); // 假设此函数在其他地方已定义
+      //  await deleteFileApi(outcomeToClear.imageUrl, token); //
+      //  console.log("✅ Remote file deletion attempted."); //
+        
+        
+        // 2. 修复：清除本地状态，将 imageUrl 设置为空字符串
         handleUpdateOutcome(outcomeId, { 
-            imageUrl: null, 
-            externalUrl: '', 
+            imageUrl: '', 
+            // 移除 externalUrl 字段，因为它不在 FunnelOutcome 接口中
         }); 
         
-        // 清除文件名標籤
+        // 3. 修复：清除文件名标签
         if (typeof setFileLabel === 'function') {
-            setFileLabel(prev => ({ ...prev, [outcomeId]: null }));
+            setFileLabel(prev => ({ ...prev, [outcomeId]: '' }));
         }
 
-        console.log("DEBUG C: Local state cleared.");
+        console.log("✅ Image cleared locally for outcome:", outcomeId);
 
     } catch (error: any) {
-        console.error("❌ Token Test Error:", error.message);
+        console.error("❌ Error clearing image:", error.message);
+        // 如果删除远程文件失败，至少保证本地状态被清除
+        handleUpdateOutcome(outcomeId, { imageUrl: '' }); 
+        setFileLabel(prev => ({ ...prev, [outcomeId]: '' }));
     }
-};
-
+  };
 
 
 // NEW: 处理文件选择或拖放
@@ -1891,7 +1878,8 @@ const processFile = (selectedFile: File | null, outcomeId: string) => {
     
     // 检查文件类型 (仅限图片)
     if (!selectedFile.type.startsWith('image/')) {
-        console.log('Only image files are supported for upload.', 'error');
+        // 修正: 确保 showNotification 可用
+        typeof showNotification === 'function' ? showNotification('Only image files are supported for upload.', 'error') : console.log('Only image files are supported for upload.', 'error');
         return;
     }
     
@@ -1924,7 +1912,7 @@ const handleDrop = (e: React.DragEvent, outcomeId: string) => {
     }
 };
 
-
+// 确保 BUCKET_NAME 在全局或顶层被定义，以便 handleImageUpload 可以访问
 const BUCKET_NAME = 'funnel-editor-netlify.firebasestorage.app'; 
 
 const handleImageUpload = async (file: File, outcomeId: string) => {
@@ -1935,10 +1923,10 @@ const handleImageUpload = async (file: File, outcomeId: string) => {
   setUploadingId(outcomeId);
   setUploadProgress(0);
   // 假設 process.env.REACT_APP_TRACK_CLICK_URL 包含您的後端基礎 URL
-  const trackClickBaseUrl = process.env.REACT_APP_TRACK_CLICK_URL.replace(/\/trackClick$/, '');
+  const trackClickBaseUrl = process.env.REACT_APP_TRACK_CLICK_URL?.replace(/\/trackClick$/, '') || 'https://api-track-click-jgett3ucqq-uc.a.run.app';
 
   try {
-    // 步驟 1: 獲取簽名 URL
+    // 步骤 1: 獲取簽名 URL
     const generateUrlResponse = await fetch(`${trackClickBaseUrl}/generateUploadUrl`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1955,7 +1943,7 @@ const handleImageUpload = async (file: File, outcomeId: string) => {
     if (!generateUrlResponse.ok) {
         const errorResponse = await generateUrlResponse.json().catch(() => ({}));
         const details = errorResponse.error || "Failed to get signed URL (Check backend logs for details).";
-        // 修正: 確保 showNotification 可用
+        // 修正: 确保 showNotification 可用
         typeof showNotification === 'function' ? showNotification(`Upload setup failed: ${details}`, 'error') : console.error(`Upload setup failed: ${details}`);
         throw new Error(`Failed to get signed URL: ${details}`);
     }
@@ -1971,7 +1959,7 @@ const handleImageUpload = async (file: File, outcomeId: string) => {
     console.log("📎 uploadUrl value:", uploadUrl);
     console.log("📎 filePath value:", filePath);
 
-    // 步驟 2: 前端直接上傳文件到 GCS
+    // 步骤 2: 前端直接上傳文件到 GCS
     await new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         xhr.open('PUT', uploadUrl);
@@ -2003,16 +1991,16 @@ const handleImageUpload = async (file: File, outcomeId: string) => {
         xhr.send(file);
     });
 
-    // 🌟 步驟 3: 構造永久下載 URL (取代 getDownloadURL)
+    // 🌟 步骤 3: 構造永久下載 URL (取代 getDownloadURL)
     // 這是最推薦且最穩定的獲取永久 URL 的方式，無需前端安裝 Firebase Storage SDK
     const encodedFilePath = encodeURIComponent(filePath);
     const permanentUrl = `https://firebasestorage.googleapis.com/v0/b/${BUCKET_NAME}/o/${encodedFilePath}?alt=media`;
 
     console.log("🔗 Permanent Download URL:", permanentUrl);
     
-    // 步驟 4: 成功後更新 Firestore
+    // 步骤 4: 成功後更新 Firestore
     handleUpdateOutcome(outcomeId, { imageUrl: permanentUrl }); 
-    // 修正: 確保 showNotification 可用
+    // 修正: 确保 showNotification 可用
     typeof showNotification === 'function' ? showNotification('Image uploaded successfully!', 'success') : console.log('Image uploaded successfully!');
     
     // 清理狀態
@@ -2026,7 +2014,7 @@ const handleImageUpload = async (file: File, outcomeId: string) => {
     
     const displayMessage = `Critical Upload Error: ${error.message}`;
     if (!error.message.includes("Failed to get signed URL")) {
-        // 修正: 確保 showNotification 可用
+        // 修正: 确保 showNotification 可用
         typeof showNotification === 'function' ? showNotification(displayMessage, 'error') : console.error(displayMessage);
     }
   }
