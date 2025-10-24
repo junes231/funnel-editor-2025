@@ -2124,8 +2124,10 @@ return (
 
       {outcomes.map((outcome, index) => {
         const isCurrentUploading = uploadingId === outcome.id; 
-        const filenameToDisplay = fileLabel[outcome.id] || 'Click to Select File'; 
-        const displayPreview = outcome.imageUrl || isCurrentUploading || filenameToDisplay !== 'Click to Select File';
+        const filenameToDisplay = fileLabel[outcome.id]; // 文件名可能为空或为实际名称
+        
+        // 核心显示条件：只要有 URL 或者正在上传，或者 fileLabel 里有文件名，就显示预览区域。
+        const shouldShowPreview = !!outcome.imageUrl || isCurrentUploading || !!filenameToDisplay;
         
         return (
           <div key={outcome.id} className="outcome-card" style={{ marginBottom: '25px', padding: '15px', border: '1px solid #ddd', borderRadius: '8px', position: 'relative' }}>
@@ -2167,8 +2169,7 @@ return (
               <label>Result Image URL (For Visual Recommendation):</label>
                 
               {/* 🌟 渲染预览区域，现在 filenameToDisplay 是简洁的文件名 */}
-             {displayPreview && (
-                // 🌟 Using the intended CSS class for styling
+            {shouldShowPreview && (
                 <div className="image-preview-wrapper">
                   
                   {/* 预览图（仅当有 URL 时显示） */}
@@ -2184,11 +2185,12 @@ return (
                         />
                       </div>
                   )}
-               {/* 🌟 核心：简洁的文件名显示 */}
+            {/* 🌟 核心：文件名显示（修复文件名不显示的问题） */}
+                  {/* 注意：我们只在非上传状态且有文件名时显示，否则显示上传状态 */}
                   <span className="file-name-display-compact"> 
                         {isCurrentUploading 
-                            ? `Uploading: ${uploadProgress !== null ? uploadProgress : 0}% - ${fileLabel[outcome.id] || 'File...'}`
-                            : filenameToDisplay}
+                            ? `Uploading: ${uploadProgress !== null ? uploadProgress : 0}% - ${filenameToDisplay || 'File...'}`
+                            : filenameToDisplay || 'No file selected'}
                   </span>
                   
                   {/* 清除按钮（仅当有 URL 时才可清除） */}
@@ -2203,7 +2205,6 @@ return (
                 </div>
               )}
               
-              {/* --- 拖放/点击上传区域 (仅在没有 URL 时显示默认提示，但总是允许点击上传) --- */}
             {/* --- 拖放/点击上传区域 --- */}
             <div 
               className={`file-upload-wrapper ${isDragOver && !isCurrentUploading ? 'drag-over' : ''}`}
@@ -2250,7 +2251,7 @@ return (
                 disabled={isCurrentUploading}
                 className="file-upload-input" 
               />
-              </div>
+            </div>
 
               {/* 外部 URL 输入框，现在在上传区域之外 */}
               <OptimizedTextInput
