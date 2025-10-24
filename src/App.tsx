@@ -1866,6 +1866,10 @@ const OutcomeSettingsComponent: React.FC<OutcomeSettingsComponentProps> = ({
   // --- NEW: 文件名解析和初始化逻辑 ---
   useEffect(() => {
     const initialLabels = outcomes.reduce((acc, outcome) => {
+        
+        console.log(`[DEBUG] Processing Outcome ID: ${outcome.id}`);
+        console.log(`[DEBUG] Source Image URL: ${outcome.imageUrl}`);
+
         if (outcome.imageUrl) {
             // 1. 去除 URL 末尾的所有查询参数（例如 ?alt=media...）
             let url = outcome.imageUrl.split('?')[0]; 
@@ -1874,21 +1878,37 @@ const OutcomeSettingsComponent: React.FC<OutcomeSettingsComponentProps> = ({
             const lastSlashIndex = url.lastIndexOf('/');
             let filename = url.substring(lastSlashIndex + 1);
 
+            console.log(`[DEBUG] Encoded Path Segment: ${filename}`);
+
             // 3. 对文件名进行 URL 解码
+            let cleanFilename = 'Unknown File';
             try {
                 // 确保解码，处理像 IMG_7923.jpeg 这样的原始文件名
-                filename = decodeURIComponent(filename);
-            } catch (e) {
-                // 解码失败，保留原始编码的路径片段
-            }
+                const decodedFilename = decodeURIComponent(filename);
+                
+                // 4. 只保留最后一个文件名部分
+                const finalFilenameParts = decodedFilename.split('/');
+                cleanFilename = finalFilenameParts[finalFilenameParts.length - 1];
 
-          const cleanFilename = filename.split('/').pop() || 'Uploaded File';
+            } catch (e) {
+                console.error('[DEBUG] Filename decode error:', e);
+                // 尝试保留原始文件名（可能是用户手动输入的 URL）
+                cleanFilename = filename.split('/').pop() || 'Unknown File';
+            }
             
-            acc[outcome.id] = cleanFilename.trim();
+            cleanFilename = cleanFilename.trim();
+            
+            console.log(`[DEBUG] Final Clean Filename: ${cleanFilename}`);
+            
+            // 确保文件名不是空的或仅仅是 'null'
+            if (cleanFilename && cleanFilename !== 'null') {
+                 acc[outcome.id] = cleanFilename;
+            }
         }
         return acc;
     }, {} as Record<string, string>);
-
+    
+    console.log('[DEBUG] Final fileLabel state:', initialLabels);
     setFileLabel(initialLabels);
 }, [outcomes]);
 
@@ -2103,7 +2123,8 @@ return (
       <p>Configure different result pages for high-converting, personalized recommendations. (Changes are auto-saved).</p>
 
       {outcomes.map((outcome, index) => {
-        const isCurrentUploading = uploadingId === outcome.id;
+        const displayPreview = outcome.imageUrl || isCurrentUploading || fileLabel[outcome.id];
+        const filenameToDisplay = fileLabel[outcome.id] || 'N/A';
         
         return (
           <div key={outcome.id} className="outcome-card" style={{ marginBottom: '25px', padding: '15px', border: '1px solid #ddd', borderRadius: '8px', position: 'relative' }}>
@@ -2145,12 +2166,13 @@ return (
               <label>Result Image URL (For Visual Recommendation):</label>
               
               {/* 预览和删除区域 (NEW) */}
-             {(outcome.imageUrl || isCurrentUploading || fileLabel[outcome.id]) && (
-                <div className="image-preview-wrapper">
+           {displayPreview && (
+            
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '15px', padding: '10px', border: '1px solid #e0e0e0', borderRadius: '8px', background: '#f7f7f7' }}>
                   
                   {/* 预览图（仅当有 URL 时显示） */}
                   {outcome.imageUrl && (
-                    <div className="image-preview-container">
+                      <div className="image-preview-container" style={{ width: '50px', height: '50px', marginRight: '15px' }}>
                       <img 
                         src={outcome.imageUrl} 
                         alt="Result Preview" 
@@ -2161,13 +2183,11 @@ return (
                       />
                     </div>
                   )}
-                  
-                {/* 🌟 修正文件名显示区域 */}
+                         {/* 确保文件名显示元素总是存在，并使用正确的类名 */}
                   <span className="file-name-display-compact"> 
                         {isCurrentUploading 
-                            ? `Uploading: ${uploadProgress !== null ? uploadProgress : 0}% - ${fileLabel[outcome.id]}`
-                            // 修正：只显示文件名，不带 "Current File: "
-                            : fileLabel[outcome.id] || 'N/A'}
+                            ? `Uploading: ${uploadProgress !== null ? uploadProgress : 0}% - ${filenameToDisplay}`
+                            : filenameToDisplay}
                   </span>
                   
                   {/* 清除按钮（仅当有 URL 时才可清除） */}
