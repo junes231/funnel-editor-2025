@@ -1867,30 +1867,31 @@ const OutcomeSettingsComponent: React.FC<OutcomeSettingsComponentProps> = ({
   useEffect(() => {
     const initialLabels = outcomes.reduce((acc, outcome) => {
         if (outcome.imageUrl) {
-            // 尝试从 URL 中提取文件名
             // 1. 去除 URL 末尾的查询参数（如 ?alt=media...）
             let url = outcome.imageUrl.split('?')[0]; 
-            // 2. 获取最后一个斜杠后的部分
-            const urlParts = url.split('/');
-            let filename = urlParts[urlParts.length - 1];
-            
-            // 3. 对文件名进行 URL 解码（处理 %2F, %20 等）
-            try {
-                filename = decodeURIComponent(filename);
-            } catch (e) {
-                // 如果解码失败，保持原始值
-            }
-            
-            // 4. Firebase Storage 会在路径中包含 /funnelId/outcomeId/
-            // 我们只需要最精简的文件名。这里假设解码后足够干净。
+            // 2. 获取最后一个斜杠后的部分 (这部分通常是编码后的文件名)
+            const encodedFilename = url.split('/').pop();
 
-            acc[outcome.id] = filename.trim() || 'Uploaded File';
+            if (encodedFilename) {
+                let decodedFilename = encodedFilename;
+                try {
+                    // 3. 对文件名进行 URL 解码
+                    decodedFilename = decodeURIComponent(encodedFilename);
+                } catch (e) {
+                    // 解码失败，保留原始编码
+                }
+
+                const finalFilenameParts = decodedFilename.split('/');
+                const finalFilename = finalFilenameParts[finalFilenameParts.length - 1];
+
+                acc[outcome.id] = finalFilename.trim() || 'Uploaded File';
+            }
         }
         return acc;
     }, {} as Record<string, string>);
 
     setFileLabel(initialLabels);
-  }, [outcomes]);
+}, [outcomes]);
 
   // 文件路径: src/App.tsx (在 OutcomeSettingsComponent 组件内部)
 
@@ -2162,11 +2163,12 @@ return (
                     </div>
                   )}
                   
-                  {/* 文件名显示 */}
-                  <span className="file-name-display" style={{ textAlign: 'left', flexGrow: 1, marginRight: '15px' }}>
+                {/* 🌟 修正文件名显示区域 */}
+                  <span className="file-name-display-compact"> 
                         {isCurrentUploading 
                             ? `Uploading: ${uploadProgress !== null ? uploadProgress : 0}% - ${fileLabel[outcome.id]}`
-                            : `Current File: ${fileLabel[outcome.id] || 'N/A'}`}
+                            // 修正：只显示文件名，不带 "Current File: "
+                            : fileLabel[outcome.id] || 'N/A'}
                   </span>
                   
                   {/* 清除按钮（仅当有 URL 时才可清除） */}
@@ -2205,11 +2207,11 @@ return (
                 
                 {/* 进度条 */}
                 {isCurrentUploading && uploadProgress !== null && (
-                  <div className="upload-progress-container" style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '10px' }}>
-                    <div 
-                      className="upload-progress-bar" 
-                      style={{ width: `${uploadProgress}%`, height: '100%', backgroundColor: '#007bff' }} 
-                    />
+                  <div className="upload-progress-container" style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '10px', width: '100%' }}>
+                        <div 
+                        className="upload-progress-bar" 
+                        style={{ width: `${uploadProgress}%`, height: '100%', backgroundColor: '#007bff' }} 
+                        />
                   </div>
                 )}
                 
