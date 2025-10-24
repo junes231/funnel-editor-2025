@@ -1280,6 +1280,7 @@ p {
   overflow: hidden;
   text-overflow: ellipsis;
   min-width: 0; /* 允许 flex item 正确收缩 */
+  max-width: 100%;
 }
 .file-upload-wrapper {
   position: relative;
@@ -1357,6 +1358,7 @@ p {
     border-radius: 8px;
     background-color: #f7f7f7;
     box-shadow: 0 1px 3px rgba(0,0,0,0.05); /* 增加微妙阴影 */
+    overflow: hidden;
 }
 
 /* 预览图容器 */
@@ -1378,7 +1380,9 @@ p {
 
 .delete-image-btn {
     /* 样式保持不变，但确保其 z-index 高于所有文件输入元素 */
-    background-color: #dc3545;
+   flex-shrink: 0; /* 确保按钮不会被压缩 */
+   margin-left: 10px;
+  background-color: #dc3545;
     color: white;
     padding: 8px 16px;
     border-radius: 6px;
