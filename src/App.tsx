@@ -485,14 +485,49 @@ const FunnelDashboard: React.FC<FunnelDashboardProps> = ({ db, user, isAdmin, fu
     </div>
   );
 };
+
+const getAuthToken = async () => {
+  const authInstance = getAuth();
+  const user = authInstance.currentUser;
+  if (!user) {
+    throw new Error('User not authenticated for file deletion.');
+  }
+  return user.getIdToken();
+};
+
+// --- 辅助函数：调用后端 API 删除文件 ---
+// 从 .env 文件中获取 Cloud Run URL
+const trackClickBaseUrl = process.env.REACT_APP_TRACK_CLICK_URL; 
+const deleteFileApi = async (fileUrl: string, token: string) => {
+  if (!trackClickBaseUrl) {
+    throw new Error('REACT_APP_TRACK_CLICK_URL is not configured.');
+  }
+  // 确保 URL 结尾没有斜杠，但 /deleteFile 前面有斜杠
+  const apiUrl = `${trackClickBaseUrl.replace(/\/$/, '')}/deleteFile`;
+
+  const response = await fetch(apiUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify({ data: { fileUrl } }),
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.json().catch(() => ({}));
+    const details = errorBody.error || response.statusText;
+    throw new Error(`Deletion failed: ${details}`);
+  }
+};
+
 interface FunnelEditorProps {
   db: Firestore;
   storage: FirebaseStorage;
   updateFunnelData: (funnelId: string, newData: FunnelData) => Promise<void>;
 }
 
-
-const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, auth, storage, updateFunnelData }) => {
+  const FunnelEditor: React.FC<FunnelEditorProps> = ({ db, auth, storage, updateFunnelData }) => {
   const { funnelId } = useParams<{ funnelId: string }>();
   const navigate = useNavigate();
   const location = useLocation(); 
@@ -1826,50 +1861,55 @@ const OutcomeSettingsComponent: React.FC<OutcomeSettingsComponentProps> = ({
     );
   };
 
-  // 【核心修复的函数】
-  const handleClearImage = async (outcomeId: string) => {
-    // 1. 修复：从 props 中获取正确的 outcome 对象
+  // 文件路径: src/App.tsx (在 OutcomeSettingsComponent 组件内部)
+
+const handleClearImage = async (outcomeId: string) => {
+    // 1. 获取正确的 outcome 对象
     const outcomeToClear = outcomes.find(o => o.id === outcomeId);
     
-    // 如果找不到或者没有 imageUrl，则直接返回
+    // 检查是否需要清除
     if (!outcomeToClear || !outcomeToClear.imageUrl) {
-        console.warn("URL is already empty or missing, skipping.");
-        // 确保清除 local file label 以防万一
         if (typeof setFileLabel === 'function') {
              setFileLabel(prev => ({ ...prev, [outcomeId]: '' }));
         }
         return;
     }
+    
+    const fileUrlToDelete = outcomeToClear.imageUrl; 
 
     try {
-        // 【已删除/注释】：移除依赖于未定义函数的异步调用（getAuthToken），防止代码中断
-        // 如果您希望同时删除远程文件，您需要定义 getAuthToken 函数并取消注释下面的逻辑：
-        
-       // const token = await getAuthToken(); // 假设此函数在其他地方已定义
-      //  await deleteFileApi(outcomeToClear.imageUrl, token); //
-      //  console.log("✅ Remote file deletion attempted."); //
-        
-        
-        // 2. 修复：清除本地状态，将 imageUrl 设置为空字符串
-        handleUpdateOutcome(outcomeId, { 
-            imageUrl: '', 
-            // 移除 externalUrl 字段，因为它不在 FunnelOutcome 接口中
-        }); 
-        
-        // 3. 修复：清除文件名标签
-        if (typeof setFileLabel === 'function') {
-            setFileLabel(prev => ({ ...prev, [outcomeId]: '' }));
-        }
+        // 2. 调用辅助函数，执行后端删除
+        const token = await getAuthToken(); 
+        await deleteFileApi(fileUrlToDelete, token); 
 
-        console.log("✅ Image cleared locally for outcome:", outcomeId);
+        console.log("✅ Remote file deleted successfully.");
 
     } catch (error: any) {
-        console.error("❌ Error clearing image:", error.message);
-        // 如果删除远程文件失败，至少保证本地状态被清除
-        handleUpdateOutcome(outcomeId, { imageUrl: '' }); 
+        console.error("❌ CRITICAL: Remote file deletion failed:", error.message);
+        
+        // 如果删除失败（非 404 错误），给用户一个通知
+        const isAuthError = error.message.includes('token') || error.message.includes('Authentication');
+        if (isAuthError) {
+             typeof showNotification === 'function' ? showNotification('Authentication error. Please re-login to delete file.', 'error') : null;
+        } else if (!error.message.includes('not found')) {
+             // 忽略文件已丢失的警告，只报告其他错误
+             typeof showNotification === 'function' ? showNotification(`File deletion failed (Code Error): ${error.message}`, 'error') : null;
+        }
+        // 允许继续，清除前端状态
+    }
+    
+    // 3. 清除本地状态
+    handleUpdateOutcome(outcomeId, { 
+        imageUrl: '',
+    }); 
+    
+    // 4. 清除文件名标签
+    if (typeof setFileLabel === 'function') {
         setFileLabel(prev => ({ ...prev, [outcomeId]: '' }));
     }
-  };
+
+    typeof showNotification === 'function' ? showNotification('Image successfully cleared from editor.', 'success') : null;
+};
 
 
 // NEW: 处理文件选择或拖放
