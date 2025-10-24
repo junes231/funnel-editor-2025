@@ -1867,25 +1867,24 @@ const OutcomeSettingsComponent: React.FC<OutcomeSettingsComponentProps> = ({
   useEffect(() => {
     const initialLabels = outcomes.reduce((acc, outcome) => {
         if (outcome.imageUrl) {
-            // 1. 去除 URL 末尾的查询参数（如 ?alt=media...）
+            // 1. 去除 URL 末尾的所有查询参数（例如 ?alt=media...）
             let url = outcome.imageUrl.split('?')[0]; 
-            // 2. 获取最后一个斜杠后的部分 (这部分通常是编码后的文件名)
-            const encodedFilename = url.split('/').pop();
+            
+            // 2. 假设路径中最后一个斜杠 / 之后的内容是文件名（可能是编码的）
+            const lastSlashIndex = url.lastIndexOf('/');
+            let filename = url.substring(lastSlashIndex + 1);
 
-            if (encodedFilename) {
-                let decodedFilename = encodedFilename;
-                try {
-                    // 3. 对文件名进行 URL 解码
-                    decodedFilename = decodeURIComponent(encodedFilename);
-                } catch (e) {
-                    // 解码失败，保留原始编码
-                }
-
-                const finalFilenameParts = decodedFilename.split('/');
-                const finalFilename = finalFilenameParts[finalFilenameParts.length - 1];
-
-                acc[outcome.id] = finalFilename.trim() || 'Uploaded File';
+            // 3. 对文件名进行 URL 解码
+            try {
+                // 确保解码，处理像 IMG_7923.jpeg 这样的原始文件名
+                filename = decodeURIComponent(filename);
+            } catch (e) {
+                // 解码失败，保留原始编码的路径片段
             }
+
+          const cleanFilename = filename.split('/').pop() || 'Uploaded File';
+            
+            acc[outcome.id] = cleanFilename.trim();
         }
         return acc;
     }, {} as Record<string, string>);
