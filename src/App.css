@@ -1270,17 +1270,18 @@ p {
     min-width: 100%;
 }
 .file-name-display-compact {
-  flex-grow: 1; 
+  flex-grow: 1; /* 占据尽可能多的空间 */
   color: #333;
   font-size: 0.95em;
-  font-weight: 600; /* 加粗文件名，使其更清晰 */
+  font-weight: 600; 
   text-align: left;
   /* 确保文件名只显示一行，超出部分截断 */
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  min-width: 0; /* 允许 flex item 正确收缩 */
-  }
+  min-width: 0; /* 允许在 flex 布局中收缩，防止溢出 */
+  margin-right: 15px; /* 与 Clear Image 按钮保持距离 */
+}
 .file-upload-wrapper {
   position: relative;
   display: flex;
@@ -1355,9 +1356,10 @@ p {
     border-radius: 8px;
     background-color: #f7f7f7;
     box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-    overflow: hidden; /* 防止内容溢出，维持简洁布局 */
+    overflow: hidden; 
 }
 
+/* 预览图容器 (确保它是固定大小) */
 .image-preview-container {
     width: 50px; 
     height: 50px; 
@@ -1383,7 +1385,7 @@ p {
     cursor: pointer;
     transition: background-color 0.2s;
     flex-shrink: 0;
-    margin-left: 10px; 
+    margin-left: 0; 
 }
 .delete-image-btn:hover {
     background-color: #c82333;
