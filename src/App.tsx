@@ -1853,8 +1853,36 @@ const OutcomeSettingsComponent: React.FC<OutcomeSettingsComponentProps> = ({
   const [uploadingId, setUploadingId] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null); // NEW: 上传进度 (0-100)
   const [isDragOver, setIsDragOver] = useState(false);
-  const [fileLabel, setFileLabel] = useState<Record<string, string>>({}); // <--- 新增状态：存储文件名
+  const [fileLabel, setFileLabel] = useState<Record<string, string>>({}); 
   const fileInputRef = useRef<Record<string, HTMLInputElement | null>>({});
+
+  // 【新增 useEffect】: 根据加载的 outcomes 初始化 fileLabel
+  useEffect(() => {
+    const initialLabels = outcomes.reduce((acc, outcome) => {
+        if (outcome.imageUrl) {
+            // 尝试从 URL 中提取文件名 (简单实现，仅查找最后一个斜杠后的部分)
+            const urlParts = outcome.imageUrl.split('/');
+            let filename = urlParts[urlParts.length - 1];
+
+            // 如果 URL 包含 ?alt=media 等参数，需要去除
+            const queryIndex = filename.indexOf('?');
+            if (queryIndex !== -1) {
+                filename = filename.substring(0, queryIndex);
+            }
+            // 针对 Firebase Storage 的编码路径进行解码
+            try {
+                filename = decodeURIComponent(filename);
+            } catch (e) {
+                // 如果解码失败，保持原始值
+            }
+            
+            acc[outcome.id] = filename;
+        }
+        return acc;
+    }, {} as Record<string, string>);
+
+    setFileLabel(initialLabels);
+  }, [outcomes]);
   const handleUpdateOutcome = (id: string, updates: Partial<FunnelOutcome>) => {
     setOutcomes(prev =>
       prev.map(o => (o.id === id ? { ...o, ...updates } : o))
@@ -2057,6 +2085,7 @@ const handleImageUpload = async (file: File, outcomeId: string) => {
         // 修正: 确保 showNotification 可用
         typeof showNotification === 'function' ? showNotification(displayMessage, 'error') : console.error(displayMessage);
     }
+   setFileLabel(prev => ({ ...prev, [outcomeId]: '' }));
   }
 };
 
