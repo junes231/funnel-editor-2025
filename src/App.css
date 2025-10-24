@@ -1273,30 +1273,30 @@ p {
 .file-upload-wrapper {
   position: relative;
   display: flex;
-  flex-direction: row; /* 修复: 让按钮和文件名并排 */
+  flex-direction: column; /* 保持垂直堆叠以容纳按钮和文件名/提示 */
   align-items: center;
-  justify-content: flex-start; /* 修复: 从左侧开始对齐 */
+  justify-content: center;
   gap: 15px;
   margin-top: 10px; 
-  padding: 15px; /* 调整内边距，使其更紧凑 */
-  border: 2px dashed #a0c4ff; /* 浅蓝色虚线，暗示上传 */
-  border-radius: 10px; 
-  background-color: #ffffff; /* 保持白色背景，减少干扰 */
-  min-height: 50px; /* 减小最小高度 */
+  padding: 30px 20px; /* 增加内边距，使其看起来更大气 */
+  border: 2px dashed #90a4ae; /* 灰蓝色虚线，更专业且美观 */
+  border-radius: 12px; 
+  background-color: #fafafa; /* 保持浅色背景 */
+  min-height: 140px;
   cursor: pointer; 
+  transition: all 0.3s ease;
 }
 
-/* --- 拖放激活时的视觉反馈 --- */
+/* 拖放激活时的视觉反馈 */
 .file-upload-wrapper.drag-over {
-  border-color: #28a745; /* 悬停时变为绿色 */
-  background-color: #e8f9e8; /* 浅绿色背景 */
-  box-shadow: 0 0 15px rgba(40, 167, 69, 0.4); /* 绿色光晕 */
+  border-color: #28a745; 
+  background-color: #e8f9e8; 
+  box-shadow: 0 0 15px rgba(40, 167, 69, 0.2); 
 }
 
 .file-upload-wrapper:hover {
-  border-color: #0056b3; /* 悬停时边框颜色加深 */
-  background-color: #e6f0ff; /* 背景色轻微变化 */
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-color: #546e7a; /* 悬停时边框颜色加深 */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
 /* 隐藏原生的文件输入框 (保持不变) */
@@ -1314,58 +1314,59 @@ p {
 
 /* --- 优化自定义按钮样式 (保持不变) --- */
 .custom-file-button {
-  min-width: 150px; /* 确保按钮宽度一致 */
-  padding: 10px 15px;
+  min-width: 180px; 
+  padding: 12px 24px;
+  font-size: 1em;
   background-color: #007bff; 
   color: white;
-  border-radius: 6px;
+  border-radius: 8px;
   font-weight: 600; 
-  flex-shrink: 0; /* 确保按钮不会被压缩 */
+  flex-shrink: 0; 
 }
 
-/* --- 4. 优化文件名显示区域 (file-name-display) --- */
+/* 优化文件名显示区域 (file-name-display) */
 .file-name-display {
-  flex-grow: 1; /* 占据剩余空间 */
-  color: #333;
-  font-size: 0.9em;
-  font-weight: 500;
-  text-align: left;
-  /* 确保文本不会溢出 */
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  flex-grow: 1;
+  color: #546e7a; /* 提示文字颜色 */
+  font-size: 0.95em;
+  text-align: center;
+  margin-top: -5px; /* 向上微调 */
+  
+  /* 确保文本能换行，以显示长文件名 */
+  white-space: normal;
+  word-break: break-all;
+  max-width: 100%;
 }
 
 /* --- 图片预览和删除按钮的容器 --- */
 .image-preview-wrapper {
     display: flex;
-    flex-direction: row; /* 修复: 让预览图和按钮并排 */
+    flex-direction: row; 
     align-items: center;
-    justify-content: space-between; /* 修复: 左右对齐 */
+    justify-content: space-between; 
     width: 100%;
-    margin-bottom: 15px; /* 增加与下方上传区域的间距 */
+    margin-bottom: 15px; 
     padding: 10px;
-    border: 1px solid #ddd; /* 增加视觉分隔 */
+    border: 1px solid #e0e0e0; /* 浅灰色实线边框作为分隔 */
     border-radius: 8px;
     background-color: #f7f7f7;
-    z-index: 15;
 }
 
 .image-preview-container {
     /* 调整：给预览图一个固定的，但较小的尺寸 */
-    width: 80px; 
-    height: 80px; 
+    width: 60px; 
+    height: 60px; 
     overflow: hidden;
-    margin-bottom: 0; /* 移除多余边距 */
-    border-radius: 6px;
+    margin-bottom: 0; 
+    border-radius: 4px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    flex-shrink: 0; /* 防止被挤压 */
+    flex-shrink: 0; 
 }
 
 .image-preview-container img {
     width: 100%;
     height: 100%;
-    object-fit: cover; /* 确保图片完整填充 */
+    object-fit: cover;
 }
 
 .delete-image-btn {
