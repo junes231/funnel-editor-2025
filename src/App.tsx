@@ -1850,44 +1850,47 @@ const OutcomeSettingsComponent: React.FC<OutcomeSettingsComponentProps> = ({
   storage,
   onBack,
 }) => {
-  const [uploadingId, setUploadingId] = useState<string | null>(null);
-  const [uploadProgress, setUploadProgress] = useState<number | null>(null); // NEW: 上传进度 (0-100)
+ const [uploadingId, setUploadingId] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null); 
   const [isDragOver, setIsDragOver] = useState(false);
   const [fileLabel, setFileLabel] = useState<Record<string, string>>({}); 
   const fileInputRef = useRef<Record<string, HTMLInputElement | null>>({});
 
-  // 【新增 useEffect】: 根据加载的 outcomes 初始化 fileLabel
+  // 辅助函数：统一更新单个 Result 的状态 (保持不变)
+  const handleUpdateOutcome = (id: string, updates: Partial<FunnelOutcome>) => {
+    setOutcomes(prev =>
+      prev.map(o => (o.id === id ? { ...o, ...updates } : o))
+    );
+  };
+    
+  // --- NEW: 文件名解析和初始化逻辑 ---
   useEffect(() => {
     const initialLabels = outcomes.reduce((acc, outcome) => {
         if (outcome.imageUrl) {
-            // 尝试从 URL 中提取文件名 (简单实现，仅查找最后一个斜杠后的部分)
-            const urlParts = outcome.imageUrl.split('/');
+            // 尝试从 URL 中提取文件名
+            // 1. 去除 URL 末尾的查询参数（如 ?alt=media...）
+            let url = outcome.imageUrl.split('?')[0]; 
+            // 2. 获取最后一个斜杠后的部分
+            const urlParts = url.split('/');
             let filename = urlParts[urlParts.length - 1];
-
-            // 如果 URL 包含 ?alt=media 等参数，需要去除
-            const queryIndex = filename.indexOf('?');
-            if (queryIndex !== -1) {
-                filename = filename.substring(0, queryIndex);
-            }
-            // 针对 Firebase Storage 的编码路径进行解码
+            
+            // 3. 对文件名进行 URL 解码（处理 %2F, %20 等）
             try {
                 filename = decodeURIComponent(filename);
             } catch (e) {
                 // 如果解码失败，保持原始值
             }
             
-            acc[outcome.id] = filename;
+            // 4. Firebase Storage 会在路径中包含 /funnelId/outcomeId/
+            // 我们只需要最精简的文件名。这里假设解码后足够干净。
+
+            acc[outcome.id] = filename.trim() || 'Uploaded File';
         }
         return acc;
     }, {} as Record<string, string>);
 
     setFileLabel(initialLabels);
   }, [outcomes]);
-  const handleUpdateOutcome = (id: string, updates: Partial<FunnelOutcome>) => {
-    setOutcomes(prev =>
-      prev.map(o => (o.id === id ? { ...o, ...updates } : o))
-    );
-  };
 
   // 文件路径: src/App.tsx (在 OutcomeSettingsComponent 组件内部)
 
@@ -1951,11 +1954,13 @@ const processFile = (selectedFile: File | null, outcomeId: string) => {
         return;
     }
     
+    // 立即显示文件名，改善用户体验
+    setFileLabel(prev => ({ ...prev, [outcomeId]: selectedFile.name }));
+    
     // 模拟文件选择事件结构并调用 handleImageUpload
-    // 注意：我们将文件对象直接传递给 handleImageUpload
     handleImageUpload(selectedFile, outcomeId);
 };
-
+    
 // NEW: 拖放事件处理器
 const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -2140,67 +2145,82 @@ return (
               <label>Result Image URL (For Visual Recommendation):</label>
               
               {/* 预览和删除区域 (NEW) */}
-              {outcome.imageUrl && (
+             {(outcome.imageUrl || isCurrentUploading || fileLabel[outcome.id]) && (
                 <div className="image-preview-wrapper">
-                  <div className="image-preview-container">
-                    <img 
-                      src={outcome.imageUrl} 
-                      alt="Result Preview" 
-                      onError={(e) => {
-                          // 图片加载失败时显示占位符或清除 URL
-                          e.currentTarget.onerror = null; 
-                          e.currentTarget.src = 'https://placehold.co/100x100/F44336/ffffff?text=Load+Error';
-                      }}
-                    />
-                  </div>
-                  <button 
-                    className="delete-image-btn" 
-                    onClick={() => handleClearImage(outcome.id)}
-                  >
-                    Clear Image
-                  </button>
-                  </div>
+                  
+                  {/* 预览图（仅当有 URL 时显示） */}
+                  {outcome.imageUrl && (
+                    <div className="image-preview-container">
+                      <img 
+                        src={outcome.imageUrl} 
+                        alt="Result Preview" 
+                        onError={(e) => {
+                            e.currentTarget.onerror = null; 
+                            e.currentTarget.src = 'https://placehold.co/60x60/F44336/ffffff?text=Error';
+                        }}
+                      />
+                    </div>
+                  )}
+                  
+                  {/* 文件名显示 */}
+                  <span className="file-name-display" style={{ textAlign: 'left', flexGrow: 1, marginRight: '15px' }}>
+                        {isCurrentUploading 
+                            ? `Uploading: ${uploadProgress !== null ? uploadProgress : 0}% - ${fileLabel[outcome.id]}`
+                            : `Current File: ${fileLabel[outcome.id] || 'N/A'}`}
+                  </span>
+                  
+                  {/* 清除按钮（仅当有 URL 时才可清除） */}
+                  {outcome.imageUrl && (
+                    <button 
+                      className="delete-image-btn" 
+                      onClick={() => handleClearImage(outcome.id)}
+                    >
+                      Clear Image
+                    </button>
+                  )}
+                </div>
               )}
               
-              {/* 拖放/点击上传区域 (核心交互) */}
+              {/* --- 拖放/点击上传区域 (仅在没有 URL 时显示默认提示，但总是允许点击上传) --- */}
               <div 
                 className={`file-upload-wrapper ${isDragOver && !isCurrentUploading ? 'drag-over' : ''}`}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={(e) => handleDrop(e, outcome.id)}
+                onClick={() => fileInputRef.current[outcome.id]?.click()} 
               >
                 <button 
                   className="custom-file-button"
-                  onClick={() => fileInputRef.current[outcome.id]?.click()} 
+                  // 移除 onClick，交给父 div 处理
                   disabled={isCurrentUploading}
+                  style={{ pointerEvents: 'none' }} // 确保点击事件被 div 捕获
                 >
                   <span role="img" aria-label="upload-icon" style={{ marginRight: 8 }}>
                     {isCurrentUploading ? '⏳' : '📤'}
                   </span>
                   {isCurrentUploading 
-                    ? `Uploading: ${uploadProgress !== null ? uploadProgress : 0}%` 
+                    ? `Uploading...` 
                     : 'Click to Select File'}
                 </button>
                 
-                {/* 进度条 (NEW) */}
+                {/* 进度条 */}
                 {isCurrentUploading && uploadProgress !== null && (
-                  <div className="upload-progress-container">
+                  <div className="upload-progress-container" style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '10px' }}>
                     <div 
                       className="upload-progress-bar" 
-                      style={{ width: `${uploadProgress}%` }} 
+                      style={{ width: `${uploadProgress}%`, height: '100%', backgroundColor: '#007bff' }} 
                     />
                   </div>
                 )}
                 
-                <span className="file-name-display">
-                  {isCurrentUploading 
-                    ? `Transferring data: ${uploadProgress !== null ? uploadProgress : 0}%`
-                    : fileLabel[outcome.id] 
-                      ? `Current: ${fileLabel[outcome.id]}`
-                      : 'Or drag and drop files into this area (maximum 25MB)'}
-                </span>
+                {/* 提示文本 */}
+                {!outcome.imageUrl && !isCurrentUploading && (
+                     <p className="file-name-display" style={{ margin: 0 }}>
+                        Or drag and drop files into this area (maximum 25MB)
+                    </p>
+                )}
                 
-                {/* 隐藏的 input (用于点击) */}
+                {/* 隐藏的 input */}
                 <input
                   type="file"
                   accept="image/*"
@@ -2211,6 +2231,7 @@ return (
                 />
               </div>
 
+              {/* 外部 URL 输入框，现在在上传区域之外 */}
               <OptimizedTextInput
                 initialValue={outcome.imageUrl}
                 onUpdate={(v) => handleUpdateOutcome(outcome.id, { imageUrl: v })}
