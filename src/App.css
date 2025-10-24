@@ -1269,20 +1269,32 @@ p {
     /* 【中文注释：将最小宽度设置为 100% 以适应容器，防止被固定宽度限制】 */
     min-width: 100%;
 }
-
+.file-name-display-compact {
+  flex-grow: 1; 
+  color: #333;
+  font-size: 0.95em;
+  font-weight: 600; /* 加粗文件名，使其更清晰 */
+  text-align: left;
+  /* 确保文件名只显示一行，超出部分截断 */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0; /* 允许 flex item 正确收缩 */
+}
 .file-upload-wrapper {
   position: relative;
   display: flex;
-  flex-direction: column; /* 保持垂直堆叠以容纳按钮和文件名/提示 */
+  flex-direction: column; 
   align-items: center;
   justify-content: center;
-  gap: 15px;
+  gap: 10px; /* 减少间距 */
   margin-top: 10px; 
-  padding: 30px 20px; /* 增加内边距，使其看起来更大气 */
-  border: 2px dashed #90a4ae; /* 灰蓝色虚线，更专业且美观 */
+  padding: 30px 20px; 
+  /* 🌟 美观的虚线边框 */
+  border: 2px dashed #b0bec5; 
   border-radius: 12px; 
-  background-color: #fafafa; /* 保持浅色背景 */
-  min-height: 140px;
+  background-color: #fff;
+  min-height: 120px; /* 再次调整最小高度 */
   cursor: pointer; 
   transition: all 0.3s ease;
 }
@@ -1293,10 +1305,17 @@ p {
   background-color: #e8f9e8; 
   box-shadow: 0 0 15px rgba(40, 167, 69, 0.2); 
 }
-
 .file-upload-wrapper:hover {
   border-color: #546e7a; /* 悬停时边框颜色加深 */
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+/* 提示文本（用于上传区域） */
+.file-name-display-hint {
+  color: #78909c; /* 提示文字颜色 */
+  font-size: 0.85em;
+  font-style: italic;
+  text-align: center;
+  margin-top: 5px; 
 }
 
 /* 隐藏原生的文件输入框 (保持不变) */
@@ -1315,27 +1334,14 @@ p {
 /* --- 优化自定义按钮样式 (保持不变) --- */
 .custom-file-button {
   min-width: 180px; 
-  padding: 12px 24px;
-  font-size: 1em;
+  padding: 10px 20px; /* 略微缩小 */
+  font-size: 0.95em;
   background-color: #007bff; 
   color: white;
-  border-radius: 8px;
+  border-radius: 6px; /* 略微减小圆角 */
   font-weight: 600; 
   flex-shrink: 0; 
-}
-
-/* 优化文件名显示区域 (file-name-display) */
-.file-name-display {
-  flex-grow: 1;
-  color: #546e7a; /* 提示文字颜色 */
-  font-size: 0.95em;
-  text-align: center;
-  margin-top: -5px; /* 向上微调 */
-  
-  /* 确保文本能换行，以显示长文件名 */
-  white-space: normal;
-  word-break: break-all;
-  max-width: 100%;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 /* --- 图片预览和删除按钮的容器 --- */
@@ -1347,22 +1353,23 @@ p {
     width: 100%;
     margin-bottom: 15px; 
     padding: 10px;
-    border: 1px solid #e0e0e0; /* 浅灰色实线边框作为分隔 */
+    border: 1px solid #e0e0e0; 
     border-radius: 8px;
     background-color: #f7f7f7;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05); /* 增加微妙阴影 */
 }
 
+/* 预览图容器 */
 .image-preview-container {
-    /* 调整：给预览图一个固定的，但较小的尺寸 */
-    width: 60px; 
-    height: 60px; 
+    width: 50px; /* 进一步缩小预览图尺寸 */
+    height: 50px; 
     overflow: hidden;
-    margin-bottom: 0; 
+    margin-right: 15px; /* 增加右侧间距 */
     border-radius: 4px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     flex-shrink: 0; 
 }
 
+/* 预览图本身 */
 .image-preview-container img {
     width: 100%;
     height: 100%;
