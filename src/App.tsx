@@ -1841,7 +1841,6 @@ interface OutcomeSettingsComponentProps {
   funnelId: string;
   storage: FirebaseStorage;
   onBack: (event: React.MouseEvent<HTMLButtonElement>) => void;
-  showNotification: (message: string, type?: 'success' | 'error') => void;
 }
 
 const OutcomeSettingsComponent: React.FC<OutcomeSettingsComponentProps> = ({
@@ -1850,69 +1849,17 @@ const OutcomeSettingsComponent: React.FC<OutcomeSettingsComponentProps> = ({
   funnelId,
   storage,
   onBack,
-  showNotification,
 }) => {
- const [uploadingId, setUploadingId] = useState<string | null>(null);
-  const [uploadProgress, setUploadProgress] = useState<number | null>(null); 
+  const [uploadingId, setUploadingId] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null); // NEW: 上传进度 (0-100)
   const [isDragOver, setIsDragOver] = useState(false);
-  const [fileLabel, setFileLabel] = useState<Record<string, string>>({}); 
+  const [fileLabel, setFileLabel] = useState<Record<string, string>>({}); // <--- 新增状态：存储文件名
   const fileInputRef = useRef<Record<string, HTMLInputElement | null>>({});
-
-  // 辅助函数：统一更新单个 Result 的状态 (保持不变)
   const handleUpdateOutcome = (id: string, updates: Partial<FunnelOutcome>) => {
     setOutcomes(prev =>
       prev.map(o => (o.id === id ? { ...o, ...updates } : o))
     );
   };
-    
-  // --- NEW: 文件名解析和初始化逻辑 ---
-  useEffect(() => {
-    const initialLabels = outcomes.reduce((acc, outcome) => {
-        
-        console.log(`[DEBUG] Processing Outcome ID: ${outcome.id}`);
-        console.log(`[DEBUG] Source Image URL: ${outcome.imageUrl}`);
-
-        if (outcome.imageUrl) {
-            let url = outcome.imageUrl.split('?')[0]; 
-            const lastSlashIndex = url.lastIndexOf('/');
-            let filename = url.substring(lastSlashIndex + 1);
-
-            console.log(`[DEBUG] Encoded Path Segment: ${filename}`);
-
-            let cleanFilename = 'Unknown File';
-            try {
-                const decodedFilename = decodeURIComponent(filename);
-                const finalFilenameParts = decodedFilename.split('/').pop() || 'Unknown File';
-                cleanFilename = finalFilenameParts;
-
-            } catch (e) {
-                console.error('[DEBUG] Filename decode error:', e);
-                cleanFilename = filename.split('/').pop() || 'Unknown File';
-            }
-            
-            cleanFilename = cleanFilename.trim();
-            
-            // 🌟 核心修复点：移除时间戳前缀
-            const timestampRegex = /^\d+-/;
-            if (timestampRegex.test(cleanFilename)) {
-                 cleanFilename = cleanFilename.replace(timestampRegex, '');
-            }
-            // ------------------------------------
-            
-            console.log(`[DEBUG] Final Clean Filename (after timestamp strip): ${cleanFilename}`);
-            
-            if (cleanFilename && cleanFilename !== 'null' && cleanFilename !== 'Unknown File') {
-                 acc[outcome.id] = cleanFilename;
-            } else if (cleanFilename === 'Unknown File') {
-                acc[outcome.id] = 'Error: Cannot parse name'; // Display error for clear feedback
-            }
-        }
-        return acc;
-    }, {} as Record<string, string>);
-    
-    console.log('[DEBUG] Final fileLabel state:', initialLabels);
-    setFileLabel(initialLabels);
-}, [outcomes]);
 
   // 文件路径: src/App.tsx (在 OutcomeSettingsComponent 组件内部)
 
@@ -1976,13 +1923,11 @@ const processFile = (selectedFile: File | null, outcomeId: string) => {
         return;
     }
     
-    // 立即显示文件名，改善用户体验
-    setFileLabel(prev => ({ ...prev, [outcomeId]: selectedFile.name }));
-    
     // 模拟文件选择事件结构并调用 handleImageUpload
+    // 注意：我们将文件对象直接传递给 handleImageUpload
     handleImageUpload(selectedFile, outcomeId);
 };
-    
+
 // NEW: 拖放事件处理器
 const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -2112,7 +2057,6 @@ const handleImageUpload = async (file: File, outcomeId: string) => {
         // 修正: 确保 showNotification 可用
         typeof showNotification === 'function' ? showNotification(displayMessage, 'error') : console.error(displayMessage);
     }
-   setFileLabel(prev => ({ ...prev, [outcomeId]: '' }));
   }
 };
 
@@ -2125,11 +2069,7 @@ return (
       <p>Configure different result pages for high-converting, personalized recommendations. (Changes are auto-saved).</p>
 
       {outcomes.map((outcome, index) => {
-        const isCurrentUploading = uploadingId === outcome.id; 
-        const filenameToDisplay = fileLabel[outcome.id]; // 文件名可能为空或为实际名称
-        
-        // 核心显示条件：只要有 URL 或者正在上传，或者 fileLabel 里有文件名，就显示预览区域。
-        const shouldShowPreview = !!outcome.imageUrl || isCurrentUploading || !!filenameToDisplay;
+        const isCurrentUploading = uploadingId === outcome.id;
         
         return (
           <div key={outcome.id} className="outcome-card" style={{ marginBottom: '25px', padding: '15px', border: '1px solid #ddd', borderRadius: '8px', position: 'relative' }}>
@@ -2169,97 +2109,79 @@ return (
             {/* 图片上传区域 - 整合拖放和进度条 */}
             <div className="form-group">
               <label>Result Image URL (For Visual Recommendation):</label>
-                
-              {/* 🌟 渲染预览区域，现在 filenameToDisplay 是简洁的文件名 */}
-            {shouldShowPreview && (
+              
+              {/* 预览和删除区域 (NEW) */}
+              {outcome.imageUrl && (
                 <div className="image-preview-wrapper">
-                  
-                  {/* 预览图（仅当有 URL 时显示） */}
-               {outcome.imageUrl && (
-  <div className="image-preview-container">
-    <img 
-      src={outcome.imageUrl} 
-      alt="Result Preview" 
-      onError={(e) => {
-        e.currentTarget.style.display = 'none';
-        e.currentTarget.parentElement.querySelector('.image-error-btn').style.display = 'inline-block';
-      }}
-    />
-    <button className="delete-image-btn image-error-btn" style={{ display: 'none' }}>Error</button>
-  </div>
-)}
-                   {!outcome.imageUrl && (
-                      <button className="delete-image-btn image-error-btn" style={{ display: 'none' }}>Error</button>
-                  )}
-                  {/* 🌟 核心：文件名显示（修复文件名不显示的问题） */}
-                  {/* 注意：我们只在非上传状态且有文件名时显示，否则显示上传状态 */}
-                  <span className="file-name-display-compact"> 
-                        {isCurrentUploading 
-                            ? `Uploading: ${uploadProgress !== null ? uploadProgress : 0}% - ${filenameToDisplay || 'File...'}`
-                            : filenameToDisplay || 'No file selected'}
-                  </span>
-                  
-                  {/* 清除按钮（仅当有 URL 时才可清除） */}
-                  {outcome.imageUrl && (
-                    <button 
-                      className="delete-image-btn" 
-                      onClick={() => handleClearImage(outcome.id)}
-                    >
-                      Clear Image
-                    </button>
-                  )}
-                </div>
+                  <div className="image-preview-container">
+                    <img 
+                      src={outcome.imageUrl} 
+                      alt="Result Preview" 
+                      onError={(e) => {
+                          // 图片加载失败时显示占位符或清除 URL
+                          e.currentTarget.onerror = null; 
+                          e.currentTarget.src = 'https://placehold.co/100x100/F44336/ffffff?text=Load+Error';
+                      }}
+                    />
+                  </div>
+                  <button 
+                    className="delete-image-btn" 
+                    onClick={() => handleClearImage(outcome.id)}
+                  >
+                    Clear Image
+                  </button>
+                  </div>
               )}
               
-            {/* --- 拖放/点击上传区域 --- */}
-            <div 
-              className={`file-upload-wrapper ${isDragOver && !isCurrentUploading ? 'drag-over' : ''}`}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={(e) => handleDrop(e, outcome.id)}
-              onClick={() => fileInputRef.current[outcome.id]?.click()} 
-            >
-              <button 
-                className="custom-file-button"
-                disabled={isCurrentUploading}
-                style={{ pointerEvents: 'none' }} 
+              {/* 拖放/点击上传区域 (核心交互) */}
+              <div 
+                className={`file-upload-wrapper ${isDragOver && !isCurrentUploading ? 'drag-over' : ''}`}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={(e) => handleDrop(e, outcome.id)}
               >
-                <span role="img" aria-label="upload-icon" style={{ marginRight: 8 }}>
-                  {isCurrentUploading ? '⏳' : '📤'}
-                </span>
-                {isCurrentUploading 
-                    ? `Uploading...` 
+                <button 
+                  className="custom-file-button"
+                  onClick={() => fileInputRef.current[outcome.id]?.click()} 
+                  disabled={isCurrentUploading}
+                >
+                  <span role="img" aria-label="upload-icon" style={{ marginRight: 8 }}>
+                    {isCurrentUploading ? '⏳' : '📤'}
+                  </span>
+                  {isCurrentUploading 
+                    ? `Uploading: ${uploadProgress !== null ? uploadProgress : 0}%` 
                     : 'Click to Select File'}
-              </button>
-              
-              {/* 进度条 */}
-              {isCurrentUploading && uploadProgress !== null && (
-                <div className="upload-progress-container" style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '10px', width: '100%' }}>
-                      <div 
+                </button>
+                
+                {/* 进度条 (NEW) */}
+                {isCurrentUploading && uploadProgress !== null && (
+                  <div className="upload-progress-container">
+                    <div 
                       className="upload-progress-bar" 
-                      style={{ width: `${uploadProgress}%`, height: '100%', backgroundColor: '#007bff' }} 
-                      />
-                </div>
-              )}
-              
-              {/* 提示文本（仅在没有图片时显示，以避免冗余） */}
-              {!outcome.imageUrl && !isCurrentUploading && (
-                  <p className="file-name-display-hint" style={{ margin: 0, marginTop: '10px' }}>
-                      Or drag and drop files into this area (maximum 25MB)
-                  </p>
-              )}
-              
-              <input
-                type="file"
-                accept="image/*"
-                ref={el => fileInputRef.current[outcome.id] = el}
-                onChange={(e) => processFile(e.target.files?.[0] || null, outcome.id)}
-                disabled={isCurrentUploading}
-                className="file-upload-input" 
-              />
-            </div>
+                      style={{ width: `${uploadProgress}%` }} 
+                    />
+                  </div>
+                )}
+                
+                <span className="file-name-display">
+                  {isCurrentUploading 
+                    ? `Transferring data: ${uploadProgress !== null ? uploadProgress : 0}%`
+                    : fileLabel[outcome.id] 
+                      ? `Current: ${fileLabel[outcome.id]}`
+                      : 'Or drag and drop files into this area (maximum 25MB)'}
+                </span>
+                
+                {/* 隐藏的 input (用于点击) */}
+                <input
+                  type="file"
+                  accept="image/*"
+                  ref={el => fileInputRef.current[outcome.id] = el}
+                  onChange={(e) => processFile(e.target.files?.[0] || null, outcome.id)}
+                  disabled={isCurrentUploading}
+                  className="file-upload-input" 
+                />
+              </div>
 
-              {/* 外部 URL 输入框，现在在上传区域之外 */}
               <OptimizedTextInput
                 initialValue={outcome.imageUrl}
                 onUpdate={(v) => handleUpdateOutcome(outcome.id, { imageUrl: v })}
