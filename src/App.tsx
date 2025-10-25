@@ -2075,7 +2075,35 @@ return (
             
             <h4 style={{marginTop: 0, borderBottom: '1px solid #eee', paddingBottom: '10px'}}>{outcome.name} (Result #{index + 1})</h4>
             
-            {/* ... (其他输入字段保持不变) ... */}
+            <div className="form-group">
+              <label>Result Name (Internal):</label>
+              <OptimizedTextInput
+                initialValue={outcome.name}
+                onUpdate={(v) => handleUpdateOutcome(outcome.id, { name: v })}
+                placeholder="e.g., Top Budget Recommendation"
+                type="text"
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Result Title (Displayed to User):</label>
+              <OptimizedTextInput
+                initialValue={outcome.title}
+                onUpdate={(v) => handleUpdateOutcome(outcome.id, { title: v })}
+                placeholder="e.g., Congratulations! You are a High-Value Client."
+                type="text"
+              />
+            </div>
+            
+            <div className="form-group">
+              <label>CTA Link:</label>
+              <OptimizedTextInput
+                initialValue={outcome.ctaLink}
+                onUpdate={(v) => handleUpdateOutcome(outcome.id, { ctaLink: v })}
+                placeholder="https://your-product-link.com"
+                type="url"
+              />
+            </div>
 
             {/* 图片上传区域 - 修正后的 JSX */}
             <div className="form-group">
