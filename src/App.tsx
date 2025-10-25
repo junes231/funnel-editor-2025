@@ -1841,6 +1841,7 @@ interface OutcomeSettingsComponentProps {
   funnelId: string;
   storage: FirebaseStorage;
   onBack: (event: React.MouseEvent<HTMLButtonElement>) => void;
+  showNotification: (message: string, type?: 'success' | 'error') => void;
 }
 
 const OutcomeSettingsComponent: React.FC<OutcomeSettingsComponentProps> = ({
@@ -1849,6 +1850,7 @@ const OutcomeSettingsComponent: React.FC<OutcomeSettingsComponentProps> = ({
   funnelId,
   storage,
   onBack,
+  showNotification,
 }) => {
  const [uploadingId, setUploadingId] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null); 
@@ -2173,19 +2175,23 @@ return (
                 <div className="image-preview-wrapper">
                   
                   {/* 预览图（仅当有 URL 时显示） */}
-                  {outcome.imageUrl && (
+                 {outcome.imageUrl && (
                       <div className="image-preview-container">
                         <img 
                           src={outcome.imageUrl} 
                           alt="Result Preview" 
                           onError={(e) => {
-                              e.currentTarget.onerror = null; 
-                              e.currentTarget.src = 'https://placehold.co/50x50/F44336/ffffff?text=Error';
+                              // 显示一个 Error 按钮代替图片，而不是占位符
+                              e.currentTarget.style.display = 'none';
+                              e.currentTarget.parentElement?.parentElement?.querySelector('.image-error-btn')?.style.display = 'inline-block';
                           }}
                         />
                       </div>
                   )}
-            {/* 🌟 核心：文件名显示（修复文件名不显示的问题） */}
+                   {!outcome.imageUrl && (
+                      <button className="delete-image-btn image-error-btn" style={{ display: 'none' }}>Error</button>
+                  )}
+                  {/* 🌟 核心：文件名显示（修复文件名不显示的问题） */}
                   {/* 注意：我们只在非上传状态且有文件名时显示，否则显示上传状态 */}
                   <span className="file-name-display-compact"> 
                         {isCurrentUploading 
