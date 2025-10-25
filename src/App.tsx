@@ -108,27 +108,32 @@ const getDefaultData = (type: string) => {
     try {
       // 1. URL 解码: 处理路径中的 %2F (斜杠) 和 %20 (空格) 等编码字符
       const decodedUrl = decodeURIComponent(url);
+      
+      // 匹配 Firebase Storage 的 /o/ 后跟路径和可选参数
       const firebaseUrlMatch = decodedUrl.match(/\/o\/(.+?)(?:\?|#|$)/);
 
       let filePath = null;
       if (firebaseUrlMatch && firebaseUrlMatch[1]) {
+        // 提取路径部分
         filePath = firebaseUrlMatch[1];
       }
-
-      if (filePath) {
-        // 3. 提取文件名（路径的最后一段）
-        // 路径示例: uploads/images/funnel-id/outcome-id/timestamp-IMG_7937.jpeg
-        const pathParts = filePath.split('/');
-        const fileNameWithPrefix = pathParts[pathParts.length - 1]; // 提取最后一段，即带前缀的文件名
-
-        // 4. 移除时间戳前缀 (如 1718000000000-)
-        // 这是你在后端 (functions/track-click/index.js) 自动重命名的逻辑
-        const nameWithoutTimestamp = fileNameWithPrefix.replace(/^\d+-/, ''); // 移除数字+破折号前缀
-
-        // 5. 再次对文件名部分进行解码，以防文件名本身包含编码字符
-        return decodeURIComponent(nameWithoutTimestamp);
-      }
       
+      // 如果未成功提取路径，则返回 null，使用备用提示
+      if (!filePath) {
+        return null;
+      }
+
+      // 2. 提取文件名（路径的最后一段）
+      // 路径示例: uploads/images/funnel-id/outcome-id/timestamp-IMG_7937.jpeg
+      const pathParts = filePath.split('/');
+      const fileNameWithPrefix = pathParts[pathParts.length - 1]; // 提取最后一段
+      
+      // 3. 移除时间戳前缀 (如 1718000000000-)
+      const nameWithoutTimestamp = fileNameWithPrefix.replace(/^\d+-/, ''); // 移除数字+破折号前缀
+
+      // 4. 最终解码，确保文件名中的编码字符正确显示
+      return decodeURIComponent(nameWithoutTimestamp);
+
     } catch (e) {
       console.error("Failed to extract filename from URL:", e);
     }
@@ -722,7 +727,15 @@ interface FunnelEditorProps {
   updateFunnelData(funnelId, dataToSave);
   console.log('✅ Auto-Save triggered.');
 };
-const debouncedSave = useCallback( 
+
+   const forceSaveFunnelData = async (dataToSave: FunnelData) => {
+    if (!funnelId) return;
+    await updateFunnelData(funnelId, dataToSave);
+    console.log('✅ IMMEDIATE Save triggered for image upload.');
+    // 假设 showNotification 在 FunnelEditor 组件的父级 App.tsx 中通过 props/context 可用
+    // if (typeof showNotification === 'function') { showNotification('Image link saved.', 'success'); }
+}; 
+    const debouncedSave = useCallback( 
   debounce(performSave, 300), 
 [funnelId, updateFunnelData, leadCaptureEnabled, leadCaptureWebhookUrl]
 );
@@ -2089,26 +2102,45 @@ const handleImageUpload = async (file: File, outcomeId: string) => {
 
     console.log("🔗 Permanent Download URL:", permanentUrl);
     
-    // 步骤 4: 成功後更新 Firestore
-    handleUpdateOutcome(outcomeId, { imageUrl: permanentUrl }); 
-    // 修正: 确保 showNotification 可用
-    typeof showNotification === 'function' ? showNotification('Image uploaded successfully!', 'success') : console.log('Image uploaded successfully!');
-    
-    // 清理狀態
-    setUploadingId(null);
-    setUploadProgress(null);
+    const newOutcomes = outcomes.map(o => (o.id === outcomeId ? { ...o, imageUrl: permanentUrl } : o));
+        setOutcomes(newOutcomes); 
 
-  } catch (error: any) { 
-    console.error("❌ Upload Error:", error.message);
-    setUploadingId(null);
-    setUploadProgress(null);
-    
-    const displayMessage = `Critical Upload Error: ${error.message}`;
-    if (!error.message.includes("Failed to get signed URL")) {
-        // 修正: 确保 showNotification 可用
-        typeof showNotification === 'function' ? showNotification(displayMessage, 'error') : console.error(displayMessage);
+        // 【关键修复：绕过防抖，立即持久化保存 URL】
+        const dataToForceSave: FunnelData = {
+            questions: Array.isArray(questions) ? questions : [],
+            finalRedirectLink,
+            tracking,
+            conversionGoal,
+            primaryColor,
+            buttonColor,
+            backgroundColor,
+            textColor,
+            enableLeadCapture: leadCaptureEnabled, 
+            leadCaptureWebhookUrl: leadCaptureWebhookUrl,
+            outcomes: newOutcomes, // 使用最新的 outcomes 状态
+            scoreMappings: scoreMappings,
+        };
+        
+        await forceSaveFunnelData(dataToForceSave); // 强制立即保存
+
+        // 步骤 4.2: 成功后通知并清理 UI 状态
+        typeof showNotification === 'function' ? showNotification('Image uploaded and link saved!', 'success') : console.log('Image uploaded successfully!');
+        setUploadingId(null);
+        setUploadProgress(null);
+
+    } catch (error: any) { 
+        console.error("❌ Upload Error:", error.message);
+        setUploadingId(null);
+        setUploadProgress(null);
+        
+        // 【关键修复：上传失败时，清除本地 URL，防止出现孤立文件】
+        handleUpdateOutcome(outcomeId, { imageUrl: '' }); // 清除本地 URL 状态
+
+        const displayMessage = `Critical Upload Error: ${error.message}`;
+        if (!error.message.includes("Failed to get signed URL")) {
+            typeof showNotification === 'function' ? showNotification(displayMessage, 'error') : console.error(displayMessage);
+        }
     }
-  }
 };
 
 return (
