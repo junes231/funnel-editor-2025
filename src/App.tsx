@@ -2175,19 +2175,19 @@ return (
                 <div className="image-preview-wrapper">
                   
                   {/* 预览图（仅当有 URL 时显示） */}
-                 {outcome.imageUrl && (
-                      <div className="image-preview-container">
-                        <img 
-                          src={outcome.imageUrl} 
-                          alt="Result Preview" 
-                          onError={(e) => {
-                              // 显示一个 Error 按钮代替图片，而不是占位符
-                              e.currentTarget.style.display = 'none';
-                              e.currentTarget.parentElement?.parentElement?.querySelector('.image-error-btn')?.style.display = 'inline-block';
-                          }}
-                        />
-                      </div>
-                  )}
+               {outcome.imageUrl && (
+  <div className="image-preview-container">
+    <img 
+      src={outcome.imageUrl} 
+      alt="Result Preview" 
+      onError={(e) => {
+        e.currentTarget.style.display = 'none';
+        e.currentTarget.parentElement.querySelector('.image-error-btn').style.display = 'inline-block';
+      }}
+    />
+    <button className="delete-image-btn image-error-btn" style={{ display: 'none' }}>Error</button>
+  </div>
+)}
                    {!outcome.imageUrl && (
                       <button className="delete-image-btn image-error-btn" style={{ display: 'none' }}>Error</button>
                   )}
