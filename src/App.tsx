@@ -1031,7 +1031,7 @@ const handleImportQuestions = (importedQuestions: Question[]) => {
             storage={storage} // 传入 storage 实例
             onBack={() => setCurrentSubView('mainEditorDashboard')}
             extractFileNameFromUrl={extractFileNameFromUrl}
-            showNotification={showNotification}
+            
             />
         );
        
@@ -1883,7 +1883,7 @@ interface OutcomeSettingsComponentProps {
   storage: FirebaseStorage;
   onBack: (event: React.MouseEvent<HTMLButtonElement>) => void;
   extractFileNameFromUrl: (url: string | undefined) => string | null;
-  showNotification: (message: string, type?: 'success' | 'error') => void;
+  
 }
 
 const OutcomeSettingsComponent: React.FC<OutcomeSettingsComponentProps> = ({
@@ -1893,7 +1893,7 @@ const OutcomeSettingsComponent: React.FC<OutcomeSettingsComponentProps> = ({
   storage,
   onBack,
   extractFileNameFromUrl,
-  showNotification,
+  
 }) => {
   const [uploadingId, setUploadingId] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null); // NEW: 上传进度 (0-100)
@@ -1935,10 +1935,10 @@ const handleClearImage = async (outcomeId: string) => {
         // 如果删除失败（非 404 错误），给用户一个通知
         const isAuthError = error.message.includes('token') || error.message.includes('Authentication');
         if (isAuthError) {
-             typeof showNotification === 'function' ? showNotification('Authentication error. Please re-login to delete file.', 'error') : null;
+             typeof showNotification === 'function' ? showNotification('Authentication error Please re-login to delete file.', 'error') : console.log('Authentication error Please re-login to delete file.', 'error');
         } else if (!error.message.includes('not found')) {
              // 忽略文件已丢失的警告，只报告其他错误
-             typeof showNotification === 'function' ? showNotification(`File deletion failed (Code Error): ${error.message}`, 'error') : null;
+             typeof showNotification === 'function' ? showNotification('File deletion failed Code Error', 'error') : console.log('File deletion failed Code Error', 'error');
         }
         // 允许继续，清除前端状态
     }
@@ -1953,7 +1953,7 @@ const handleClearImage = async (outcomeId: string) => {
         setFileLabel(prev => ({ ...prev, [outcomeId]: '' }));
     }
 
-    typeof showNotification === 'function' ? showNotification('Image successfully cleared from editor.', 'success') : null;
+    typeof showNotification === 'function' ? showNotification('Image successfully cleared from editor.', 'success') : console.log('Image successfully cleared', 'success');
 };
 
 
