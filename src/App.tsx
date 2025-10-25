@@ -1885,7 +1885,13 @@ interface OutcomeSettingsComponentProps {
   extractFileNameFromUrl: (url: string | undefined) => string | null;
   
 }
-
+const getUrlHint = (url: string | undefined): string => {
+  if (!url) return 'N/A';
+  const cleanUrl = url.split('?')[0]; // 移除 token 部分
+  const maxLen = 45;
+  if (cleanUrl.length <= maxLen) return `Link: ${cleanUrl}`;
+  return `Link: ${cleanUrl.substring(0, maxLen)}...`;
+};
 const OutcomeSettingsComponent: React.FC<OutcomeSettingsComponentProps> = ({
   outcomes,
   setOutcomes,
@@ -2157,7 +2163,12 @@ return (
               
               {/* 预览和删除区域 (NEW) */}
              {outcome.imageUrl && (
-    <div className="image-preview-wrapper">
+    <div 
+        className="image-preview-wrapper"
+        // 【✅ 修复 B：添加点击事件，在新窗口打开图片】
+        onClick={() => window.open(outcome.imageUrl, '_blank')}
+        style={{ cursor: 'pointer' }} // 提示用户可点击
+    >
       <div className="image-preview-container">
         <img 
           src={outcome.imageUrl} 
@@ -2170,11 +2181,15 @@ return (
       </div>
       {/* NEW: 动态显示解析出的文件名 */}
       <span className="file-name-display-compact">
-          Current: {extractFileNameFromUrl(outcome.imageUrl) || 'N/A'}
+          {/* 【✅ 修复 A：如果文件名解析失败，显示 URL 提示，帮助用户调试】 */}
+          Current: {extractFileNameFromUrl(outcome.imageUrl) || getUrlHint(outcome.imageUrl)}
       </span>
       <button 
         className="delete-image-btn" 
-        onClick={() => handleClearImage(outcome.id)}
+        onClick={(e) => {
+          e.stopPropagation(); // 【重要：阻止事件冒泡到父级的 onClick (修复 B 的副作用)】
+          handleClearImage(outcome.id);
+        }}
       >
         Clear Image
       </button>
