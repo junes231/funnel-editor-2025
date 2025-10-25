@@ -97,6 +97,33 @@ const getDefaultData = (type: string) => {
         return {};
          }
           };
+
+  const extractFileNameFromUrl = (url: string | undefined): string | null => {
+  if (!url || typeof url !== 'string') return null;
+
+  try {
+    // 1. URL 解码: 处理路径中的 %2F 等编码字符
+    const decodedUrl = decodeURIComponent(url);
+    
+    // 2. 匹配路径中的文件名部分，它在最后一个斜杠 / 和 ? 之间
+    // 文件名为：.../timestamp-originalName.ext?alt=media
+    const match = decodedUrl.match(/\/([^/?]+)\?alt=media/);
+
+    if (match && match[1]) {
+      const fileNameWithPrefix = match[1];
+      
+      // 3. 移除时间戳前缀 (如 1718000000000-)
+      // 这是为了匹配你上传时自动重命名的逻辑
+      const nameWithoutTimestamp = fileNameWithPrefix.replace(/^\d+-/, '');
+
+      return nameWithoutTimestamp;
+    }
+  } catch (e) {
+    console.error("Failed to extract filename from URL:", e);
+  }
+
+  return null;
+};
 // REPLACE your old App function with this new one
 export default function App({ db, storage }: AppProps) {
   const navigate = useNavigate();
@@ -2111,86 +2138,89 @@ return (
               <label>Result Image URL (For Visual Recommendation):</label>
               
               {/* 预览和删除区域 (NEW) */}
-              {outcome.imageUrl && (
-                <div className="image-preview-wrapper">
-                  <div className="image-preview-container">
-                    <img 
-                      src={outcome.imageUrl} 
-                      alt="Result Preview" 
-                      onError={(e) => {
-                          // 图片加载失败时显示占位符或清除 URL
-                          e.currentTarget.onerror = null; 
-                          e.currentTarget.src = 'https://placehold.co/100x100/F44336/ffffff?text=Load+Error';
-                      }}
-                    />
-                  </div>
-                  <button 
-                    className="delete-image-btn" 
-                    onClick={() => handleClearImage(outcome.id)}
-                  >
-                    Clear Image
-                  </button>
-                  </div>
-              )}
-              
-              {/* 拖放/点击上传区域 (核心交互) */}
-              <div 
-                className={`file-upload-wrapper ${isDragOver && !isCurrentUploading ? 'drag-over' : ''}`}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={(e) => handleDrop(e, outcome.id)}
-              >
-                <button 
-                  className="custom-file-button"
-                  onClick={() => fileInputRef.current[outcome.id]?.click()} 
-                  disabled={isCurrentUploading}
-                >
-                  <span role="img" aria-label="upload-icon" style={{ marginRight: 8 }}>
-                    {isCurrentUploading ? '⏳' : '📤'}
-                  </span>
-                  {isCurrentUploading 
-                    ? `Uploading: ${uploadProgress !== null ? uploadProgress : 0}%` 
-                    : 'Click to Select File'}
-                </button>
-                
-                {/* 进度条 (NEW) */}
-                {isCurrentUploading && uploadProgress !== null && (
-                  <div className="upload-progress-container">
-                    <div 
-                      className="upload-progress-bar" 
-                      style={{ width: `${uploadProgress}%` }} 
-                    />
-                  </div>
-                )}
-                
-                <span className="file-name-display">
-                  {isCurrentUploading 
-                    ? `Transferring data: ${uploadProgress !== null ? uploadProgress : 0}%`
-                    : fileLabel[outcome.id] 
-                      ? `Current: ${fileLabel[outcome.id]}`
-                      : 'Or drag and drop files into this area (maximum 25MB)'}
-                </span>
-                
-                {/* 隐藏的 input (用于点击) */}
-                <input
-                  type="file"
-                  accept="image/*"
-                  ref={el => fileInputRef.current[outcome.id] = el}
-                  onChange={(e) => processFile(e.target.files?.[0] || null, outcome.id)}
-                  disabled={isCurrentUploading}
-                  className="file-upload-input" 
-                />
-              </div>
+             {outcome.imageUrl && (
+    <div className="image-preview-wrapper">
+      <div className="image-preview-container">
+        <img 
+          src={outcome.imageUrl} 
+          alt="Result Preview" 
+          onError={(e) => {
+              e.currentTarget.onerror = null; 
+              e.currentTarget.src = 'https://placehold.co/100x100/F44336/ffffff?text=Load+Error';
+          }}
+        />
+      </div>
+      {/* NEW: 动态显示解析出的文件名 */}
+      <span className="file-name-display-compact">
+          Current: {extractFileNameFromUrl(outcome.imageUrl) || 'N/A'}
+      </span>
+      <button 
+        className="delete-image-btn" 
+        onClick={() => handleClearImage(outcome.id)}
+      >
+        Clear Image
+      </button>
+    </div>
+  )}
+  
+  {/* 拖放/点击上传区域 (核心交互) */}
+  <div 
+    className={`file-upload-wrapper ${isDragOver && !isCurrentUploading ? 'drag-over' : ''}`}
+    onDragOver={handleDragOver}
+    onDragLeave={handleDragLeave}
+    onDrop={(e) => handleDrop(e, outcome.id)}
+  >
+    <button 
+      className="custom-file-button"
+      onClick={() => fileInputRef.current[outcome.id]?.click()} 
+      disabled={isCurrentUploading}
+    >
+      <span role="img" aria-label="upload-icon" style={{ marginRight: 8 }}>
+        {isCurrentUploading ? '⏳' : '📤'}
+      </span>
+      {isCurrentUploading 
+        ? `Uploading: ${uploadProgress !== null ? uploadProgress : 0}%` 
+        : 'Click to Select File'}
+    </button>
+    
+    {/* 进度条 (NEW) */}
+    {isCurrentUploading && uploadProgress !== null && (
+      <div className="upload-progress-container">
+        <div 
+          className="upload-progress-bar" 
+          style={{ width: `${uploadProgress}%` }} 
+        />
+      </div>
+    )}
+    
+    {/* 修正：这里不再依赖 fileLabel 状态来显示文件名，而是用静态提示 */}
+    <span className="file-name-display-hint">
+        {isCurrentUploading 
+          ? `Transferring data...`
+          : 'Or drag and drop files into this area (maximum 25MB)'}
+    </span>
+    
+    {/* 隐藏的 input (用于点击) */}
+    <input
+      type="file"
+      accept="image/*"
+      ref={el => fileInputRef.current[outcome.id] = el}
+      onChange={(e) => processFile(e.target.files?.[0] || null, outcome.id)}
+      disabled={isCurrentUploading}
+      className="file-upload-input" 
+    />
+  </div>
 
-              <OptimizedTextInput
-                initialValue={outcome.imageUrl}
-                onUpdate={(v) => handleUpdateOutcome(outcome.id, { imageUrl: v })}
-                placeholder="Or paste an external URL"
-                type="url"
-                style={{marginTop: '10px'}}
-                disabled={isCurrentUploading}
-              />
-            </div>
+  {/* URL 输入框 */}
+  <OptimizedTextInput
+    initialValue={outcome.imageUrl}
+    onUpdate={(v) => handleUpdateOutcome(outcome.id, { imageUrl: v })}
+    placeholder="Or paste an external URL"
+    type="url"
+    style={{marginTop: '10px'}}
+    disabled={isCurrentUploading}
+  />
+</div>
           </div>
         );
       })}
