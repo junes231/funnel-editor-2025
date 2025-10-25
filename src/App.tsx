@@ -2140,38 +2140,30 @@ return (
               <label>Result Image URL (For Visual Recommendation):</label>
               
               {/* 预览和删除区域 (NEW) */}
-             {outcome.imageUrl ? (
-  <div className="image-preview-wrapper">
-    <div className="image-preview-container">
-      <img 
-        src={outcome.imageUrl} 
-        alt="Result Preview" 
-        onError={(e) => {
-            e.currentTarget.onerror = null; 
-            e.currentTarget.src = 'https://placehold.co/100x100/F44336/ffffff?text=Load+Error';
-        }}
-      />
+             {outcome.imageUrl && (
+    <div className="image-preview-wrapper">
+      <div className="image-preview-container">
+        <img 
+          src={outcome.imageUrl} 
+          alt="Result Preview" 
+          onError={(e) => {
+              e.currentTarget.onerror = null; 
+              e.currentTarget.src = 'https://placehold.co/100x100/F44336/ffffff?text=Load+Error';
+          }}
+        />
+      </div>
+      {/* NEW: 动态显示解析出的文件名 */}
+      <span className="file-name-display-compact">
+          Current: {extractFileNameFromUrl(outcome.imageUrl) || 'N/A'}
+      </span>
+      <button 
+        className="delete-image-btn" 
+        onClick={() => handleClearImage(outcome.id)}
+      >
+        Clear Image
+      </button>
     </div>
-    {/* ------------------------------------------------------------------ */}
-    {/* ⭐ 确保这个元素存在且包含解析出的文件名 ⭐ */}
-    <span className="file-name-display-compact">
-        Current: {extractFileNameFromUrl(outcome.imageUrl) || 'N/A'}
-    </span>
-    {/* ------------------------------------------------------------------ */}
-
-    <button 
-      className="delete-image-btn" 
-      onClick={() => handleClearImage(outcome.id)}
-    >
-      Clear Image
-    </button>
-  </div>
-) : (
-  // 如果没有 URL，这个包裹器不渲染，继续渲染文件上传区域
-  <span className="file-name-display-hint">
-    No image uploaded yet.
-  </span>
-)}
+  )}
   
   {/* 拖放/点击上传区域 (核心交互) */}
   <div 
