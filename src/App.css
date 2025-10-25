@@ -1385,12 +1385,15 @@ p {
     cursor: pointer;
     transition: background-color 0.2s;
     flex-shrink: 0;
-    margin-left: 0; 
+    margin-left: 10px; 
 }
 .delete-image-btn:hover {
     background-color: #c82333;
 }
-
+.delete-image-btn.image-error-btn {
+    background-color: #ff9800; /* 橙色表示错误 */
+    color: white;
+}
 
 
 
