@@ -1878,80 +1878,97 @@ const OutcomeSettingsComponent: React.FC<OutcomeSettingsComponentProps> = ({
   onBack,
 }) => {
   const [uploadingId, setUploadingId] = useState<string | null>(null);
-  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
-  const [currentUploadingFileName, setCurrentUploadingFileName] = useState<string | null>(null);
-
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null); // NEW: 上传进度 (0-100)
   const [isDragOver, setIsDragOver] = useState(false);
+  const [fileLabel, setFileLabel] = useState<Record<string, string>>({}); // <--- 新增状态：存储文件名
   const fileInputRef = useRef<Record<string, HTMLInputElement | null>>({});
-  
-  // 确保 showNotification 可以在这里访问（假设它在 App.tsx 顶层）
-  const showNotification = (message: string, type: 'success' | 'error' = 'success') => {
-    // 简化处理，因为 showNotification 是 App 组件的 prop，这里需要一个更全局的方案
-    // 暂时用 console 代替，如果需要显示通知，需要将 showNotification 作为 prop 传入
-    console.log(`[Notification ${type}]: ${message}`);
-  };
-
   const handleUpdateOutcome = (id: string, updates: Partial<FunnelOutcome>) => {
     setOutcomes(prev =>
       prev.map(o => (o.id === id ? { ...o, ...updates } : o))
     );
   };
 
-  const handleClearImage = async (outcomeId: string) => {
+  // 文件路径: src/App.tsx (在 OutcomeSettingsComponent 组件内部)
+
+const handleClearImage = async (outcomeId: string) => {
+    // 1. 获取正确的 outcome 对象
     const outcomeToClear = outcomes.find(o => o.id === outcomeId);
     
+    // 检查是否需要清除
     if (!outcomeToClear || !outcomeToClear.imageUrl) {
+        if (typeof setFileLabel === 'function') {
+             setFileLabel(prev => ({ ...prev, [outcomeId]: '' }));
+        }
         return;
     }
     
     const fileUrlToDelete = outcomeToClear.imageUrl; 
 
     try {
+        // 2. 调用辅助函数，执行后端删除
         const token = await getAuthToken(); 
         await deleteFileApi(fileUrlToDelete, token); 
+
         console.log("✅ Remote file deleted successfully.");
 
     } catch (error: any) {
         console.error("❌ CRITICAL: Remote file deletion failed:", error.message);
         
+        // 如果删除失败（非 404 错误），给用户一个通知
         const isAuthError = error.message.includes('token') || error.message.includes('Authentication');
         if (isAuthError) {
-             showNotification('Authentication error. Please re-login to delete file.', 'error');
+             typeof showNotification === 'function' ? showNotification('Authentication error. Please re-login to delete file.', 'error') : null;
         } else if (!error.message.includes('not found')) {
-             showNotification(`File deletion failed (Code Error): ${error.message}`, 'error');
+             // 忽略文件已丢失的警告，只报告其他错误
+             typeof showNotification === 'function' ? showNotification(`File deletion failed (Code Error): ${error.message}`, 'error') : null;
         }
+        // 允许继续，清除前端状态
     }
     
-    handleUpdateOutcome(outcomeId, { imageUrl: '' }); 
-    showNotification('Image successfully cleared from editor.', 'success');
-  };
+    // 3. 清除本地状态
+    handleUpdateOutcome(outcomeId, { 
+        imageUrl: '',
+    }); 
+    
+    // 4. 清除文件名标签
+    if (typeof setFileLabel === 'function') {
+        setFileLabel(prev => ({ ...prev, [outcomeId]: '' }));
+    }
 
-  const processFile = (selectedFile: File | null, outcomeId: string) => {
+    typeof showNotification === 'function' ? showNotification('Image successfully cleared from editor.', 'success') : null;
+};
+
+
+// NEW: 处理文件选择或拖放
+const processFile = (selectedFile: File | null, outcomeId: string) => {
     if (!selectedFile) return;
     
+    // 检查文件类型 (仅限图片)
     if (!selectedFile.type.startsWith('image/')) {
-        showNotification('Only image files are supported for upload.', 'error');
+        // 修正: 确保 showNotification 可用
+        typeof showNotification === 'function' ? showNotification('Only image files are supported for upload.', 'error') : console.log('Only image files are supported for upload.', 'error');
         return;
     }
     
-    // 3. 使用新状态追踪当前正在上传的文件名
-    setCurrentUploadingFileName(selectedFile.name); 
+    // 模拟文件选择事件结构并调用 handleImageUpload
+    // 注意：我们将文件对象直接传递给 handleImageUpload
     handleImageUpload(selectedFile, outcomeId);
-  };
+};
 
-  const handleDragOver = (e: React.DragEvent) => {
+// NEW: 拖放事件处理器
+const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragOver(true);
-  };
+};
 
-  const handleDragLeave = (e: React.DragEvent) => {
+const handleDragLeave = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragOver(false);
-  };
+};
 
-  const handleDrop = (e: React.DragEvent, outcomeId: string) => {
+const handleDrop = (e: React.DragEvent, outcomeId: string) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragOver(false);
@@ -1960,103 +1977,116 @@ const OutcomeSettingsComponent: React.FC<OutcomeSettingsComponentProps> = ({
     if (droppedFile) {
         processFile(droppedFile, outcomeId);
     }
-  };
+};
 
-  const BUCKET_NAME = 'funnel-editor-netlify.firebasestorage.app'; 
-  const handleImageUpload = async (file: File, outcomeId: string) => {
-    
-    if (uploadingId === outcomeId) return; 
+// 确保 BUCKET_NAME 在全局或顶层被定义，以便 handleImageUpload 可以访问
+const BUCKET_NAME = 'funnel-editor-netlify.firebasestorage.app'; 
 
-    setUploadingId(outcomeId);
-    setUploadProgress(0);
-    
-    const trackClickBaseUrl = process.env.REACT_APP_TRACK_CLICK_URL?.replace(/\/trackClick$/, '') || 'https://api-track-click-jgett3ucqq-uc.a.run.app';
+const handleImageUpload = async (file: File, outcomeId: string) => {
+  setFileLabel(prev => ({ ...prev, [outcomeId]: file.name }));
 
-    try {
-      // 步骤 1: 獲取簽名 URL
-      const generateUrlResponse = await fetch(`${trackClickBaseUrl}/generateUploadUrl`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-              data: { 
-                  funnelId, 
-                  outcomeId, 
-                  fileName: file.name,
-                  fileType: file.type 
-              }
-          }),
-      });
+  if (uploadingId === outcomeId) return; 
 
-      if (!generateUrlResponse.ok) {
-          const errorResponse = await generateUrlResponse.json().catch(() => ({}));
-          const details = errorResponse.error || "Failed to get signed URL (Check backend logs for details).";
-          showNotification(`Upload setup failed: ${details}`, 'error');
-          throw new Error(`Failed to get signed URL: ${details}`);
-      }
+  setUploadingId(outcomeId);
+  setUploadProgress(0);
+  // 假設 process.env.REACT_APP_TRACK_CLICK_URL 包含您的後端基礎 URL
+  const trackClickBaseUrl = process.env.REACT_APP_TRACK_CLICK_URL?.replace(/\/trackClick$/, '') || 'https://api-track-click-jgett3ucqq-uc.a.run.app';
 
-      const { data } = await generateUrlResponse.json();
-      const { uploadUrl, filePath } = data; 
-      
-      if (!filePath) {
-          throw new Error("Backend did not return the file path required for getting the permanent URL.");
-      }
-      
-      // 步骤 2: 前端直接上傳文件到 GCS
-      await new Promise((resolve, reject) => {
-          const xhr = new XMLHttpRequest();
-          xhr.open('PUT', uploadUrl);
-          xhr.setRequestHeader('Content-Type', file.type); 
+  try {
+    // 步骤 1: 獲取簽名 URL
+    const generateUrlResponse = await fetch(`${trackClickBaseUrl}/generateUploadUrl`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            data: { 
+                funnelId, 
+                outcomeId, 
+                fileName: file.name,
+                fileType: file.type 
+            }
+        }),
+    });
 
-          xhr.upload.onprogress = (event) => {
-              if (event.lengthComputable) {
-                  const percent = Math.round((event.loaded / event.total) * 100);
-                  setUploadProgress(percent); 
-              }
-          };
-
-          xhr.onload = () => {
-              if (xhr.status >= 200 && xhr.status < 300) {
-                  resolve(xhr.responseText);
-              } else {
-                  reject(new Error(`File PUT failed with status: ${xhr.status || 'Network/CORS error'}.`));
-              }
-          };
-
-          xhr.onerror = () => {
-              reject(new Error('File PUT failed due to network error or strict CORS policy.'));
-          };
-
-          xhr.send(file);
-      });
-
-      // 步骤 3: 構造永久下載 URL
-      const encodedFilePath = encodeURIComponent(filePath);
-      const permanentUrl = `https://firebasestorage.googleapis.com/v0/b/${BUCKET_NAME}/o/${encodedFilePath}?alt=media`;
-
-      // 步骤 4: 成功後更新 Firestore
-      handleUpdateOutcome(outcomeId, { imageUrl: permanentUrl }); 
-      showNotification('Image uploaded successfully!', 'success');
-      
-      // 清理状态
-      setUploadingId(null);
-      setUploadProgress(null);
-      setCurrentUploadingFileName(null);
-
-
-    } catch (error: any) { 
-      console.error("❌ Upload Error:", error.message);
-      setUploadingId(null);
-      setUploadProgress(null);
-      setCurrentUploadingFileName(null);
-      
-      const displayMessage = `Critical Upload Error: ${error.message}`;
-      if (!error.message.includes("Failed to get signed URL")) {
-          showNotification(displayMessage, 'error');
-      }
+    if (!generateUrlResponse.ok) {
+        const errorResponse = await generateUrlResponse.json().catch(() => ({}));
+        const details = errorResponse.error || "Failed to get signed URL (Check backend logs for details).";
+        // 修正: 确保 showNotification 可用
+        typeof showNotification === 'function' ? showNotification(`Upload setup failed: ${details}`, 'error') : console.error(`Upload setup failed: ${details}`);
+        throw new Error(`Failed to get signed URL: ${details}`);
     }
-  };
 
- 
+    const { data } = await generateUrlResponse.json();
+    // 獲取簽名 URL (用於 PUT) 和 GCS 文件路徑 (用於構造永久 URL)
+    const { uploadUrl, filePath } = data; 
+    
+    if (!filePath) {
+        throw new Error("Backend did not return the file path required for getting the permanent URL.");
+    }
+    
+    console.log("📎 uploadUrl value:", uploadUrl);
+    console.log("📎 filePath value:", filePath);
+
+    // 步骤 2: 前端直接上傳文件到 GCS
+    await new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('PUT', uploadUrl);
+        // 🌟 關鍵修復點 1: 必須設置 Content-Type 匹配 GCS 預簽名 URL 的要求
+        xhr.setRequestHeader('Content-Type', file.type); 
+
+        xhr.upload.onprogress = (event) => {
+            if (event.lengthComputable) {
+                const percent = Math.round((event.loaded / event.total) * 100);
+                setUploadProgress(percent); // 更新進度
+            }
+        };
+
+        xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+                console.log("✅ File PUT successful.");
+                resolve(xhr.responseText);
+            } else {
+                // 處理 PUT 失敗，例如 CORS 錯誤通常會顯示 0
+                reject(new Error(`File PUT failed with status: ${xhr.status || 'Network/CORS error'}.`));
+            }
+        };
+
+        xhr.onerror = () => {
+            // 修正：提供更清晰的錯誤訊息
+            reject(new Error('File PUT failed due to network error or strict CORS policy.'));
+        };
+
+        xhr.send(file);
+    });
+
+    // 🌟 步骤 3: 構造永久下載 URL (取代 getDownloadURL)
+    // 這是最推薦且最穩定的獲取永久 URL 的方式，無需前端安裝 Firebase Storage SDK
+    const encodedFilePath = encodeURIComponent(filePath);
+    const permanentUrl = `https://firebasestorage.googleapis.com/v0/b/${BUCKET_NAME}/o/${encodedFilePath}?alt=media`;
+
+    console.log("🔗 Permanent Download URL:", permanentUrl);
+    
+    // 步骤 4: 成功後更新 Firestore
+    handleUpdateOutcome(outcomeId, { imageUrl: permanentUrl }); 
+    // 修正: 确保 showNotification 可用
+    typeof showNotification === 'function' ? showNotification('Image uploaded successfully!', 'success') : console.log('Image uploaded successfully!');
+    
+    // 清理狀態
+    setUploadingId(null);
+    setUploadProgress(null);
+
+  } catch (error: any) { 
+    console.error("❌ Upload Error:", error.message);
+    setUploadingId(null);
+    setUploadProgress(null);
+    
+    const displayMessage = `Critical Upload Error: ${error.message}`;
+    if (!error.message.includes("Failed to get signed URL")) {
+        // 修正: 确保 showNotification 可用
+        typeof showNotification === 'function' ? showNotification(displayMessage, 'error') : console.error(displayMessage);
+    }
+  }
+};
+
 return (
     <div className="link-settings-container">
       <h2>
@@ -2065,10 +2095,8 @@ return (
       </h2>
       <p>Configure different result pages for high-converting, personalized recommendations. (Changes are auto-saved).</p>
 
-      {outcomes.map((outcome, index) => { // <-- **确保你在 map 的回调函数内部**
+      {outcomes.map((outcome, index) => {
         const isCurrentUploading = uploadingId === outcome.id;
-        // ⭐ 使用辅助函数动态获取文件名
-        const currentFileName = extractFileNameFromUrl(outcome.imageUrl); 
         
         return (
           <div key={outcome.id} className="outcome-card" style={{ marginBottom: '25px', padding: '15px', border: '1px solid #ddd', borderRadius: '8px', position: 'relative' }}>
@@ -2105,98 +2133,94 @@ return (
               />
             </div>
 
-            {/* 图片上传区域 - 修正后的 JSX */}
+            {/* 图片上传区域 - 整合拖放和进度条 */}
             <div className="form-group">
               <label>Result Image URL (For Visual Recommendation):</label>
               
               {/* 预览和删除区域 (NEW) */}
-              {outcome.imageUrl ? (
-                <div className="image-preview-wrapper">
-                  <div className="image-preview-container">
-                    <img 
-                      src={outcome.imageUrl} 
-                      alt="Result Preview" 
-                      onError={(e) => {
-                          e.currentTarget.onerror = null; 
-                          e.currentTarget.src = 'https://placehold.co/100x100/F44336/ffffff?text=Load+Error';
-                      }}
-                    />
-                  </div>
-                  {/* ⭐ FIX: 使用解析出的持久化文件名 ⭐ */}
-                  <span className="file-name-display-compact">
-                      Current: {currentFileName || 'N/A'}
-                  </span>
-                  <button 
-                    className="delete-image-btn" 
-                    onClick={() => handleClearImage(outcome.id)}
-                  >
-                    Clear Image
-                  </button>
-                  </div>
-              ) : (
-                <span className="file-name-display-hint" style={{ marginBottom: '15px', marginTop: '10px' }}>
-                    No image uploaded yet.
-                </span>
-              )}
-              
-              {/* 拖放/点击上传区域 (核心交互) */}
-              <div 
-                className={`file-upload-wrapper ${isDragOver && !isCurrentUploading ? 'drag-over' : ''}`}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={(e) => handleDrop(e, outcome.id)}
-                style={{ minHeight: '80px', padding: '15px' }} /* 调整样式避免过大 */
-              >
-                <button 
-                  className="custom-file-button"
-                  onClick={() => fileInputRef.current[outcome.id]?.click()} 
-                  disabled={isCurrentUploading}
-                >
-                  <span role="img" aria-label="upload-icon" style={{ marginRight: 8 }}>
-                    {isCurrentUploading ? '⏳' : '📤'}
-                  </span>
-                  {isCurrentUploading 
-                    ? `Uploading: ${uploadProgress !== null ? uploadProgress : 0}%` 
-                    : 'Click to Select File'}
-                </button>
-                
-                {/* 进度条 (NEW) */}
-                {isCurrentUploading && uploadProgress !== null && (
-                  <div className="upload-progress-container">
-                    <div 
-                      className="upload-progress-bar" 
-                      style={{ width: `${uploadProgress}%` }} 
-                    />
-                  </div>
-                )}
-                
-                {/* 提示文本 - 显示正在上传的文件名或默认提示 */}
-                <span className="file-name-display-hint">
-                    {isCurrentUploading
-                      ? `Uploading: ${currentUploadingFileName || 'File...'}`
-                      : 'Or drag and drop files into this area (maximum 25MB)'}
-                </span>
-                
-                {/* 隐藏的 input (用于点击) */}
-                <input
-                  type="file"
-                  accept="image/*"
-                  ref={el => fileInputRef.current[outcome.id] = el}
-                  onChange={(e) => processFile(e.target.files?.[0] || null, outcome.id)}
-                  disabled={isCurrentUploading}
-                  className="file-upload-input" 
-                />
-              </div>
+             {outcome.imageUrl && (
+    <div className="image-preview-wrapper">
+      <div className="image-preview-container">
+        <img 
+          src={outcome.imageUrl} 
+          alt="Result Preview" 
+          onError={(e) => {
+              e.currentTarget.onerror = null; 
+              e.currentTarget.src = 'https://placehold.co/100x100/F44336/ffffff?text=Load+Error';
+          }}
+        />
+      </div>
+      {/* NEW: 动态显示解析出的文件名 */}
+      <span className="file-name-display-compact">
+          Current: {extractFileNameFromUrl(outcome.imageUrl) || 'N/A'}
+      </span>
+      <button 
+        className="delete-image-btn" 
+        onClick={() => handleClearImage(outcome.id)}
+      >
+        Clear Image
+      </button>
+    </div>
+  )}
+  
+  {/* 拖放/点击上传区域 (核心交互) */}
+  <div 
+    className={`file-upload-wrapper ${isDragOver && !isCurrentUploading ? 'drag-over' : ''}`}
+    onDragOver={handleDragOver}
+    onDragLeave={handleDragLeave}
+    onDrop={(e) => handleDrop(e, outcome.id)}
+  >
+    <button 
+      className="custom-file-button"
+      onClick={() => fileInputRef.current[outcome.id]?.click()} 
+      disabled={isCurrentUploading}
+    >
+      <span role="img" aria-label="upload-icon" style={{ marginRight: 8 }}>
+        {isCurrentUploading ? '⏳' : '📤'}
+      </span>
+      {isCurrentUploading 
+        ? `Uploading: ${uploadProgress !== null ? uploadProgress : 0}%` 
+        : 'Click to Select File'}
+    </button>
+    
+    {/* 进度条 (NEW) */}
+    {isCurrentUploading && uploadProgress !== null && (
+      <div className="upload-progress-container">
+        <div 
+          className="upload-progress-bar" 
+          style={{ width: `${uploadProgress}%` }} 
+        />
+      </div>
+    )}
+    
+    {/* 修正：这里不再依赖 fileLabel 状态来显示文件名，而是用静态提示 */}
+    <span className="file-name-display-hint">
+        {isCurrentUploading 
+          ? `Transferring data...`
+          : 'Or drag and drop files into this area (maximum 25MB)'}
+    </span>
+    
+    {/* 隐藏的 input (用于点击) */}
+    <input
+      type="file"
+      accept="image/*"
+      ref={el => fileInputRef.current[outcome.id] = el}
+      onChange={(e) => processFile(e.target.files?.[0] || null, outcome.id)}
+      disabled={isCurrentUploading}
+      className="file-upload-input" 
+    />
+  </div>
 
-              <OptimizedTextInput
-                initialValue={outcome.imageUrl}
-                onUpdate={(v) => handleUpdateOutcome(outcome.id, { imageUrl: v })}
-                placeholder="Or paste an external URL"
-                type="url"
-                style={{marginTop: '10px'}}
-                disabled={isCurrentUploading}
-              />
-            </div>
+  {/* URL 输入框 */}
+  <OptimizedTextInput
+    initialValue={outcome.imageUrl}
+    onUpdate={(v) => handleUpdateOutcome(outcome.id, { imageUrl: v })}
+    placeholder="Or paste an external URL"
+    type="url"
+    style={{marginTop: '10px'}}
+    disabled={isCurrentUploading}
+  />
+</div>
           </div>
         );
       })}
