@@ -2056,9 +2056,7 @@ const OutcomeSettingsComponent: React.FC<OutcomeSettingsComponentProps> = ({
     }
   };
 
-  // 在 OutcomeSettingsComponent 的 return 语句之前
-console.log(`Outcome ${outcome.id} URL:`, outcome.imageUrl);
-console.log(`Extracted Name:`, extractFileNameFromUrl(outcome.imageUrl));
+ 
 return (
     <div className="link-settings-container">
       <h2>
