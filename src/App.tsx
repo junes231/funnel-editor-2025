@@ -1031,6 +1031,7 @@ const handleImportQuestions = (importedQuestions: Question[]) => {
             storage={storage} // 传入 storage 实例
             onBack={() => setCurrentSubView('mainEditorDashboard')}
             extractFileNameFromUrl={extractFileNameFromUrl}
+            showNotification={showNotification}
             />
         );
        
@@ -1882,6 +1883,7 @@ interface OutcomeSettingsComponentProps {
   storage: FirebaseStorage;
   onBack: (event: React.MouseEvent<HTMLButtonElement>) => void;
   extractFileNameFromUrl: (url: string | undefined) => string | null;
+  showNotification: (message: string, type?: 'success' | 'error') => void;
 }
 
 const OutcomeSettingsComponent: React.FC<OutcomeSettingsComponentProps> = ({
@@ -1891,6 +1893,7 @@ const OutcomeSettingsComponent: React.FC<OutcomeSettingsComponentProps> = ({
   storage,
   onBack,
   extractFileNameFromUrl,
+  showNotification,
 }) => {
   const [uploadingId, setUploadingId] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null); // NEW: 上传进度 (0-100)
