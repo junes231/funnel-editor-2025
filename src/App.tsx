@@ -98,32 +98,44 @@ const getDefaultData = (type: string) => {
          }
           };
 
+  // 文件路径: junes231/funnel-editor-2025/funnel-editor-2025-f15bde6cbd1b225dd665a1a56189ae1345bc6eba/src/App.tsx
+
+// ... (省略前面的导入和接口定义)
+
   const extractFileNameFromUrl = (url: string | undefined): string | null => {
-  if (!url || typeof url !== 'string') return null;
+    if (!url || typeof url !== 'string') return null;
 
-  try {
-    // 1. URL 解码: 处理路径中的 %2F 等编码字符
-    const decodedUrl = decodeURIComponent(url);
-    
-    // 2. 匹配路径中的文件名部分，它在最后一个斜杠 / 和 ? 之间
-    // 文件名为：.../timestamp-originalName.ext?alt=media
-    const match = decodedUrl.match(/\/([^/?]+)\?alt=media/);
+    try {
+      // 1. URL 解码: 处理路径中的 %2F (斜杠) 和 %20 (空格) 等编码字符
+      const decodedUrl = decodeURIComponent(url);
+      const firebaseUrlMatch = decodedUrl.match(/\/o\/(.+?)(?:\?|#|$)/);
 
-    if (match && match[1]) {
-      const fileNameWithPrefix = match[1];
+      let filePath = null;
+      if (firebaseUrlMatch && firebaseUrlMatch[1]) {
+        filePath = firebaseUrlMatch[1];
+      }
+
+      if (filePath) {
+        // 3. 提取文件名（路径的最后一段）
+        // 路径示例: uploads/images/funnel-id/outcome-id/timestamp-IMG_7937.jpeg
+        const pathParts = filePath.split('/');
+        const fileNameWithPrefix = pathParts[pathParts.length - 1]; // 提取最后一段，即带前缀的文件名
+
+        // 4. 移除时间戳前缀 (如 1718000000000-)
+        // 这是你在后端 (functions/track-click/index.js) 自动重命名的逻辑
+        const nameWithoutTimestamp = fileNameWithPrefix.replace(/^\d+-/, ''); // 移除数字+破折号前缀
+
+        // 5. 再次对文件名部分进行解码，以防文件名本身包含编码字符
+        return decodeURIComponent(nameWithoutTimestamp);
+      }
       
-      // 3. 移除时间戳前缀 (如 1718000000000-)
-      // 这是为了匹配你上传时自动重命名的逻辑
-      const nameWithoutTimestamp = fileNameWithPrefix.replace(/^\d+-/, '');
-
-      return nameWithoutTimestamp;
+    } catch (e) {
+      console.error("Failed to extract filename from URL:", e);
     }
-  } catch (e) {
-    console.error("Failed to extract filename from URL:", e);
-  }
 
-  return null;
-};
+    return null;
+  };
+// ... (App 组件的其余部分)
 // REPLACE your old App function with this new one
 export default function App({ db, storage }: AppProps) {
   const navigate = useNavigate();
@@ -1018,7 +1030,8 @@ const handleImportQuestions = (importedQuestions: Question[]) => {
             funnelId={funnelId!}
             storage={storage} // 传入 storage 实例
             onBack={() => setCurrentSubView('mainEditorDashboard')}
-          />
+            extractFileNameFromUrl={extractFileNameFromUrl}
+            />
         );
        
        case 'scoreMapping': // <--- 新增视图入口
@@ -1868,6 +1881,7 @@ interface OutcomeSettingsComponentProps {
   funnelId: string;
   storage: FirebaseStorage;
   onBack: (event: React.MouseEvent<HTMLButtonElement>) => void;
+  extractFileNameFromUrl: (url: string | undefined) => string | null;
 }
 
 const OutcomeSettingsComponent: React.FC<OutcomeSettingsComponentProps> = ({
@@ -1876,6 +1890,7 @@ const OutcomeSettingsComponent: React.FC<OutcomeSettingsComponentProps> = ({
   funnelId,
   storage,
   onBack,
+  extractFileNameFromUrl,
 }) => {
   const [uploadingId, setUploadingId] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null); // NEW: 上传进度 (0-100)
