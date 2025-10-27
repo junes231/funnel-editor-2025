@@ -108,32 +108,27 @@ const getDefaultData = (type: string) => {
     try {
       // 1. URL 解码: 处理路径中的 %2F (斜杠) 和 %20 (空格) 等编码字符
       const decodedUrl = decodeURIComponent(url);
-      
-      // 匹配 Firebase Storage 的 /o/ 后跟路径和可选参数
       const firebaseUrlMatch = decodedUrl.match(/\/o\/(.+?)(?:\?|#|$)/);
 
       let filePath = null;
       if (firebaseUrlMatch && firebaseUrlMatch[1]) {
-        // 提取路径部分
         filePath = firebaseUrlMatch[1];
       }
-      
-      // 如果未成功提取路径，则返回 null，使用备用提示
-      if (!filePath) {
-        return null;
+
+      if (filePath) {
+        // 3. 提取文件名（路径的最后一段）
+        // 路径示例: uploads/images/funnel-id/outcome-id/timestamp-IMG_7937.jpeg
+        const pathParts = filePath.split('/');
+        const fileNameWithPrefix = pathParts[pathParts.length - 1]; // 提取最后一段，即带前缀的文件名
+
+        // 4. 移除时间戳前缀 (如 1718000000000-)
+        // 这是你在后端 (functions/track-click/index.js) 自动重命名的逻辑
+        const nameWithoutTimestamp = fileNameWithPrefix.replace(/^\d+-/, ''); // 移除数字+破折号前缀
+
+        // 5. 再次对文件名部分进行解码，以防文件名本身包含编码字符
+        return decodeURIComponent(nameWithoutTimestamp);
       }
-
-      // 2. 提取文件名（路径的最后一段）
-      // 路径示例: uploads/images/funnel-id/outcome-id/timestamp-IMG_7937.jpeg
-      const pathParts = filePath.split('/');
-      const fileNameWithPrefix = pathParts[pathParts.length - 1]; // 提取最后一段
       
-      // 3. 移除时间戳前缀 (如 1718000000000-)
-      const nameWithoutTimestamp = fileNameWithPrefix.replace(/^\d+-/, ''); // 移除数字+破折号前缀
-
-      // 4. 最终解码，确保文件名中的编码字符正确显示
-      return decodeURIComponent(nameWithoutTimestamp);
-
     } catch (e) {
       console.error("Failed to extract filename from URL:", e);
     }
@@ -727,15 +722,7 @@ interface FunnelEditorProps {
   updateFunnelData(funnelId, dataToSave);
   console.log('✅ Auto-Save triggered.');
 };
-
-   const forceSaveFunnelData = async (dataToSave: FunnelData) => {
-    if (!funnelId) return;
-    await updateFunnelData(funnelId, dataToSave);
-    console.log('✅ IMMEDIATE Save triggered for image upload.');
-    // 假设 showNotification 在 FunnelEditor 组件的父级 App.tsx 中通过 props/context 可用
-    // if (typeof showNotification === 'function') { showNotification('Image link saved.', 'success'); }
-}; 
-    const debouncedSave = useCallback( 
+const debouncedSave = useCallback( 
   debounce(performSave, 300), 
 [funnelId, updateFunnelData, leadCaptureEnabled, leadCaptureWebhookUrl]
 );
@@ -2020,108 +2007,108 @@ const handleDrop = (e: React.DragEvent, outcomeId: string) => {
 const BUCKET_NAME = 'funnel-editor-netlify.firebasestorage.app'; 
 
 const handleImageUpload = async (file: File, outcomeId: string) => {
-    // 立即显示文件名作为加载提示
-    setFileLabel(prev => ({ ...prev, [outcomeId]: file.name })); //
+  setFileLabel(prev => ({ ...prev, [outcomeId]: file.name }));
 
-    if (uploadingId === outcomeId) return; //
+  if (uploadingId === outcomeId) return; 
 
-    setUploadingId(outcomeId); //
-    setUploadProgress(0); //
-    
-    const trackClickBaseUrl = process.env.REACT_APP_TRACK_CLICK_URL?.replace(/\/trackClick$/, '') || 'https://api-track-click-jgett3ucqq-uc.a.run.app';
-    let permanentUrl = '';
-    let filePath = ''; 
+  setUploadingId(outcomeId);
+  setUploadProgress(0);
+  // 假設 process.env.REACT_APP_TRACK_CLICK_URL 包含您的後端基礎 URL
+  const trackClickBaseUrl = process.env.REACT_APP_TRACK_CLICK_URL?.replace(/\/trackClick$/, '') || 'https://api-track-click-jgett3ucqq-uc.a.run.app';
 
-    try {
-        // --- 步骤 1 & 2: 获取签名 URL 和 PUT Upload ---
-        const generateUrlResponse = await fetch(`${trackClickBaseUrl}/generateUploadUrl`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ data: { funnelId, outcomeId, fileName: file.name, fileType: file.type } }),
-        });
+  try {
+    // 步骤 1: 獲取簽名 URL
+    const generateUrlResponse = await fetch(`${trackClickBaseUrl}/generateUploadUrl`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            data: { 
+                funnelId, 
+                outcomeId, 
+                fileName: file.name,
+                fileType: file.type 
+            }
+        }),
+    });
 
-        if (!generateUrlResponse.ok) {
-            const errorResponse = await generateUrlResponse.json().catch(() => ({}));
-            throw new Error(`Failed to get signed URL: ${errorResponse.error || "Network error"}`);
-        }
-        
-        const { data } = await generateUrlResponse.json();
-        const uploadUrl = data.uploadUrl;
-        filePath = data.filePath;
-        
-        // 执行 PUT 请求（省略 XHR 代码块，假设它成功设置了进度和处理了错误）
-        await new Promise((resolve, reject) => {
-            const xhr = new XMLHttpRequest();
-            xhr.open('PUT', uploadUrl);
-            xhr.setRequestHeader('Content-Type', file.type); 
-            xhr.upload.onprogress = (event) => {
-                if (event.lengthComputable) {
-                    const percent = Math.round((event.loaded / event.total) * 100);
-                    setUploadProgress(percent);
-                }
-            };
-            xhr.onload = () => {
-                if (xhr.status >= 200 && xhr.status < 300) {
-                    resolve(xhr.responseText);
-                } else {
-                    reject(new Error(`File PUT failed with status: ${xhr.status || 'Network/CORS error'}.`));
-                }
-            };
-            xhr.onerror = () => {
-                reject(new Error('File PUT failed due to network error or strict CORS policy.'));
-            };
-            xhr.send(file);
-        });
-        
-        // --- 步骤 3: 构造永久下载 URL ---
-        const BUCKET_NAME = process.env.REACT_APP_FIREBASE_STORAGE_BUCKET || 'funnel-editor-netlify.firebasestorage.app'; //
-        const encodedFilePath = encodeURIComponent(filePath);
-        permanentUrl = `https://firebasestorage.googleapis.com/v0/b/${BUCKET_NAME}/o/${encodedFilePath}?alt=media`;
-
-        console.log("🔗 Permanent Download URL:", permanentUrl); //
-        
-        // --- 步骤 4: **关键修复**：使用函数式更新并立即强制保存 ---
-        
-        let latestOutcomes = [] as FunnelOutcome[];
-        
-        // 4.1 函数式更新本地状态，确保使用最新的 outcomes 数组
-        setOutcomes(prevOutcomes => {
-            latestOutcomes = prevOutcomes.map(o => 
-                (o.id === outcomeId ? { ...o, imageUrl: permanentUrl } : o)
-            );
-            return latestOutcomes;
-        }); 
-
-        // 4.2 构造完整数据并强制保存 (使用最新状态)
-        const dataToForceSave: FunnelData = {
-            questions: Array.isArray(questions) ? questions : [],
-            finalRedirectLink, tracking, conversionGoal, primaryColor, buttonColor, backgroundColor, textColor,
-            enableLeadCapture: leadCaptureEnabled, leadCaptureWebhookUrl: leadCaptureWebhookUrl,
-            outcomes: latestOutcomes.length > 0 ? latestOutcomes : outcomes, // 使用最新或旧的（如果更新失败）
-            scoreMappings: scoreMappings,
-        };
-        await forceSaveFunnelData(dataToForceSave); // 立即保存到 Firestore，解决刷新丢失问题
-
-        // --- 步骤 5: 成功后清理 UI 状态 ---
-        typeof showNotification === 'function' ? showNotification('Image uploaded and link saved!', 'success') : console.log('Image uploaded successfully!'); //
-        setUploadingId(null); //
-        setUploadProgress(null); //
-
-
-    } catch (error: any) { 
-        console.error("❌ Upload Error:", error.message); //
-        setUploadingId(null); //
-        setUploadProgress(null); //
-        
-        // 失败时，清空本地状态，避免显示错误的 URL
-        handleUpdateOutcome(outcomeId, { imageUrl: '' }); 
-        setFileLabel(prev => ({ ...prev, [outcomeId]: '' }));
-
-        const displayMessage = `Critical Upload Error: ${error.message}`;
-        if (!error.message.includes("Failed to get signed URL")) {
-            typeof showNotification === 'function' ? showNotification(displayMessage, 'error') : console.error(displayMessage); //
-        }
+    if (!generateUrlResponse.ok) {
+        const errorResponse = await generateUrlResponse.json().catch(() => ({}));
+        const details = errorResponse.error || "Failed to get signed URL (Check backend logs for details).";
+        // 修正: 确保 showNotification 可用
+        typeof showNotification === 'function' ? showNotification(`Upload setup failed: ${details}`, 'error') : console.error(`Upload setup failed: ${details}`);
+        throw new Error(`Failed to get signed URL: ${details}`);
     }
+
+    const { data } = await generateUrlResponse.json();
+    // 獲取簽名 URL (用於 PUT) 和 GCS 文件路徑 (用於構造永久 URL)
+    const { uploadUrl, filePath } = data; 
+    
+    if (!filePath) {
+        throw new Error("Backend did not return the file path required for getting the permanent URL.");
+    }
+    
+    console.log("📎 uploadUrl value:", uploadUrl);
+    console.log("📎 filePath value:", filePath);
+
+    // 步骤 2: 前端直接上傳文件到 GCS
+    await new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('PUT', uploadUrl);
+        // 🌟 關鍵修復點 1: 必須設置 Content-Type 匹配 GCS 預簽名 URL 的要求
+        xhr.setRequestHeader('Content-Type', file.type); 
+
+        xhr.upload.onprogress = (event) => {
+            if (event.lengthComputable) {
+                const percent = Math.round((event.loaded / event.total) * 100);
+                setUploadProgress(percent); // 更新進度
+            }
+        };
+
+        xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+                console.log("✅ File PUT successful.");
+                resolve(xhr.responseText);
+            } else {
+                // 處理 PUT 失敗，例如 CORS 錯誤通常會顯示 0
+                reject(new Error(`File PUT failed with status: ${xhr.status || 'Network/CORS error'}.`));
+            }
+        };
+
+        xhr.onerror = () => {
+            // 修正：提供更清晰的錯誤訊息
+            reject(new Error('File PUT failed due to network error or strict CORS policy.'));
+        };
+
+        xhr.send(file);
+    });
+
+    // 🌟 步骤 3: 構造永久下載 URL (取代 getDownloadURL)
+    // 這是最推薦且最穩定的獲取永久 URL 的方式，無需前端安裝 Firebase Storage SDK
+    const encodedFilePath = encodeURIComponent(filePath);
+    const permanentUrl = `https://firebasestorage.googleapis.com/v0/b/${BUCKET_NAME}/o/${encodedFilePath}?alt=media`;
+
+    console.log("🔗 Permanent Download URL:", permanentUrl);
+    
+    // 步骤 4: 成功後更新 Firestore
+    handleUpdateOutcome(outcomeId, { imageUrl: permanentUrl }); 
+    // 修正: 确保 showNotification 可用
+    typeof showNotification === 'function' ? showNotification('Image uploaded successfully!', 'success') : console.log('Image uploaded successfully!');
+    
+    // 清理狀態
+    setUploadingId(null);
+    setUploadProgress(null);
+
+  } catch (error: any) { 
+    console.error("❌ Upload Error:", error.message);
+    setUploadingId(null);
+    setUploadProgress(null);
+    
+    const displayMessage = `Critical Upload Error: ${error.message}`;
+    if (!error.message.includes("Failed to get signed URL")) {
+        // 修正: 确保 showNotification 可用
+        typeof showNotification === 'function' ? showNotification(displayMessage, 'error') : console.error(displayMessage);
+    }
+  }
 };
 
 return (
