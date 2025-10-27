@@ -726,10 +726,13 @@ interface FunnelEditorProps {
   debounce(performSave, 300), 
 [funnelId, updateFunnelData, leadCaptureEnabled, leadCaptureWebhookUrl]
 );
-const forceSave = useCallback(() => {
-    // 1. 立即执行等待中的 debouncedSave，确保所有普通输入更改被保存
+const forceSave = useCallback(async () => { 
+    // 1. 立即执行等待中的 debouncedSave
     debouncedSave.flush();
     
+    // 【修改点 2：添加一个微任务延迟。这是为了保证 React 的状态更新（setOutcomes）在 forceSave 捕获状态之前完成】
+    await Promise.resolve();
+
     // 2. 构造最新数据，并直接调用非防抖的保存函数
     const dataToSave: FunnelData = {
         questions: Array.isArray(questions) ? questions : [],
@@ -745,17 +748,26 @@ const forceSave = useCallback(() => {
         outcomes: outcomes, // 使用最新状态
         scoreMappings: scoreMappings, // 使用最新状态
     };
-    updateFunnelData(funnelId!, dataToSave);
-    console.log('✅ Force-Save executed.');
+    
+    // 【修改点 3：打印即将发送给 Firestore 的完整数据】
+    console.log('[DEBUG-FORCE-SAVE] Attempting to save payload:', dataToSave);
+    
+    try {
+        await updateFunnelData(funnelId!, dataToSave);
+        console.log('✅ Force-Save executed successfully and finished writing to Firestore.');
+        console.log('数据已强制保存', 'success'); // 增加成功反馈
+    } catch (error) {
+         console.error('❌ [DEBUG-FORCE-SAVE] Critical Error during forceSave:', error);
+         console.log('强制保存失败，请检查控制台', 'error');
+    }
 
 }, [
     funnelId,
     updateFunnelData,
-    debouncedSave, // 确保 debouncedSave 也被 flush
+    debouncedSave, 
     // 依赖所有需要立即保存的状态
     questions,
     finalRedirectLink,
-    tracking,
     conversionGoal,
     primaryColor,
     buttonColor,
@@ -763,8 +775,9 @@ const forceSave = useCallback(() => {
     textColor,
     leadCaptureEnabled,
     leadCaptureWebhookUrl,
-    outcomes,
-    scoreMappings
+    outcomes, // 必须依赖 outcomes 才能获取最新 URL
+    scoreMappings,
+    tracking
 ]);
 // 3. 监听状态变化并调用防抖保存的 useEffect (替代原有的 unoptimized useEffect)
 useEffect(() => {
@@ -1999,7 +2012,7 @@ const handleClearImage = async (outcomeId: string) => {
     }
 
     typeof showNotification === 'function' ? showNotification('Image successfully cleared from editor.', 'success') : console.log('Image successfully cleared', 'success');
-    forceSave();
+    
 };
 
 
@@ -2134,7 +2147,8 @@ const handleImageUpload = async (file: File, outcomeId: string) => {
     // 修正: 确保 showNotification 可用
     typeof showNotification === 'function' ? showNotification('Image uploaded successfully!', 'success') : console.log('Image uploaded successfully!');
 
-    forceSave();
+    await forceSave(); 
+    console.log(`[DEBUG-UPLOAD] Image uploaded for ${outcomeId} and forced save complete. URL: ${permanentUrl}`);
     // 清理狀態
     setUploadingId(null);
     setUploadProgress(null);
