@@ -721,12 +721,51 @@ interface FunnelEditorProps {
   };
   updateFunnelData(funnelId, dataToSave);
   console.log('✅ Auto-Save triggered.');
-};
-const debouncedSave = useCallback( 
+  }
+    const debouncedSave = useCallback( 
   debounce(performSave, 300), 
 [funnelId, updateFunnelData, leadCaptureEnabled, leadCaptureWebhookUrl]
 );
+const forceSave = useCallback(() => {
+    // 1. 立即执行等待中的 debouncedSave，确保所有普通输入更改被保存
+    debouncedSave.flush();
+    
+    // 2. 构造最新数据，并直接调用非防抖的保存函数
+    const dataToSave: FunnelData = {
+        questions: Array.isArray(questions) ? questions : [],
+        finalRedirectLink,
+        tracking,
+        conversionGoal,
+        primaryColor,
+        buttonColor,
+        backgroundColor,
+        textColor,
+        enableLeadCapture: leadCaptureEnabled,
+        leadCaptureWebhookUrl: leadCaptureWebhookUrl,
+        outcomes: outcomes, // 使用最新状态
+        scoreMappings: scoreMappings, // 使用最新状态
+    };
+    updateFunnelData(funnelId!, dataToSave);
+    console.log('✅ Force-Save executed.');
 
+}, [
+    funnelId,
+    updateFunnelData,
+    debouncedSave, // 确保 debouncedSave 也被 flush
+    // 依赖所有需要立即保存的状态
+    questions,
+    finalRedirectLink,
+    tracking,
+    conversionGoal,
+    primaryColor,
+    buttonColor,
+    backgroundColor,
+    textColor,
+    leadCaptureEnabled,
+    leadCaptureWebhookUrl,
+    outcomes,
+    scoreMappings
+]);
 // 3. 监听状态变化并调用防抖保存的 useEffect (替代原有的 unoptimized useEffect)
 useEffect(() => {
   if (!isDataLoaded) return;
@@ -1031,7 +1070,7 @@ const handleImportQuestions = (importedQuestions: Question[]) => {
             storage={storage} // 传入 storage 实例
             onBack={() => setCurrentSubView('mainEditorDashboard')}
             extractFileNameFromUrl={extractFileNameFromUrl}
-            
+            forceSave={forceSave}
             />
         );
        
@@ -1883,7 +1922,7 @@ interface OutcomeSettingsComponentProps {
   storage: FirebaseStorage;
   onBack: (event: React.MouseEvent<HTMLButtonElement>) => void;
   extractFileNameFromUrl: (url: string | undefined) => string | null;
-  
+  forceSave: () => void;
 }
 const getUrlHint = (url: string | undefined): string => {
   if (!url) return 'N/A';
@@ -1899,7 +1938,7 @@ const OutcomeSettingsComponent: React.FC<OutcomeSettingsComponentProps> = ({
   storage,
   onBack,
   extractFileNameFromUrl,
-  
+  forceSave,
 }) => {
   const [uploadingId, setUploadingId] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null); // NEW: 上传进度 (0-100)
@@ -1960,6 +1999,7 @@ const handleClearImage = async (outcomeId: string) => {
     }
 
     typeof showNotification === 'function' ? showNotification('Image successfully cleared from editor.', 'success') : console.log('Image successfully cleared', 'success');
+    forceSave();
 };
 
 
@@ -2093,7 +2133,8 @@ const handleImageUpload = async (file: File, outcomeId: string) => {
     handleUpdateOutcome(outcomeId, { imageUrl: permanentUrl }); 
     // 修正: 确保 showNotification 可用
     typeof showNotification === 'function' ? showNotification('Image uploaded successfully!', 'success') : console.log('Image uploaded successfully!');
-    
+
+    forceSave();
     // 清理狀態
     setUploadingId(null);
     setUploadProgress(null);
