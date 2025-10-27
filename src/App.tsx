@@ -1031,7 +1031,19 @@ const handleImportQuestions = (importedQuestions: Question[]) => {
             storage={storage} // 传入 storage 实例
             onBack={() => setCurrentSubView('mainEditorDashboard')}
             extractFileNameFromUrl={extractFileNameFromUrl}
-            
+            onUpdateAndFlush={(updatedOutcomes) => {
+                setOutcomes(updatedOutcomes); // 更新本地状态
+                
+                // 手动构造并强制立即保存到 Firestore
+                const dataToFlush: FunnelData = {
+                    // ... [省略其余状态] ...
+                    outcomes: updatedOutcomes, // 使用最新的 outcomes 数据
+                    scoreMappings: scoreMappings,
+                };
+                updateFunnelData(funnelId!, dataToFlush); // 立即写入 Firestore
+                debouncedSave.cancel(); // 取消任何可能正在运行的防抖任务
+                
+            }}
             />
         );
        
@@ -2090,7 +2102,13 @@ const handleImageUpload = async (file: File, outcomeId: string) => {
     console.log("🔗 Permanent Download URL:", permanentUrl);
     
     // 步骤 4: 成功後更新 Firestore
-    handleUpdateOutcome(outcomeId, { imageUrl: permanentUrl }); 
+    const getUpdatedOutcomes = (id: string, updates: Partial<FunnelOutcome>) => {
+        return outcomes.map(o => (o.id === id ? { ...o, ...updates } : o));
+    };
+
+    // 步骤 4: 成功後更新本地狀態 AND 強制保存到 Firestore
+    const updatedOutcomesArray = getUpdatedOutcomes(outcomeId, { imageUrl: permanentUrl });
+    onUpdateAndFlush(updatedOutcomesArray);
     // 修正: 确保 showNotification 可用
     typeof showNotification === 'function' ? showNotification('Image uploaded successfully!', 'success') : console.log('Image uploaded successfully!');
     
