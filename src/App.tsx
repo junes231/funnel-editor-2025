@@ -722,7 +722,14 @@ interface FunnelEditorProps {
   updateFunnelData(funnelId, dataToSave);
   console.log('✅ Auto-Save triggered.');
 };
-const debouncedSave = useCallback( 
+   const immediateSave = useCallback((data: FunnelData) => {
+    if (!funnelId) return;
+    
+    updateFunnelData(funnelId, data); 
+    console.log('✅ Immediate save triggered for critical data (Image URL).');
+  }, [funnelId, updateFunnelData]);
+    
+    const debouncedSave = useCallback( 
   debounce(performSave, 300), 
 [funnelId, updateFunnelData, leadCaptureEnabled, leadCaptureWebhookUrl]
 );
@@ -1031,7 +1038,18 @@ const handleImportQuestions = (importedQuestions: Question[]) => {
             storage={storage} // 传入 storage 实例
             onBack={() => setCurrentSubView('mainEditorDashboard')}
             extractFileNameFromUrl={extractFileNameFromUrl}
-            
+            onImmediateSave={immediateSave} 
+            questions={questions}
+           finalRedirectLink={finalRedirectLink}
+           tracking={tracking}
+          conversionGoal={conversionGoal}
+         primaryColor={primaryColor}
+         buttonColor={buttonColor}
+         backgroundColor={backgroundColor}
+        textColor={textColor}
+         leadCaptureEnabled={leadCaptureEnabled}
+         leadCaptureWebhookUrl={leadCaptureWebhookUrl}
+         scoreMappings={scoreMappings}
             />
         );
        
@@ -1899,7 +1917,18 @@ const OutcomeSettingsComponent: React.FC<OutcomeSettingsComponentProps> = ({
   storage,
   onBack,
   extractFileNameFromUrl,
-  
+  onImmediateSave,
+  questions,
+  finalRedirectLink,
+  tracking,
+  conversionGoal,
+  primaryColor,
+  buttonColor,
+  backgroundColor,
+  textColor,
+  leadCaptureEnabled,
+  leadCaptureWebhookUrl,
+  scoreMappings,
 }) => {
   const [uploadingId, setUploadingId] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null); // NEW: 上传进度 (0-100)
@@ -2093,7 +2122,31 @@ const handleImageUpload = async (file: File, outcomeId: string) => {
     handleUpdateOutcome(outcomeId, { imageUrl: permanentUrl }); 
     // 修正: 确保 showNotification 可用
     typeof showNotification === 'function' ? showNotification('Image uploaded successfully!', 'success') : console.log('Image uploaded successfully!');
-    
+    setOutcomes(prev =>
+        prev.map(o => (o.id === outcomeId ? { ...o, imageUrl: permanentUrl } : o))
+      );
+
+      // 步骤 4.2: 【核心修复】立即构造并保存 FunnelData
+      // 必须使用当前的 props 状态（因为本地状态 setOutcomes 是异步的）
+      const newOutcomes = outcomes.map(o => (o.id === outcomeId ? { ...o, imageUrl: permanentUrl } : o));
+      
+      const immediateSaveData: FunnelData = {
+          questions: questions,
+          finalRedirectLink: finalRedirectLink,
+          tracking: tracking,
+          conversionGoal: conversionGoal,
+          primaryColor: primaryColor,
+          buttonColor: buttonColor,
+          backgroundColor: backgroundColor,
+          textColor: textColor,
+          enableLeadCapture: leadCaptureEnabled,
+          leadCaptureWebhookUrl: leadCaptureWebhookUrl,
+          outcomes: newOutcomes, // 使用包含新 URL 的数组
+          scoreMappings: scoreMappings,
+      };
+
+      // 绕过防抖，立即写入 Firestore
+      onImmediateSave(immediateSaveData);
     // 清理狀態
     setUploadingId(null);
     setUploadProgress(null);
