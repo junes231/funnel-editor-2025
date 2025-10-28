@@ -671,6 +671,13 @@ interface FunnelEditorProps {
         return question; // 已经是对象格式
       });
 
+        if (funnel.data.outcomes && Array.isArray(funnel.data.outcomes)) {
+        console.log('[LOAD] Restoring outcomes from Firestore:', funnel.data.outcomes);
+        setOutcomes(funnel.data.outcomes);
+      } else {
+        console.warn('[LOAD] No outcomes found in Firestore document.');
+      }
+     
       // ✅ 移除 if (compatibleQuestions.length > 0) 检查，总是加载
       // 这能防止初始空数据时阻塞
       setFunnelName(funnel.name);
@@ -2148,11 +2155,18 @@ const handleImageUpload = async (file: File, outcomeId: string) => {
     // 修正: 确保 showNotification 可用
     typeof showNotification === 'function' ? showNotification('Image uploaded successfully!', 'success') : console.log('Image uploaded successfully!');
 
-    await forceSave(newOutcomesArray);
-    console.log(`[DEBUG-UPLOAD] Image uploaded for ${outcomeId} and forced save complete. URL: ${permanentUrl}`);
-    // 清理狀態
-    setUploadingId(null);
-    setUploadProgress(null);
+    // 更新 outcomes
+setOutcomes(newOutcomesArray);
+
+// ✅ 立即保存最新状态到 Firestore
+await Promise.resolve();  // 等待 setState 完成
+await forceSave();         // 调用 forceSave()，使用最新 outcomes
+
+console.log(`[DEBUG-UPLOAD] Image uploaded for ${outcomeId} and forced save complete. URL: ${permanentUrl}`);
+
+// 清理状态
+setUploadingId(null);
+setUploadProgress(null);
 
   } catch (error: any) { 
     console.error("❌ Upload Error:", error.message);
