@@ -2012,7 +2012,8 @@ const handleClearImage = async (outcomeId: string) => {
     }
 
     typeof showNotification === 'function' ? showNotification('Image successfully cleared from editor.', 'success') : console.log('Image successfully cleared', 'success');
-    
+    await forceSave(latestOutcomes);
+    console.log(`[DEBUG-CLEAR] Cleared image for ${outcomeId} and forced save complete.`); 
 };
 
 
