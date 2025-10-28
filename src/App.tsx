@@ -745,7 +745,7 @@ const forceSave = useCallback(async () => {
         textColor,
         enableLeadCapture: leadCaptureEnabled,
         leadCaptureWebhookUrl: leadCaptureWebhookUrl,
-        outcomes: latestOutcomes, // 使用最新状态
+        outcomes: outcomes, // 使用最新状态
         scoreMappings: scoreMappings, // 使用最新状态
     };
     
