@@ -755,10 +755,10 @@ const forceSave = useCallback(async () => {
     try {
         await updateFunnelData(funnelId!, dataToSave);
         console.log('✅ Force-Save executed successfully and finished writing to Firestore.');
-        console.log('数据已强制保存', 'success'); // 增加成功反馈
+        
     } catch (error) {
          console.error('❌ [DEBUG-FORCE-SAVE] Critical Error during forceSave:', error);
-         console.log('强制保存失败，请检查控制台', 'error');
+         
     }
 
 }, [
