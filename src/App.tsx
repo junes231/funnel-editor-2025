@@ -2198,7 +2198,7 @@ return (
               <label>Result Name (Internal):</label>
               <OptimizedTextInput
                 initialValue={outcome.name}
-                onUpdate={(v) => handleUpdateOutcome(outcome.id, { name: v })}
+                onUpdate={(v) => setOutcomes(getNewOutcomesArray(outcome.id, { name: v }, outcomes))}
                 placeholder="e.g., Top Budget Recommendation"
                 type="text"
               />
