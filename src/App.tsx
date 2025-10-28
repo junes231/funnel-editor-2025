@@ -1965,8 +1965,12 @@ const OutcomeSettingsComponent: React.FC<OutcomeSettingsComponentProps> = ({
   };
 
   // 文件路径: src/App.tsx (在 OutcomeSettingsComponent 组件内部)
+const getNewOutcomesArray = (id: string, updates: Partial<FunnelOutcome>, currentOutcomes: FunnelOutcome[]): FunnelOutcome[] => {
+    // 目的：使用传入的当前数组 (currentOutcomes) 同步计算下一个状态
+    return currentOutcomes.map(o => (o.id === id ? { ...o, ...updates } : o));
+};
 
-const handleClearImage = async (outcomeId: string) => {
+  const handleClearImage = async (outcomeId: string) => {
     // 1. 获取正确的 outcome 对象
     const outcomeToClear = outcomes.find(o => o.id === outcomeId);
     
@@ -2000,11 +2004,12 @@ const handleClearImage = async (outcomeId: string) => {
         }
         // 允许继续，清除前端状态
     }
-    
+    const newOutcomesArray = getNewOutcomesArray(outcomeId, { imageUrl: '' }, outcomes);
+
     // 3. 清除本地状态
-    handleUpdateOutcome(outcomeId, { 
-        imageUrl: '',
-    }); 
+    setOutcomes(newOutcomesArray);
+    // 3. 清除本地状态
+    
     
     // 4. 清除文件名标签
     if (typeof setFileLabel === 'function') {
@@ -2143,8 +2148,11 @@ const handleImageUpload = async (file: File, outcomeId: string) => {
 
     console.log("🔗 Permanent Download URL:", permanentUrl);
     
-    // 步骤 4: 成功後更新 Firestore
-    handleUpdateOutcome(outcomeId, { imageUrl: permanentUrl }); 
+   const newOutcomesArray = getNewOutcomesArray(outcomeId, { imageUrl: permanentUrl }, outcomes);
+
+    // 【修改点 6：同步更新本地状态】
+    setOutcomes(newOutcomesArray); // 步骤 4: 成功後更新 Firestore
+    
     // 修正: 确保 showNotification 可用
     typeof showNotification === 'function' ? showNotification('Image uploaded successfully!', 'success') : console.log('Image uploaded successfully!');
 
