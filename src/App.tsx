@@ -734,13 +734,15 @@ interface FunnelEditorProps {
 [funnelId, updateFunnelData, leadCaptureEnabled, leadCaptureWebhookUrl]
 );
 const forceSave = useCallback(async () => { 
-    // 1. 立即执行等待中的 debouncedSave
+    console.log("[FORCESAVE] Triggered. Current outcomes state:", outcomes);
+
+    // 1️⃣ 立即执行等待中的 debouncedSave
     debouncedSave.flush();
     
-    // 【修改点 2：添加一个微任务延迟。这是为了保证 React 的状态更新（setOutcomes）在 forceSave 捕获状态之前完成】
+    // 2️⃣ 微任务等待 React 状态更新完成
     await Promise.resolve();
 
-    // 2. 构造最新数据，并直接调用非防抖的保存函数
+    // 3️⃣ 构造最新数据
     const dataToSave: FunnelData = {
         questions: Array.isArray(questions) ? questions : [],
         finalRedirectLink,
@@ -752,27 +754,30 @@ const forceSave = useCallback(async () => {
         textColor,
         enableLeadCapture: leadCaptureEnabled,
         leadCaptureWebhookUrl: leadCaptureWebhookUrl,
-        outcomes: outcomes, // 使用最新状态
-        scoreMappings: scoreMappings, // 使用最新状态
+        outcomes: outcomes,       // 使用最新状态
+        scoreMappings: scoreMappings,
     };
-    
-    // 【修改点 3：打印即将发送给 Firestore 的完整数据】
-    console.log('[DEBUG-FORCE-SAVE] Attempting to save payload (CHECK OUTCOMES ARRAY HERE):', dataToSave.outcomes);
-    
+
+    console.log("[FORCESAVE] Payload prepared for Firestore:", dataToSave);
+
     try {
         await updateFunnelData(funnelId!, dataToSave);
-        console.log('✅ Force-Save executed successfully and finished writing to Firestore.');
+        console.log("✅ [FORCESAVE] Successfully written to Firestore. Outcomes saved:", dataToSave.outcomes);
         
+        // 🔎 再次读取 Firestore 来确认写入
+        const docSnapshot = await getDoc(doc(db, "funnels", funnelId!));
+        if (docSnapshot.exists()) {
+            console.log("[FORCESAVE] Verified Firestore document after save:", docSnapshot.data().data.outcomes);
+        }
+
     } catch (error) {
-         console.error('❌ [DEBUG-FORCE-SAVE] Critical Error during forceSave:', error);
-         
+        console.error("❌ [FORCESAVE] Error during save:", error);
     }
 
 }, [
     funnelId,
     updateFunnelData,
     debouncedSave, 
-    // 依赖所有需要立即保存的状态
     questions,
     finalRedirectLink,
     conversionGoal,
@@ -784,8 +789,8 @@ const forceSave = useCallback(async () => {
     leadCaptureWebhookUrl,
     scoreMappings,
     outcomes,
-   tracking
-    ]);
+    tracking
+]);
 // 3. 监听状态变化并调用防抖保存的 useEffect (替代原有的 unoptimized useEffect)
 useEffect(() => {
   if (!isDataLoaded) return;
@@ -2065,118 +2070,109 @@ const handleDrop = (e: React.DragEvent, outcomeId: string) => {
 const BUCKET_NAME = 'funnel-editor-netlify.firebasestorage.app'; 
 
 const handleImageUpload = async (file: File, outcomeId: string) => {
+  console.log("🚀 [UPLOAD] Start uploading file:", file.name, "for outcomeId:", outcomeId);
+  
   setFileLabel(prev => ({ ...prev, [outcomeId]: file.name }));
 
-  if (uploadingId === outcomeId) return; 
+  if (uploadingId === outcomeId) {
+    console.warn("[UPLOAD] Upload already in progress for this outcomeId:", outcomeId);
+    return; 
+  }
 
   setUploadingId(outcomeId);
   setUploadProgress(0);
-  // 假設 process.env.REACT_APP_TRACK_CLICK_URL 包含您的後端基礎 URL
-  const trackClickBaseUrl = process.env.REACT_APP_TRACK_CLICK_URL?.replace(/\/trackClick$/, '') || 'https://api-track-click-jgett3ucqq-uc.a.run.app';
+
+  const trackClickBaseUrl =
+    process.env.REACT_APP_TRACK_CLICK_URL?.replace(/\/trackClick$/, '') ||
+    'https://api-track-click-jgett3ucqq-uc.a.run.app';
 
   try {
-    // 步骤 1: 獲取簽名 URL
+    console.log("[UPLOAD] Requesting signed URL from backend...");
     const generateUrlResponse = await fetch(`${trackClickBaseUrl}/generateUploadUrl`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            data: { 
-                funnelId, 
-                outcomeId, 
-                fileName: file.name,
-                fileType: file.type 
-            }
-        }),
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        data: { funnelId, outcomeId, fileName: file.name, fileType: file.type }
+      }),
     });
 
     if (!generateUrlResponse.ok) {
-        const errorResponse = await generateUrlResponse.json().catch(() => ({}));
-        const details = errorResponse.error || "Failed to get signed URL (Check backend logs for details).";
-        // 修正: 确保 showNotification 可用
-        typeof showNotification === 'function' ? showNotification(`Upload setup failed: ${details}`, 'error') : console.error(`Upload setup failed: ${details}`);
-        throw new Error(`Failed to get signed URL: ${details}`);
+      const errorResponse = await generateUrlResponse.json().catch(() => ({}));
+      const details = errorResponse.error || "Failed to get signed URL.";
+      console.error("[UPLOAD] Failed to get signed URL:", details);
+      throw new Error(`Failed to get signed URL: ${details}`);
     }
 
     const { data } = await generateUrlResponse.json();
-    // 獲取簽名 URL (用於 PUT) 和 GCS 文件路徑 (用於構造永久 URL)
-    const { uploadUrl, filePath } = data; 
-    
-    if (!filePath) {
-        throw new Error("Backend did not return the file path required for getting the permanent URL.");
-    }
-    
-    console.log("📎 uploadUrl value:", uploadUrl);
-    console.log("📎 filePath value:", filePath);
+    const { uploadUrl, filePath } = data;
 
-    // 步骤 2: 前端直接上傳文件到 GCS
-    await new Promise((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        xhr.open('PUT', uploadUrl);
-        // 🌟 關鍵修復點 1: 必須設置 Content-Type 匹配 GCS 預簽名 URL 的要求
-        xhr.setRequestHeader('Content-Type', file.type); 
+    console.log("[UPLOAD] Received uploadUrl:", uploadUrl);
+    console.log("[UPLOAD] Received filePath:", filePath);
 
-        xhr.upload.onprogress = (event) => {
-            if (event.lengthComputable) {
-                const percent = Math.round((event.loaded / event.total) * 100);
-                setUploadProgress(percent); // 更新進度
-            }
-        };
+    if (!filePath) throw new Error("Backend did not return filePath.");
 
-        xhr.onload = () => {
-            if (xhr.status >= 200 && xhr.status < 300) {
-                console.log("✅ File PUT successful.");
-                resolve(xhr.responseText);
-            } else {
-                // 處理 PUT 失敗，例如 CORS 錯誤通常會顯示 0
-                reject(new Error(`File PUT failed with status: ${xhr.status || 'Network/CORS error'}.`));
-            }
-        };
+    // 上传文件
+    await new Promise<void>((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('PUT', uploadUrl);
+      xhr.setRequestHeader('Content-Type', file.type);
 
-        xhr.onerror = () => {
-            // 修正：提供更清晰的錯誤訊息
-            reject(new Error('File PUT failed due to network error or strict CORS policy.'));
-        };
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable) {
+          const percent = Math.round((event.loaded / event.total) * 100);
+          setUploadProgress(percent);
+          console.log(`[UPLOAD] Progress: ${percent}%`);
+        }
+      };
 
-        xhr.send(file);
+      xhr.onload = () => {
+        console.log("[UPLOAD] XMLHttpRequest onload, status:", xhr.status);
+        if (xhr.status >= 200 && xhr.status < 300) resolve();
+        else reject(new Error(`File PUT failed with status: ${xhr.status || 'Network/CORS error'}`));
+      };
+      xhr.onerror = () => {
+        console.error("[UPLOAD] XMLHttpRequest onerror triggered");
+        reject(new Error('Network error or CORS issue during file PUT.'));
+      };
+      xhr.send(file);
     });
 
-    // 🌟 步骤 3: 構造永久下載 URL (取代 getDownloadURL)
-    // 這是最推薦且最穩定的獲取永久 URL 的方式，無需前端安裝 Firebase Storage SDK
+    // 构造永久 URL
     const encodedFilePath = encodeURIComponent(filePath);
     const permanentUrl = `https://firebasestorage.googleapis.com/v0/b/${BUCKET_NAME}/o/${encodedFilePath}?alt=media`;
-
-    console.log("🔗 Permanent Download URL:", permanentUrl);
-    
-   const newOutcomesArray = getNewOutcomesArray(outcomeId, { imageUrl: permanentUrl }, outcomes);
-
-    // 【修改点 6：同步更新本地状态】
-    setOutcomes(newOutcomesArray); // 步骤 4: 成功後更新 Firestore
-    
-    // 修正: 确保 showNotification 可用
-    typeof showNotification === 'function' ? showNotification('Image uploaded successfully!', 'success') : console.log('Image uploaded successfully!');
+    console.log("[UPLOAD] Permanent URL constructed:", permanentUrl);
 
     // 更新 outcomes
-setOutcomes(newOutcomesArray);
+    const newOutcomesArray = getNewOutcomesArray(outcomeId, { imageUrl: permanentUrl }, outcomes);
+    console.log("[UPLOAD] newOutcomesArray before setOutcomes:", newOutcomesArray);
 
-// ✅ 立即保存最新状态到 Firestore
-await Promise.resolve();  // 等待 setState 完成
-await forceSave();         // 调用 forceSave()，使用最新 outcomes
+    setOutcomes(newOutcomesArray);
+    console.log("[UPLOAD] setOutcomes called, waiting for state to update...");
 
-console.log(`[DEBUG-UPLOAD] Image uploaded for ${outcomeId} and forced save complete. URL: ${permanentUrl}`);
+    await new Promise(resolve => setTimeout(resolve, 0)); // 等待状态更新
+    console.log("[UPLOAD] Calling forceSave() with latest outcomes state:", outcomes);
+    await forceSave();
+    console.log(`[UPLOAD] Force save complete for outcomeId: ${outcomeId}`);
 
-// 清理状态
-setUploadingId(null);
-setUploadProgress(null);
-
-  } catch (error: any) { 
-    console.error("❌ Upload Error:", error.message);
+    // 清理状态
     setUploadingId(null);
     setUploadProgress(null);
-    
+
+    console.log("[UPLOAD] Upload function completed successfully for file:", file.name);
+    typeof showNotification === 'function' 
+      ? showNotification('Image uploaded successfully!', 'success') 
+      : console.log('Image uploaded successfully!');
+
+  } catch (error: any) {
+    console.error("[UPLOAD] Critical error during upload:", error.message);
+    setUploadingId(null);
+    setUploadProgress(null);
+
     const displayMessage = `Critical Upload Error: ${error.message}`;
     if (!error.message.includes("Failed to get signed URL")) {
-        // 修正: 确保 showNotification 可用
-        typeof showNotification === 'function' ? showNotification(displayMessage, 'error') : console.error(displayMessage);
+      typeof showNotification === 'function' 
+        ? showNotification(displayMessage, 'error') 
+        : console.error(displayMessage);
     }
   }
 };
