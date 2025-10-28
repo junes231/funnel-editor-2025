@@ -776,8 +776,9 @@ const forceSave = useCallback(async () => {
     leadCaptureEnabled,
     leadCaptureWebhookUrl,
     scoreMappings,
-    tracking
-]);
+    outcomes,
+   tracking
+    ]);
 // 3. 监听状态变化并调用防抖保存的 useEffect (替代原有的 unoptimized useEffect)
 useEffect(() => {
   if (!isDataLoaded) return;
@@ -1934,7 +1935,7 @@ interface OutcomeSettingsComponentProps {
   storage: FirebaseStorage;
   onBack: (event: React.MouseEvent<HTMLButtonElement>) => void;
   extractFileNameFromUrl: (url: string | undefined) => string | null;
-  forceSave: () => void;
+  forceSave: () => Promise<void>;
 }
 const getUrlHint = (url: string | undefined): string => {
   if (!url) return 'N/A';
@@ -2001,8 +2002,6 @@ const getNewOutcomesArray = (id: string, updates: Partial<FunnelOutcome>, curren
 
     // 3. 清除本地状态
     setOutcomes(newOutcomesArray);
-    // 3. 清除本地状态
-    
     
     // 4. 清除文件名标签
     if (typeof setFileLabel === 'function') {
@@ -2010,7 +2009,7 @@ const getNewOutcomesArray = (id: string, updates: Partial<FunnelOutcome>, curren
     }
 
     typeof showNotification === 'function' ? showNotification('Image successfully cleared from editor.', 'success') : console.log('Image successfully cleared', 'success');
-    await forceSave(latestOutcomes);
+    await forceSave(newOutcomesArray);
     console.log(`[DEBUG-CLEAR] Cleared image for ${outcomeId} and forced save complete.`); 
 };
 
@@ -2149,7 +2148,7 @@ const handleImageUpload = async (file: File, outcomeId: string) => {
     // 修正: 确保 showNotification 可用
     typeof showNotification === 'function' ? showNotification('Image uploaded successfully!', 'success') : console.log('Image uploaded successfully!');
 
-    await forceSave(); 
+    await forceSave(newOutcomesArray);
     console.log(`[DEBUG-UPLOAD] Image uploaded for ${outcomeId} and forced save complete. URL: ${permanentUrl}`);
     // 清理狀態
     setUploadingId(null);
