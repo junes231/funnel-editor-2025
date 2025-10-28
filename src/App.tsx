@@ -726,7 +726,7 @@ interface FunnelEditorProps {
   debounce(performSave, 300), 
 [funnelId, updateFunnelData, leadCaptureEnabled, leadCaptureWebhookUrl]
 );
-const forceSave = useCallback(async (partialData: Partial<FunnelData> = {}) => {
+const forceSave = useCallback(async () => { 
     // 1. 立即执行等待中的 debouncedSave
     debouncedSave.flush();
     
@@ -747,7 +747,6 @@ const forceSave = useCallback(async (partialData: Partial<FunnelData> = {}) => {
         leadCaptureWebhookUrl: leadCaptureWebhookUrl,
         outcomes: outcomes, // 使用最新状态
         scoreMappings: scoreMappings, // 使用最新状态
-        ...partialData
     };
     
     // 【修改点 3：打印即将发送给 Firestore 的完整数据】
@@ -1936,7 +1935,7 @@ interface OutcomeSettingsComponentProps {
   storage: FirebaseStorage;
   onBack: (event: React.MouseEvent<HTMLButtonElement>) => void;
   extractFileNameFromUrl: (url: string | undefined) => string | null;
-  forceSave: (partialData?: Partial<FunnelData>) => Promise<void>;
+  forceSave: () => Promise<void>;
 }
 const getUrlHint = (url: string | undefined): string => {
   if (!url) return 'N/A';
@@ -2010,7 +2009,7 @@ const getNewOutcomesArray = (id: string, updates: Partial<FunnelOutcome>, curren
     }
 
     typeof showNotification === 'function' ? showNotification('Image successfully cleared from editor.', 'success') : console.log('Image successfully cleared', 'success');
-    await forceSave({ outcomes: newOutcomesArray });
+    await forceSave(newOutcomesArray);
     console.log(`[DEBUG-CLEAR] Cleared image for ${outcomeId} and forced save complete.`); 
 };
 
@@ -2149,7 +2148,7 @@ const handleImageUpload = async (file: File, outcomeId: string) => {
     // 修正: 确保 showNotification 可用
     typeof showNotification === 'function' ? showNotification('Image uploaded successfully!', 'success') : console.log('Image uploaded successfully!');
 
-    forceSave({ outcomes: newOutcomesArray });
+    await forceSave(newOutcomesArray);
     console.log(`[DEBUG-UPLOAD] Image uploaded for ${outcomeId} and forced save complete. URL: ${permanentUrl}`);
     // 清理狀態
     setUploadingId(null);
@@ -2167,17 +2166,7 @@ const handleImageUpload = async (file: File, outcomeId: string) => {
     }
   }
 };
-const handleUpdateOutcome = (id: string, updates: Partial<FunnelOutcome>) => {
-    // 1. 使用辅助函数，获取最新的 outcomes 数组
-    const newOutcomesArray = getNewOutcomesArray(id, updates, outcomes);
-    
-    // 2. 更新 React 状态 (立即更新 UI)
-    setOutcomes(newOutcomesArray);
-    
-    // 3. 强制保存到 Firestore (确保持久化)
-    // 传入最新的 outcomes 数组，确保 forceSave 使用正确的数据
-    forceSave({ outcomes: newOutcomesArray }); 
-};
+
 return (
     <div className="link-settings-container">
       <h2>
@@ -2198,7 +2187,7 @@ return (
               <label>Result Name (Internal):</label>
               <OptimizedTextInput
                 initialValue={outcome.name}
-                onUpdate={(v) => setOutcomes(getNewOutcomesArray(outcome.id, { name: v }, outcomes))}
+                onUpdate={(v) => handleUpdateOutcome(outcome.id, { name: v })}
                 placeholder="e.g., Top Budget Recommendation"
                 type="text"
               />
@@ -2314,7 +2303,7 @@ return (
   {/* URL 输入框 */}
   <OptimizedTextInput
     initialValue={outcome.imageUrl}
-    onUpdate={(v) => handleUpdateOutcome(outcome.id, { name: v })}
+    onUpdate={(v) => handleUpdateOutcome(outcome.id, { imageUrl: v })}
     placeholder="Or paste an external URL"
     type="url"
     style={{marginTop: '10px'}}
