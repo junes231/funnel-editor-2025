@@ -745,12 +745,12 @@ const forceSave = useCallback(async () => {
         textColor,
         enableLeadCapture: leadCaptureEnabled,
         leadCaptureWebhookUrl: leadCaptureWebhookUrl,
-        outcomes: outcomes, // 使用最新状态
+        outcomes: latestOutcomes, // 使用最新状态
         scoreMappings: scoreMappings, // 使用最新状态
     };
     
     // 【修改点 3：打印即将发送给 Firestore 的完整数据】
-    console.log('[DEBUG-FORCE-SAVE] Attempting to save payload:', dataToSave);
+    console.log('[DEBUG-FORCE-SAVE] Attempting to save payload (CHECK OUTCOMES ARRAY HERE):', dataToSave.outcomes);
     
     try {
         await updateFunnelData(funnelId!, dataToSave);
@@ -775,7 +775,6 @@ const forceSave = useCallback(async () => {
     textColor,
     leadCaptureEnabled,
     leadCaptureWebhookUrl,
-    outcomes, // 必须依赖 outcomes 才能获取最新 URL
     scoreMappings,
     tracking
 ]);
@@ -1958,13 +1957,7 @@ const OutcomeSettingsComponent: React.FC<OutcomeSettingsComponentProps> = ({
   const [isDragOver, setIsDragOver] = useState(false);
   const [fileLabel, setFileLabel] = useState<Record<string, string>>({}); // <--- 新增状态：存储文件名
   const fileInputRef = useRef<Record<string, HTMLInputElement | null>>({});
-  const handleUpdateOutcome = (id: string, updates: Partial<FunnelOutcome>) => {
-    setOutcomes(prev =>
-      prev.map(o => (o.id === id ? { ...o, ...updates } : o))
-    );
-  };
-
-  // 文件路径: src/App.tsx (在 OutcomeSettingsComponent 组件内部)
+ // 文件路径: src/App.tsx (在 OutcomeSettingsComponent 组件内部)
 const getNewOutcomesArray = (id: string, updates: Partial<FunnelOutcome>, currentOutcomes: FunnelOutcome[]): FunnelOutcome[] => {
     // 目的：使用传入的当前数组 (currentOutcomes) 同步计算下一个状态
     return currentOutcomes.map(o => (o.id === id ? { ...o, ...updates } : o));
