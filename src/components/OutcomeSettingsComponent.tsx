@@ -2,15 +2,7 @@ import React, { useState, useCallback } from "react";
 import OutcomeItem from "./OutcomeItem.tsx";
 import BackButton from "./BackButton.tsx";
 
-const getUrlHint = (url: string | undefined): string => {
-  if (!url) return 'N/A';
-  const cleanUrl = url.split('?')[0]; // 移除 token 部分
-  const maxLen = 45;
-  if (cleanUrl.length <= maxLen) return `Link: ${cleanUrl}`;
-  return `Link: ${cleanUrl.substring(0, maxLen)}...`;
-};
 const BUCKET_NAME = 'funnel-editor-netlify.firebasestorage.app';
-
 const OutcomeSettingsComponent = ({
   outcomes,
   setOutcomes,
