@@ -13,6 +13,8 @@ import { checkPasswordStrength } from './utils/passwordStrength.ts';
 import BackButton from './components/BackButton.tsx'; 
 import SmartAnalysisReport from './components/SmartAnalysisReport.tsx';
 import './components/SmartAnalysisReport.css';
+import OutcomeSettingsComponent from './components/OutcomeSettingsComponent.tsx';
+
 import { useNavigate, useParams, Routes, Route, useLocation } from 'react-router-dom';
 import OptimizedTextInput from './components/OptimizedTextInput.tsx';
 import {
