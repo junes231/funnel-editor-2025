@@ -3,6 +3,15 @@ import OutcomeItem from "./OutcomeItem.tsx";
 import BackButton from "./BackButton.tsx";
 
 const BUCKET_NAME = 'funnel-editor-netlify.firebasestorage.app';
+interface OutcomeSettingsComponentProps {
+  outcomes: FunnelOutcome[];
+  setOutcomes: React.Dispatch<React.SetStateAction<FunnelOutcome[]>>;
+  funnelId: string;
+  storage: FirebaseStorage;
+  onBack: () => void;
+  extractFileNameFromUrl: (url: string | undefined) => string | null;
+  showNotification?: (msg: string, type?: 'success' | 'error') => void; // 可选
+}
 const OutcomeSettingsComponent = ({
   outcomes,
   setOutcomes,
