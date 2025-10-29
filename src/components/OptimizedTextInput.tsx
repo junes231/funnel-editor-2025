@@ -1,10 +1,9 @@
-// src/components/OptimizedTextInput.tsx
-
 import React, { useState, useEffect, useMemo } from 'react';
 import debounce from 'lodash.debounce';
 
 interface OptimizedTextInputProps {
-  initialValue: string;
+  value?: string; // 新增：受控模式
+  initialValue?: string; // 兼容旧用法
   onUpdate: (newValue: string) => void;
   debounceTime?: number;
   placeholder?: string;
@@ -12,31 +11,37 @@ interface OptimizedTextInputProps {
   className?: string;
   isTextArea?: boolean;
   style?: React.CSSProperties;
+  disabled?: boolean;
 }
 
 const OptimizedTextInput: React.FC<OptimizedTextInputProps> = ({
-  initialValue,
+  value,
+  initialValue = '',
   onUpdate,
   debounceTime = 100,
   isTextArea = false,
   ...rest
 }) => {
-  const [localValue, setLocalValue] = useState(initialValue);
+  // 优先受控（value），否则降级为初始值模式
+  const isControlled = value !== undefined;
+  const [localValue, setLocalValue] = useState(value ?? initialValue);
+
+  // 受控模式：value变化时同步本地
+  useEffect(() => {
+    if (isControlled) setLocalValue(value!);
+  }, [value, isControlled]);
+
+  // 非受控（初始值模式）：initialValue变化时同步
+  useEffect(() => {
+    if (!isControlled) setLocalValue(initialValue);
+  }, [initialValue, isControlled]);
 
   const debouncedUpdate = useMemo(
     () => debounce(onUpdate, debounceTime),
     [onUpdate, debounceTime]
   );
-   useEffect(() => {
-    // 只有在外部传入的 initialValue 改变时，才更新组件内部的 localValue
-    setLocalValue(initialValue);
-  }, [initialValue]); 
-  
-  useEffect(() => {
-    return () => {
-      debouncedUpdate.cancel();
-    };
-  }, [debouncedUpdate]);
+
+  useEffect(() => () => debouncedUpdate.cancel(), [debouncedUpdate]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const newValue = e.target.value;
