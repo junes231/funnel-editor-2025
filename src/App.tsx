@@ -721,64 +721,12 @@ interface FunnelEditorProps {
   };
   updateFunnelData(funnelId, dataToSave);
   console.log('✅ Auto-Save triggered.');
-  }
-    const debouncedSave = useCallback( 
+};
+const debouncedSave = useCallback( 
   debounce(performSave, 300), 
 [funnelId, updateFunnelData, leadCaptureEnabled, leadCaptureWebhookUrl]
 );
-const forceSave = useCallback(async () => { 
-    // 1. 立即执行等待中的 debouncedSave
-    debouncedSave.flush();
-    
-    // 【修改点 2：添加一个微任务延迟。这是为了保证 React 的状态更新（setOutcomes）在 forceSave 捕获状态之前完成】
-    await Promise.resolve();
 
-    // 2. 构造最新数据，并直接调用非防抖的保存函数
-    const dataToSave: FunnelData = {
-        questions: Array.isArray(questions) ? questions : [],
-        finalRedirectLink,
-        tracking,
-        conversionGoal,
-        primaryColor,
-        buttonColor,
-        backgroundColor,
-        textColor,
-        enableLeadCapture: leadCaptureEnabled,
-        leadCaptureWebhookUrl: leadCaptureWebhookUrl,
-        outcomes: outcomes, // 使用最新状态
-        scoreMappings: scoreMappings, // 使用最新状态
-    };
-    
-    // 【修改点 3：打印即将发送给 Firestore 的完整数据】
-    console.log('[DEBUG-FORCE-SAVE] Attempting to save payload (CHECK OUTCOMES ARRAY HERE):', dataToSave.outcomes);
-    
-    try {
-        await updateFunnelData(funnelId!, dataToSave);
-        console.log('✅ Force-Save executed successfully and finished writing to Firestore.');
-        
-    } catch (error) {
-         console.error('❌ [DEBUG-FORCE-SAVE] Critical Error during forceSave:', error);
-         
-    }
-
-}, [
-    funnelId,
-    updateFunnelData,
-    debouncedSave, 
-    // 依赖所有需要立即保存的状态
-    questions,
-    finalRedirectLink,
-    conversionGoal,
-    primaryColor,
-    buttonColor,
-    backgroundColor,
-    textColor,
-    leadCaptureEnabled,
-    leadCaptureWebhookUrl,
-    scoreMappings,
-    outcomes,
-   tracking
-    ]);
 // 3. 监听状态变化并调用防抖保存的 useEffect (替代原有的 unoptimized useEffect)
 useEffect(() => {
   if (!isDataLoaded) return;
@@ -1083,7 +1031,7 @@ const handleImportQuestions = (importedQuestions: Question[]) => {
             storage={storage} // 传入 storage 实例
             onBack={() => setCurrentSubView('mainEditorDashboard')}
             extractFileNameFromUrl={extractFileNameFromUrl}
-            forceSave={forceSave}
+            
             />
         );
        
@@ -1935,7 +1883,7 @@ interface OutcomeSettingsComponentProps {
   storage: FirebaseStorage;
   onBack: (event: React.MouseEvent<HTMLButtonElement>) => void;
   extractFileNameFromUrl: (url: string | undefined) => string | null;
-  forceSave: () => Promise<void>;
+  
 }
 const getUrlHint = (url: string | undefined): string => {
   if (!url) return 'N/A';
@@ -1951,20 +1899,22 @@ const OutcomeSettingsComponent: React.FC<OutcomeSettingsComponentProps> = ({
   storage,
   onBack,
   extractFileNameFromUrl,
-  forceSave,
+  
 }) => {
   const [uploadingId, setUploadingId] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null); // NEW: 上传进度 (0-100)
   const [isDragOver, setIsDragOver] = useState(false);
   const [fileLabel, setFileLabel] = useState<Record<string, string>>({}); // <--- 新增状态：存储文件名
   const fileInputRef = useRef<Record<string, HTMLInputElement | null>>({});
- // 文件路径: src/App.tsx (在 OutcomeSettingsComponent 组件内部)
-const getNewOutcomesArray = (id: string, updates: Partial<FunnelOutcome>, currentOutcomes: FunnelOutcome[]): FunnelOutcome[] => {
-    // 目的：使用传入的当前数组 (currentOutcomes) 同步计算下一个状态
-    return currentOutcomes.map(o => (o.id === id ? { ...o, ...updates } : o));
-};
+  const handleUpdateOutcome = (id: string, updates: Partial<FunnelOutcome>) => {
+    setOutcomes(prev =>
+      prev.map(o => (o.id === id ? { ...o, ...updates } : o))
+    );
+  };
 
-  const handleClearImage = async (outcomeId: string) => {
+  // 文件路径: src/App.tsx (在 OutcomeSettingsComponent 组件内部)
+
+const handleClearImage = async (outcomeId: string) => {
     // 1. 获取正确的 outcome 对象
     const outcomeToClear = outcomes.find(o => o.id === outcomeId);
     
@@ -1998,10 +1948,11 @@ const getNewOutcomesArray = (id: string, updates: Partial<FunnelOutcome>, curren
         }
         // 允许继续，清除前端状态
     }
-    const newOutcomesArray = getNewOutcomesArray(outcomeId, { imageUrl: '' }, outcomes);
-
+    
     // 3. 清除本地状态
-    setOutcomes(newOutcomesArray);
+    handleUpdateOutcome(outcomeId, { 
+        imageUrl: '',
+    }); 
     
     // 4. 清除文件名标签
     if (typeof setFileLabel === 'function') {
@@ -2009,8 +1960,6 @@ const getNewOutcomesArray = (id: string, updates: Partial<FunnelOutcome>, curren
     }
 
     typeof showNotification === 'function' ? showNotification('Image successfully cleared from editor.', 'success') : console.log('Image successfully cleared', 'success');
-    await forceSave(newOutcomesArray);
-    console.log(`[DEBUG-CLEAR] Cleared image for ${outcomeId} and forced save complete.`); 
 };
 
 
@@ -2140,16 +2089,11 @@ const handleImageUpload = async (file: File, outcomeId: string) => {
 
     console.log("🔗 Permanent Download URL:", permanentUrl);
     
-   const newOutcomesArray = getNewOutcomesArray(outcomeId, { imageUrl: permanentUrl }, outcomes);
-
-    // 【修改点 6：同步更新本地状态】
-    setOutcomes(newOutcomesArray); // 步骤 4: 成功後更新 Firestore
-    
+    // 步骤 4: 成功後更新 Firestore
+    handleUpdateOutcome(outcomeId, { imageUrl: permanentUrl }); 
     // 修正: 确保 showNotification 可用
     typeof showNotification === 'function' ? showNotification('Image uploaded successfully!', 'success') : console.log('Image uploaded successfully!');
-
-    await forceSave(newOutcomesArray);
-    console.log(`[DEBUG-UPLOAD] Image uploaded for ${outcomeId} and forced save complete. URL: ${permanentUrl}`);
+    
     // 清理狀態
     setUploadingId(null);
     setUploadProgress(null);
