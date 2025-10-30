@@ -527,15 +527,6 @@ const FunnelDashboard: React.FC<FunnelDashboardProps> = ({ db, user, isAdmin, fu
   );
 };
 
-const getAuthToken = async () => {
-  const authInstance = getAuth();
-  const user = authInstance.currentUser;
-  if (!user) {
-    throw new Error('User not authenticated for file deletion.');
-  }
-  return user.getIdToken();
-};
-
 // --- 辅助函数：调用后端 API 删除文件 ---
 // 从 .env 文件中获取 Cloud Run URL
 const trackClickBaseUrl = process.env.REACT_APP_TRACK_CLICK_URL; 
