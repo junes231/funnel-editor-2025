@@ -1270,17 +1270,18 @@ p {
     min-width: 100%;
 }
 .file-name-display-compact {
-  flex-grow: 1; /* 占据尽可能多的空间 */
-  color: #333;
-  font-size: 0.95em;
-  font-weight: 600; 
-  text-align: left;
-  /* 确保文件名只显示一行，超出部分截断 */
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  min-width: 0; /* 允许在 flex 布局中收缩，防止溢出 */
-  margin-right: 15px; /* 与 Clear Image 按钮保持距离 */
+  color: #333;
+  font-size: 0.95em;
+  font-weight: 600; 
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0; 
+  margin-right: 15px; 
+  /* 关键修改：不再贪婪地生长 */
+  flex-grow: 0; 
+  flex-shrink: 1; /* 允许它在必要时收缩 */
 }
 .file-upload-wrapper {
   position: relative;
