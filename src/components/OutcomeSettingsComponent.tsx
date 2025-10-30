@@ -12,12 +12,15 @@ interface OutcomeSettingsComponentProps {
   storage: FirebaseStorage;
   onBack: () => void;
   extractFileNameFromUrl: (url: string | undefined) => string | null;
-  
+  funnelData: FunnelData; 
+  updateFunnelData: (funnelId: string, newData: FunnelData) => Promise<void>;
 }
 const OutcomeSettingsComponent = ({
   outcomes,
   setOutcomes,
   funnelId,
+  funnelData, 
+  updateFunnelData,
   storage,
   onBack,
   extractFileNameFromUrl,
@@ -172,7 +175,20 @@ const OutcomeSettingsComponent = ({
         setFileLabel(prev => ({ ...prev, [outcomeId]: '' }));
     }
 
-    typeof showNotification === 'function' ? showNotification('Image successfully cleared from editor.', 'success') : console.log('Image successfully cleared', 'success');
+    try {
+        // 🚨 关键：使用 updateFunnelData 将最新的 funnelData (包含imageUrl: "") 写入数据库
+         await updateFunnelData(funnelId, funnelData);
+
+        typeof showNotification === 'function' 
+            ? showNotification('Image successfully cleared from editor and cloud.', 'success') 
+            : console.log('Image successfully cleared', 'success');
+
+    } catch (dbErr) {
+        console.error("❌ Database sync failed:", dbErr);
+        typeof showNotification === 'function' 
+            ? showNotification('Image cleared locally, but cloud sync failed. Refresh may restore the image.', 'error') 
+            : console.log('Cloud sync failed.', 'error');
+    }
 };
 
   return (
