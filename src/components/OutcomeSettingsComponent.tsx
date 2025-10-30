@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from "react";
 import OutcomeItem from "./OutcomeItem.tsx";
 import BackButton from "./BackButton.tsx";
-
+import { getAuthToken } from "../utils/auth.ts";
 const BUCKET_NAME = 'funnel-editor-netlify.firebasestorage.app';
 interface OutcomeSettingsComponentProps {
   outcomes: FunnelOutcome[];
