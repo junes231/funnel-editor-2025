@@ -127,7 +127,7 @@ const OutcomeSettingsComponent = ({
   };
 
   // 图片删除
- const handleClearImage = async (outcomeId: string) => {
+ const handleImageClear = async (outcomeId: string) => {
     // 1. 获取正确的 outcome 对象
     const outcomeToClear = outcomes.find(o => o.id === outcomeId);
     
