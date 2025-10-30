@@ -86,13 +86,28 @@ const OutcomeItem = React.memo(function OutcomeItem({
         )}
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <button
-            type="button"
-            className="custom-file-button"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploading}
-          >
-            {uploading ? `Uploading: ${uploadProgress || 0}%` : "Upload Image"}
-          </button>
+  type="button"
+  className="custom-file-button"
+  onClick={() => fileInputRef.current?.click()}
+  disabled={uploading}
+>
+  {/* 🌟 新增的图标和文本逻辑 🌟 */}
+  {uploading ? (
+    <>
+      <span role="img" aria-label="uploading-icon" style={{ marginRight: 8 }}>
+        ⏳
+      </span>
+      {`Uploading: ${uploadProgress !== null ? uploadProgress : 0}%`}
+    </>
+  ) : (
+    <>
+      <span role="img" aria-label="upload-icon" style={{ marginRight: 8 }}>
+        📤
+      </span>
+      {"Upload Image"}
+    </>
+  )}
+</button>
           <input
             type="file"
             accept="image/*"
