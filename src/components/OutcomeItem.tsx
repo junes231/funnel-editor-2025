@@ -78,7 +78,7 @@ const OutcomeItem = React.memo(function OutcomeItem({
               className="delete-image-btn"
               type="button"
               onClick={e => { e.stopPropagation(); onImageClear(outcome.id); }}
-              style={{ marginLeft: 4 }}
+              
             >
               Clear Image
             </button>
