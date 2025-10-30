@@ -1033,7 +1033,7 @@ const handleImportQuestions = (importedQuestions: Question[]) => {
             storage={storage} // 传入 storage 实例
             onBack={() => setCurrentSubView('mainEditorDashboard')}
             extractFileNameFromUrl={extractFileNameFromUrl}
-            showNotification={showNotification}
+            
             />
         );
        
