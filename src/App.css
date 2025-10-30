@@ -1270,18 +1270,18 @@ p {
     min-width: 100%;
 }
 .file-name-display-compact {
-  color: #333;
-  font-size: 0.95em;
-  font-weight: 600; 
-  text-align: left;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  min-width: 0; 
-  margin-right: 15px; 
+  color: #333;
+  font-size: 0.95em;
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  margin-right: 15px;
   /* 关键修改：不再贪婪地生长 */
-  flex-grow: 0; 
-  flex-shrink: 1; /* 允许它在必要时收缩 */
+  flex-grow: 0;
+  flex-shrink: 1; /* 允许它在必要时收缩 */
 }
 .file-upload-wrapper {
   position: relative;
