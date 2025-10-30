@@ -527,32 +527,6 @@ const FunnelDashboard: React.FC<FunnelDashboardProps> = ({ db, user, isAdmin, fu
   );
 };
 
-// --- 辅助函数：调用后端 API 删除文件 ---
-// 从 .env 文件中获取 Cloud Run URL
-const trackClickBaseUrl = process.env.REACT_APP_TRACK_CLICK_URL; 
-const deleteFileApi = async (fileUrl: string, token: string) => {
-  if (!trackClickBaseUrl) {
-    throw new Error('REACT_APP_TRACK_CLICK_URL is not configured.');
-  }
-  // 确保 URL 结尾没有斜杠，但 /deleteFile 前面有斜杠
-  const apiUrl = `${trackClickBaseUrl.replace(/\/$/, '')}/deleteFile`;
-
-  const response = await fetch(apiUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
-    body: JSON.stringify({ data: { fileUrl } }),
-  });
-
-  if (!response.ok) {
-    const errorBody = await response.json().catch(() => ({}));
-    const details = errorBody.error || response.statusText;
-    throw new Error(`Deletion failed: ${details}`);
-  }
-};
-
 interface FunnelEditorProps {
   db: Firestore;
   storage: FirebaseStorage;
