@@ -10,7 +10,7 @@ interface OutcomeSettingsComponentProps {
   storage: FirebaseStorage;
   onBack: () => void;
   extractFileNameFromUrl: (url: string | undefined) => string | null;
-  showNotification?: (msg: string, type?: 'success' | 'error') => void; // 可选
+  
 }
 const OutcomeSettingsComponent = ({
   outcomes,
@@ -19,7 +19,7 @@ const OutcomeSettingsComponent = ({
   storage,
   onBack,
   extractFileNameFromUrl,
-  showNotification, // 可选，建议传入
+   
 }) => {
   const [uploadingId, setUploadingId] = useState(null);
   const [uploadProgress, setUploadProgress] = useState(null);
@@ -116,9 +116,9 @@ const OutcomeSettingsComponent = ({
 
       // 4. 更新 outcome
       handleFieldChange(outcomeId, "imageUrl", permanentUrl);
-      showNotification && showNotification('Image uploaded successfully!', 'success');
+      typeof showNotification === 'function' ? showNotification('Image uploaded successfully!', 'success') : console.log('Image uploaded successfully!');
     } catch (error) {
-      showNotification && showNotification(`Upload Error: ${error.message}`, 'error');
+      typeof showNotification === 'function' ? showNotification('Upload Error', 'error') : console.log('Upload Error')
       console.error(error);
     } finally {
       setUploadingId(null);
